@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responses API Widget Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .widget-selector {
+            margin-bottom: 1rem;
+        }
+        
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 1rem;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background: #3730a3;
+        }
+        
+        .content {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            line-height: 1.6;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+
+        .success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .warning {
+            background: rgba(251, 191, 36, 0.2);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Responses API Widget Test</h1>
+        
+        <div class="card">
+            <h2>OpenAI Responses API Integration Test</h2>
+            <p>This page demonstrates the upgraded chat widget using OpenAI's Responses API with centralized prompt management.</p>
+            
+            <div class="widget-selector">
+                <label for="widgetSelect">Choose a Responses API widget to test:</label>
+                <select id="widgetSelect">
+                    <option value="cottonshoppen-widget-456">Cottonshoppen.dk Assistant (Working with Real Prompt)</option>
+                    <option value="demo-widget-123">Demo Chat Widget (Needs Prompt ID)</option>
+                    <option value="support-widget-789">Generic Support Widget (Needs Prompt ID)</option>
+                </select>
+                <button onclick="loadWidget()">Load Responses API Widget</button>
+            </div>
+            
+            <div class="success">
+                <h4>✅ Modern Widget with Enhanced Styling!</h4>
+                <ul>
+                    <li><strong>🎨 Modern Design:</strong> Gradient backgrounds, smooth animations, glass morphism effects</li>
+                    <li><strong>🔗 Clickable Links:</strong> Markdown links automatically converted to clickable HTML links</li>
+                    <li><strong>📱 Mobile Responsive:</strong> Adaptive layout that works beautifully on all devices</li>
+                    <li><strong>✨ Smooth Animations:</strong> Slide-in messages, typing indicators, hover effects</li>
+                    <li><strong>🎯 Better UX:</strong> Send button, focus states, custom scrollbars</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <h4>⚠️ Prompt Configuration Required</h4>
+                <p>To use widgets other than Cottonshoppen.dk:</p>
+                <ol>
+                    <li>Create prompts at <a href="https://platform.openai.com/prompts" target="_blank" style="color: #f59e0b;">platform.openai.com/prompts</a></li>
+                    <li>Copy the prompt ID (starts with <code>pmpt_</code>)</li>
+                    <li>Update the widget configuration in MongoDB</li>
+                </ol>
+            </div>
+            
+            <div class="instructions">
+                <h3>📋 Modern Widget Test Instructions:</h3>
+                <ol>
+                    <li>Select the <strong>Cottonshoppen.dk Assistant</strong> (fully configured)</li>
+                    <li>Click "Load Responses API Widget"</li>
+                    <li>Look for the modern <strong>floating chat button</strong> with gradient background</li>
+                    <li>Try asking: <em>"Can you show me some KONG products?"</em> to see clickable links</li>
+                    <li>Notice the <strong>smooth animations</strong> and typing indicators</li>
+                    <li>Test the <strong>send button</strong> or press Enter to send messages</li>
+                    <li>Observe the <strong>modern message bubbles</strong> with different styling for user/AI</li>
+                    <li>Click on the <strong>product links</strong> to verify they open in new tabs</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="content">
+            <h2>🎯 Testing Responses API Features</h2>
+            
+            <h3>Conversation Context</h3>
+            <p>The Responses API automatically maintains conversation context using <code>previous_response_id</code>. No need to manually build conversation arrays!</p>
+            
+            <h3>Prompt Management</h3>
+            <p>Prompts are now managed centrally on OpenAI's platform, allowing for easy updates without code deployment.</p>
+            
+            <h3>Advanced AI Capabilities</h3>
+            <p>The Cottonshoppen.dk assistant demonstrates advanced features like:</p>
+            <ul>
+                <li>Danish language responses</li>
+                <li>Product recommendations with links</li>
+                <li>Contextual conversation flow</li>
+                <li>Built-in reasoning and tool usage</li>
+            </ul>
+
+            <h3>Error Handling</h3>
+            <p>The widget gracefully handles API errors, invalid prompt IDs, and network issues with user-friendly error messages.</p>
+        </div>
+        
+        <div class="card">
+            <h2>Integration Code (Responses API)</h2>
+            <p>To integrate this Responses API widget into your own website:</p>
+            <div class="instructions">
+                <code id="integrationCode">
+                    &lt;script src="http://localhost:3000/api/widget-responses/cottonshoppen-widget-456"&gt;&lt;/script&gt;
+                </code>
+            </div>
+            <p><em>Replace the widget ID with your configured widget.</em></p>
+            
+            <h3>Required Setup:</h3>
+            <ol>
+                <li>Create prompts at platform.openai.com</li>
+                <li>Configure widget with prompt ID</li>
+                <li>Deploy and test</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let currentScript = null;
+        
+        function loadWidget() {
+            const widgetId = document.getElementById('widgetSelect').value;
+            const apiUrl = 'http://localhost:3000';
+            
+            // Remove existing widget script if any
+            if (currentScript) {
+                currentScript.remove();
+                
+                // Remove existing widget elements
+                const existingBtn = document.querySelector('button[style*="position:fixed"]');
+                const existingBox = document.querySelector('div[style*="position:fixed"][style*="flex-direction:column"]');
+                if (existingBtn) existingBtn.remove();
+                if (existingBox) existingBox.remove();
+            }
+            
+            // Create and load new Responses API widget script
+            currentScript = document.createElement('script');
+            currentScript.src = `${apiUrl}/api/widget-responses/${widgetId}`;
+            currentScript.async = true;
+            currentScript.onerror = () => {
+                alert(`❌ Failed to load widget "${widgetId}". Check console for details.`);
+            };
+            document.head.appendChild(currentScript);
+            
+            // Update integration code display
+            document.getElementById('integrationCode').innerHTML = 
+                `&lt;script src="${apiUrl}/api/widget-responses/${widgetId}"&gt;&lt;/script&gt;`;
+                
+            // Show success message
+            setTimeout(() => {
+                if (widgetId === 'cottonshoppen-widget-456') {
+                    alert(`✅ Cottonshoppen.dk widget loaded! Try asking about cotton products in Danish or English.`);
+                } else {
+                    alert(`⚠️ Widget "${widgetId}" loaded, but may need prompt ID configuration to work properly.`);
+                }
+            }, 500);
+        }
+        
+        // Load Cottonshoppen widget by default (since it's fully configured)
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('widgetSelect').value = 'cottonshoppen-widget-456';
+                loadWidget();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

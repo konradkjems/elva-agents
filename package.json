@@ -1,0 +1,40 @@
+{
+  "name": "elva-chat-widget",
+  "version": "1.0.0",
+  "description": "AI Chat Widget Platform with conversation storage",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "init-db": "node scripts/init-db.cjs",
+    "init-db-responses": "node scripts/init-db-responses.cjs",
+    "migrate-responses": "npm run init-db-responses",
+    "setup": "npm install && npm run init-db",
+    "setup-responses": "npm install && npm run init-db-responses"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "mongodb": "^6.19.0",
+    "next": "^14.0.0",
+    "next-auth": "^4.24.11",
+    "openai": "^4.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0"
+  },
+  "keywords": [
+    "ai",
+    "chat",
+    "widget",
+    "openai",
+    "mongodb"
+  ],
+  "author": "Elva Solutions",
+  "license": "ISC"
+}
