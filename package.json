@@ -15,18 +15,30 @@
     "setup-responses": "npm install && npm run init-db-responses"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.7",
+    "@heroicons/react": "^2.2.0",
+    "cloudinary": "^2.7.0",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.0.0",
     "mongodb": "^6.19.0",
+    "multer": "^2.0.2",
     "next": "^14.0.0",
     "next-auth": "^4.24.11",
     "openai": "^4.0.0",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react-colorful": "^5.6.1",
+    "react-dom": "^18.0.0",
+    "recharts": "^3.1.2",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@types/multer": "^2.0.0",
     "@types/node": "^20.0.0",
+    "autoprefixer": "^10.4.21",
     "eslint": "^8.0.0",
-    "eslint-config-next": "^14.0.0"
+    "eslint-config-next": "^14.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17"
   },
   "keywords": [
     "ai",
