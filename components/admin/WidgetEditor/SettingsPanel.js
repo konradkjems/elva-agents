@@ -51,6 +51,12 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
             }>
               Advanced
             </Tab>
+            <Tab className={({ selected }) =>
+              `w-full rounded-lg py-2.5 text-sm font-medium leading-5
+               ${selected ? 'bg-white text-blue-700 shadow' : 'text-blue-100 hover:bg-white/[0.12] hover:text-white'}`
+            }>
+              Embed Code
+            </Tab>
           </Tab.List>
           
           <Tab.Panels className="mt-4">
@@ -431,6 +437,83 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
               {/* Advanced Settings */}
               <div className="space-y-6">
                 <AdvancedSettings settings={settings} onChange={onChange} />
+              </div>
+            </Tab.Panel>
+            
+            <Tab.Panel>
+              {/* Embed Code Settings */}
+              <div className="space-y-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-lg font-medium text-blue-900 mb-2">🚀 Widget Integration</h3>
+                  <p className="text-sm text-blue-700 mb-4">
+                    Copy the code below and add it to your website before the closing &lt;/body&gt; tag.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Widget ID
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={settings._id || 'widget-id'}
+                          readOnly
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-mono"
+                        />
+                        <button
+                          onClick={() => navigator.clipboard.writeText(settings._id || 'widget-id')}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
+                        >
+                          📋 Copy ID
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Embed Code
+                      </label>
+                      <div className="relative">
+                        <textarea
+                          readOnly
+                          value={`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm font-mono resize-none"
+                        />
+                        <button
+                          onClick={() => {
+                            const code = `<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`;
+                            navigator.clipboard.writeText(code);
+                          }}
+                          className="absolute top-2 right-2 px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                        >
+                          📋 Copy
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <h4 className="font-medium text-green-900 mb-2">✅ Integration Steps:</h4>
+                      <ol className="text-sm text-green-800 space-y-1 list-decimal list-inside">
+                        <li>Copy the embed code above</li>
+                        <li>Paste it before the closing &lt;/body&gt; tag on your website</li>
+                        <li>Save and publish your website</li>
+                        <li>The chat widget will appear in the bottom-right corner</li>
+                      </ol>
+                    </div>
+                    
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <h4 className="font-medium text-yellow-900 mb-2">💡 Pro Tips:</h4>
+                      <ul className="text-sm text-yellow-800 space-y-1 list-disc list-inside">
+                        <li>Test the widget on a staging site first</li>
+                        <li>Make sure your domain is whitelisted in OpenAI settings</li>
+                        <li>The widget automatically adapts to mobile devices</li>
+                        <li>Changes to widget settings take effect immediately</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
             </Tab.Panel>
           </Tab.Panels>

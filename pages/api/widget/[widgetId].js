@@ -173,7 +173,7 @@ export default async function handler(req, res) {
     currentConversationId = null;
     localStorage.removeItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`);
     messages.innerHTML = '';
-    addMessage('assistant', 'Hello! How can I help you today?');
+    showWelcomeMessage();
   };
 
   // Load previous conversation if exists
@@ -181,7 +181,73 @@ export default async function handler(req, res) {
     loadConversationHistory();
   } else {
     // Show welcome message for new conversations
-    addMessage('assistant', 'Hello! How can I help you today?');
+    showWelcomeMessage();
+  }
+
+  function showWelcomeMessage() {
+    const welcomeMsg = WIDGET_CONFIG.messages?.welcomeMessage || 'Hello! How can I help you today?';
+    addMessage('assistant', welcomeMsg);
+    
+    // Show suggested responses if available and no messages yet
+    if (WIDGET_CONFIG.messages?.suggestedResponses?.length > 0) {
+      showSuggestedResponses();
+    }
+  }
+
+  function showSuggestedResponses() {
+    const suggestedResponses = WIDGET_CONFIG.messages?.suggestedResponses || [];
+    if (suggestedResponses.length === 0) return;
+    
+    // Create suggested responses container
+    const responsesContainer = document.createElement('div');
+    responsesContainer.style.cssText = \`
+      margin: 12px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    \`;
+    
+    suggestedResponses.forEach((response, index) => {
+      const button = document.createElement('button');
+      button.textContent = response;
+      button.style.cssText = \`
+        padding: 6px 12px;
+        font-size: 12px;
+        color: #6b7280;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+      \`;
+      
+      button.onmouseover = () => {
+        button.style.background = '#e5e7eb';
+        button.style.borderColor = '#9ca3af';
+      };
+      
+      button.onmouseout = () => {
+        button.style.background = '#f3f4f6';
+        button.style.borderColor = '#d1d5db';
+      };
+      
+      button.onclick = () => {
+        input.value = response;
+        sendMessage();
+        // Remove suggested responses after clicking
+        if (responsesContainer.parentNode) {
+          responsesContainer.parentNode.removeChild(responsesContainer);
+        }
+      };
+      
+      responsesContainer.appendChild(button);
+    });
+    
+    // Add to messages container
+    messages.appendChild(responsesContainer);
+    messages.scrollTop = messages.scrollHeight;
   }
 
   function addMessage(role, content) {
@@ -228,17 +294,17 @@ export default async function handler(req, res) {
             addMessage(msg.role, msg.content);
           });
         } else {
-          addMessage('assistant', 'Hello! How can I help you today?');
+          showWelcomeMessage();
         }
       } else {
         // Conversation not found, start fresh
         currentConversationId = null;
         localStorage.removeItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`);
-        addMessage('assistant', 'Hello! How can I help you today?');
+        showWelcomeMessage();
       }
     } catch (error) {
       console.log('Could not load conversation history');
-      addMessage('assistant', 'Hello! How can I help you today?');
+      showWelcomeMessage();
     }
   }
 
@@ -248,7 +314,7 @@ export default async function handler(req, res) {
     chatBox.style.display = isVisible ? "none" : "flex";
     
     if (!isVisible && messages.children.length === 0) {
-      addMessage('assistant', 'Hello! How can I help you today?');
+      showWelcomeMessage();
     }
   };
 

@@ -12,7 +12,11 @@
     "init-db-responses": "node scripts/init-db-responses.cjs",
     "migrate-responses": "npm run init-db-responses",
     "setup": "npm install && npm run init-db",
-    "setup-responses": "npm install && npm run init-db-responses"
+    "setup-responses": "npm install && npm run init-db-responses",
+    "deploy": "node scripts/deploy.js",
+    "deploy:prepare": "npm run deploy",
+    "deploy:vercel": "vercel --prod",
+    "deploy:netlify": "npm run build && netlify deploy --prod --dir=out"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

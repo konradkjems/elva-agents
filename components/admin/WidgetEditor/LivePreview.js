@@ -231,27 +231,26 @@ export default function LivePreview({ widget, settings }) {
               )}
             </div>
 
-            {/* Suggested Responses - Now at bottom */}
-            {messages.length === 0 && settings.messages?.suggestedResponses?.length > 0 && (
-              <div className="px-4 pb-3 border-t border-gray-100 bg-gray-50">
-                <div className="space-y-2 pt-3">
-                  {settings.messages.suggestedResponses
-                    .filter(response => response.trim())
-                    .map((response, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSuggestedResponse(response)}
-                        className="w-full text-left px-4 py-3 text-sm text-gray-700 bg-white rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transform hover:scale-[1.02]"
-                      >
-                        {response}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
-
             {/* Input Area */}
             <div className="p-4 border-t border-gray-100 bg-white rounded-b-lg">
+              {/* Suggested Responses - Above input field */}
+              {messages.length === 0 && settings.messages?.suggestedResponses?.length > 0 && (
+                <div className="mb-3">
+                  <div className="flex flex-wrap gap-2">
+                    {settings.messages.suggestedResponses
+                      .filter(response => response.trim())
+                      .map((response, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSuggestedResponse(response)}
+                          className="inline-flex items-center px-3 py-1.5 text-xs text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition-all duration-200 border border-gray-200 hover:border-gray-300"
+                        >
+                          {response}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
               <div className="flex space-x-3">
                 <input
                   type="text"
