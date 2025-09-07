@@ -1,4 +1,6 @@
-// Mock data for testing (temporary solution while fixing MongoDB connection)
+import clientPromise from '../../../../lib/mongodb';
+
+// Mock data for testing (fallback when MongoDB is unavailable)
 const mockWidgets = [
   {
     _id: '1',
@@ -229,7 +231,20 @@ export default async function handler(req, res) {
     const { id } = req.query;
 
     if (req.method === 'GET') {
-      // Get single widget from mock data
+      // Try to get widget from MongoDB first
+      try {
+        const client = await clientPromise;
+        const db = client.db('elva-agents');
+        const widget = await db.collection('widgets').findOne({ _id: id });
+        
+        if (widget) {
+          return res.status(200).json(widget);
+        }
+      } catch (dbError) {
+        console.error('Database error, falling back to mock data:', dbError);
+      }
+      
+      // Fallback to mock data
       const widget = mockWidgets.find(w => w._id === id);
       
       if (!widget) {
@@ -238,7 +253,30 @@ export default async function handler(req, res) {
       
       res.status(200).json(widget);
     } else if (req.method === 'PUT') {
-      // Update widget in mock data
+      // Try to update widget in MongoDB first
+      try {
+        const client = await clientPromise;
+        const db = client.db('elva-agents');
+        
+        const updateData = {
+          ...req.body,
+          updatedAt: new Date()
+        };
+        
+        const result = await db.collection('widgets').findOneAndUpdate(
+          { _id: id },
+          { $set: updateData },
+          { returnDocument: 'after' }
+        );
+        
+        if (result.value) {
+          return res.status(200).json(result.value);
+        }
+      } catch (dbError) {
+        console.error('Database error, falling back to mock data:', dbError);
+      }
+      
+      // Fallback to mock data
       const widgetIndex = mockWidgets.findIndex(w => w._id === id);
       
       if (widgetIndex === -1) {
@@ -253,7 +291,21 @@ export default async function handler(req, res) {
       mockWidgets[widgetIndex] = { ...mockWidgets[widgetIndex], ...updateData };
       res.status(200).json(mockWidgets[widgetIndex]);
     } else if (req.method === 'DELETE') {
-      // Delete widget from mock data
+      // Try to delete widget from MongoDB first
+      try {
+        const client = await clientPromise;
+        const db = client.db('elva-agents');
+        
+        const result = await db.collection('widgets').deleteOne({ _id: id });
+        
+        if (result.deletedCount > 0) {
+          return res.status(200).json({ message: 'Widget deleted successfully' });
+        }
+      } catch (dbError) {
+        console.error('Database error, falling back to mock data:', dbError);
+      }
+      
+      // Fallback to mock data
       const widgetIndex = mockWidgets.findIndex(w => w._id === id);
       
       if (widgetIndex === -1) {

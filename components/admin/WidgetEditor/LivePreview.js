@@ -1,4 +1,12 @@
 import { useState, useEffect } from 'react';
+import { 
+  ChatBubbleLeftRightIcon, 
+  XMarkIcon, 
+  PaperAirplaneIcon,
+  ArrowPathIcon,
+  DevicePhoneMobileIcon,
+  ComputerDesktopIcon
+} from '@heroicons/react/24/outline';
 
 export default function LivePreview({ widget, settings }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -6,6 +14,7 @@ export default function LivePreview({ widget, settings }) {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showPopup, setShowPopup] = useState(true);
+  const [deviceView, setDeviceView] = useState('desktop'); // 'desktop', 'mobile'
 
   // Show popup message when widget is closed
   useEffect(() => {
@@ -77,48 +86,125 @@ export default function LivePreview({ widget, settings }) {
     const placement = settings.appearance?.placement || 'bottom-right';
     switch (placement) {
       case 'bottom-right':
-        return { bottom: '20px', right: '20px' };
+        return { bottom: '-10px', right: '20px' };
       case 'bottom-left':
-        return { bottom: '20px', left: '20px' };
+        return { bottom: '-10px', left: '20px' };
       case 'top-right':
-        return { top: '20px', right: '20px' };
+        return { top: '-10px', right: '20px' };
       case 'top-left':
-        return { top: '20px', left: '20px' };
+        return { top: '-10px', left: '20px' };
       default:
-        return { bottom: '20px', right: '20px' };
+        return { bottom: '-10px', right: '20px' };
     }
   };
 
-  const widgetStyles = {
-    width: `${settings.appearance?.width || 450}px`,
-    height: `${settings.appearance?.height || 600}px`,
-    borderRadius: `${settings.appearance?.borderRadius || 20}px`,
-    boxShadow: settings.appearance?.shadow || '0 20px 60px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.1)',
-    backgroundColor: '#ffffff',
-    backdropFilter: settings.appearance?.backdropBlur ? 'blur(20px)' : 'none',
-    ...getPlacementStyles()
+  const getWidgetStyles = () => {
+    const baseWidth = settings.appearance?.width || 450;
+    const baseHeight = settings.appearance?.height || 600;
+    
+    // Adjust dimensions for mobile view
+    const width = deviceView === 'mobile' 
+      ? Math.min(baseWidth, 320) 
+      : baseWidth;
+    const height = deviceView === 'mobile' 
+      ? Math.min(baseHeight, 500) 
+      : baseHeight;
+
+    return {
+      width: `${width}px`,
+      height: `${height}px`,
+      borderRadius: `${settings.appearance?.borderRadius || 20}px`,
+      boxShadow: settings.appearance?.shadow || '0 20px 60px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.1)',
+      backgroundColor: '#ffffff',
+      backdropFilter: settings.appearance?.backdropBlur ? 'blur(20px)' : 'none',
+      ...getPlacementStyles()
+    };
   };
 
   const themeColor = settings.appearance?.themeColor || '#3b82f6';
   const secondaryColor = settings.appearance?.secondaryColor || '#8b5cf6';
   const useGradient = settings.appearance?.useGradient !== false; // Default to true
 
+  const getDeviceStyles = () => {
+    if (deviceView === 'mobile') {
+      return {
+        width: '375px',
+        height: '667px',
+        margin: '0 auto',
+        border: '8px solid #1f2937',
+        borderRadius: '25px',
+        position: 'relative',
+        overflow: 'hidden'
+      };
+    }
+    return {
+      width: '100%',
+      height: '900px', // Fixed height for desktop view
+      minHeight: '800px',
+      position: 'relative'
+    };
+  };
+
   return (
     <div className="relative h-full">
+      {/* Device View Controls */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <span className="text-sm font-medium text-gray-700">Preview:</span>
+          <button
+            onClick={() => setDeviceView('desktop')}
+            className={`p-2 rounded-lg transition-colors ${
+              deviceView === 'desktop' 
+                ? 'bg-blue-100 text-blue-700' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <ComputerDesktopIcon className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setDeviceView('mobile')}
+            className={`p-2 rounded-lg transition-colors ${
+              deviceView === 'mobile' 
+                ? 'bg-blue-100 text-blue-700' 
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <DevicePhoneMobileIcon className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => {
+              setMessages([]);
+              setInputValue('');
+              setIsTyping(false);
+            }}
+            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+            title="Clear chat"
+          >
+            <ArrowPathIcon className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
       {/* Preview Container */}
-      <div className="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 rounded-lg p-4 h-full overflow-hidden">
-        <div className="text-sm text-gray-300 mb-4">
-          Preview Area - Klik på chatbotten i hjørnet for at teste den
+      <div 
+        className="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 rounded-lg p-4 overflow-hidden relative"
+        style={getDeviceStyles()}
+      >
+        <div className="text-sm text-gray-300 mb-4 text-center">
+          {deviceView === 'mobile' ? 'Mobile Preview' : 'Desktop Preview'} - Click the chat button to test
         </div>
         
         {/* Widget Preview */}
-        <div className="relative" style={{ height: 'calc(100% - 60px)' }}>
+        <div className="relative" style={{ height: 'calc(100% - 80px)' }}>
           {/* Chat Widget */}
           <div 
             className={`absolute transition-all duration-500 ease-out transform ${
               isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4 pointer-events-none'
             }`}
-            style={widgetStyles}
+            style={getWidgetStyles()}
           >
             {/* Header */}
             <div 
@@ -134,13 +220,11 @@ export default function LivePreview({ widget, settings }) {
               </div>
               
               <div className="flex items-center space-x-3 relative z-10">
-                <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+                <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <ChatBubbleLeftRightIcon className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="font-semibold text-white">
+                  <div className="font-semibold text-white text-sm">
                     {settings.branding?.title || 'Elva AI kundeservice Agent'}
                   </div>
                   <div className="text-xs opacity-90">
@@ -150,18 +234,16 @@ export default function LivePreview({ widget, settings }) {
               </div>
               
               <div className="flex items-center space-x-2 relative z-10">
-                <button className="text-white hover:text-gray-200 transition-colors duration-200 p-1 rounded-full hover:bg-white/10">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button className="text-white hover:text-gray-200 transition-colors duration-200 p-2 rounded-full hover:bg-white/10">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                   </svg>
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-white hover:text-gray-200 transition-colors duration-200 p-1 rounded-full hover:bg-white/10"
+                  className="text-white hover:text-gray-200 transition-colors duration-200 p-2 rounded-full hover:bg-white/10"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <XMarkIcon className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -268,9 +350,7 @@ export default function LivePreview({ widget, settings }) {
                     background: useGradient ? `linear-gradient(135deg, ${secondaryColor} 0%, ${themeColor} 100%)` : secondaryColor
                   }}
                 >
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
+                  <PaperAirplaneIcon className="w-4 h-4 mr-1" />
                   Send
                 </button>
               </div>
@@ -283,8 +363,8 @@ export default function LivePreview({ widget, settings }) {
               className="absolute transition-all duration-500 ease-out transform animate-bounce-in"
               style={{
                 ...getPlacementStyles(),
-                bottom: '80px',
-                right: '20px',
+                bottom: '65px',
+                right: '25px',
                 zIndex: 10
               }}
             >
@@ -331,32 +411,10 @@ export default function LivePreview({ widget, settings }) {
             }}
           >
             <div className="flex items-center justify-center h-full">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
+              <ChatBubbleLeftRightIcon className="w-6 h-6 text-white" />
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Preview Controls */}
-      <div className="absolute bottom-4 right-4 flex space-x-2">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="px-4 py-2 bg-gray-800 text-white text-xs rounded-lg hover:bg-gray-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          {isOpen ? 'Luk Chat' : 'Åbn Chat'}
-        </button>
-        <button
-          onClick={() => {
-            setMessages([]);
-            setInputValue('');
-            setIsTyping(false);
-          }}
-          className="px-4 py-2 bg-gray-600 text-white text-xs rounded-lg hover:bg-gray-500 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-        >
-          Ryd Chat
-        </button>
       </div>
 
       <style jsx>{`
