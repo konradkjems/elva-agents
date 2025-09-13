@@ -1,14 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
-  // Handle SSL certificate issues in development
-  webpack: (config, { dev }) => {
-    if (dev) {
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-    }
-    return config;
-  },
   async headers() {
     return [
       {

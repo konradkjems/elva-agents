@@ -1,4 +1,5 @@
 import clientPromise from "../../../lib/mongodb";
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -33,8 +34,14 @@ export default async function handler(req, res) {
     const client = await clientPromise;
     const db = client.db("chatwidgets");
     
+    // Convert string ID to ObjectId if it's a valid ObjectId string
+    let queryId = widgetId;
+    if (ObjectId.isValid(widgetId)) {
+      queryId = new ObjectId(widgetId);
+    }
+    
     // Get widget configuration to verify it exists and get theme
-    const widget = await db.collection("widgets").findOne({ _id: widgetId });
+    const widget = await db.collection("widgets").findOne({ _id: queryId });
     if (!widget) {
       return res.status(404).json({ error: "Widget not found" });
     }
@@ -49,14 +56,35 @@ export default async function handler(req, res) {
 
     // Set content type to JavaScript
     res.setHeader('Content-Type', 'application/javascript');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes during development
 
     // Generate the widget JavaScript with embedded configuration
     const widgetScript = `
 (function() {
   const WIDGET_CONFIG = ${JSON.stringify({
     widgetId: widgetId,
-    theme: widget.theme || {},
+    theme: {
+      buttonColor: widget.appearance?.themeColor || widget.theme?.buttonColor || '#4f46e5',
+      chatBg: widget.appearance?.chatBg || widget.theme?.chatBg || '#ffffff',
+      width: widget.appearance?.width || widget.theme?.width || 450,
+      height: widget.appearance?.height || widget.theme?.height || 600,
+      borderRadius: widget.appearance?.borderRadius || widget.theme?.borderRadius || 20,
+      shadow: widget.appearance?.shadow || widget.theme?.shadow || '0 20px 60px rgba(0,0,0,0.15)',
+      backdropBlur: widget.appearance?.backdropBlur || widget.theme?.backdropBlur || false
+    },
+    messages: {
+      welcomeMessage: widget.messages?.welcomeMessage || 'Hello! How can I help you today?',
+      popupMessage: widget.messages?.popupMessage || 'Hi! Need help?',
+      typingText: widget.messages?.typingText || 'AI is thinking...',
+      inputPlaceholder: widget.messages?.inputPlaceholder || 'Type your message...',
+      suggestedResponses: widget.messages?.suggestedResponses || []
+    },
+    branding: {
+      title: widget.branding?.title || widget.name || 'AI Assistant',
+      assistantName: widget.branding?.assistantName || 'Assistant',
+      companyName: widget.branding?.companyName || 'Company',
+      showBranding: widget.branding?.showBranding !== undefined ? widget.branding.showBranding : true
+    },
     apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
     apiType: 'responses', // Indicate this uses Responses API
     openai: {
@@ -75,35 +103,33 @@ export default async function handler(req, res) {
   // Current conversation ID
   let currentConversationId = localStorage.getItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`) || null;
 
-  // Create chat button with modern design
+  // Create chat button with modern design matching LivePreview
   const chatBtn = document.createElement("button");
   chatBtn.innerHTML = \`
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M20 2H4C2.9 2 2 2.9 2 4V18L6 14H20C21.1 14 22 13.1 22 12V4C22 2.9 21.1 2 20 2Z" fill="currentColor"/>
-      <circle cx="7" cy="8" r="1" fill="white"/>
-      <circle cx="12" cy="8" r="1" fill="white"/>
-      <circle cx="17" cy="8" r="1" fill="white"/>
+      <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <span style="margin-left: 8px;">Chat</span>
   \`;
   chatBtn.style.cssText = \`
     position: fixed;
     bottom: 24px;
     right: 24px;
-    padding: 14px 20px;
-    border-radius: 50px;
-    background: linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}, \${adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)});
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: \${WIDGET_CONFIG.appearance?.useGradient ? 
+      \`linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'} 0%, \${WIDGET_CONFIG.appearance?.secondaryColor || adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)} 100%)\` : 
+      WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
     color: white;
     border: none;
     cursor: pointer;
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
+    justify-content: center;
     backdrop-filter: blur(10px);
   \`;
   
@@ -369,6 +395,28 @@ export default async function handler(req, res) {
     // Add to messages container
     messages.appendChild(responsesContainer);
     messages.scrollTop = messages.scrollHeight;
+  }
+
+  function formatMessage(content) {
+    // Convert text to HTML with basic formatting
+    return content
+      // Convert line breaks to <br>
+      .replace(/\\n/g, '<br>')
+      // Convert bullet points (- item) to HTML list items
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      // Wrap consecutive list items in <ul>
+      .replace(/(<li>.*<\\/li>(\\s*<li>.*<\\/li>)*)/g, '<ul>$1</ul>')
+      // Convert numbered lists (1. item) to HTML ordered list
+      .replace(/^(\\d+)\\. (.+)$/gm, '<li>$2</li>')
+      // Wrap numbered list items in <ol>
+      .replace(/(<li>.*<\\/li>(\\s*<li>.*<\\/li>)*)/g, '<ol>$1</ol>')
+      // Convert bold text (**text** or __text__)
+      .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+      .replace(/__(.*?)__/g, '<strong>$1</strong>')
+      // Convert italic text (*text* or _text_)
+      .replace(/\\*(.*?)\\*/g, '<em>$1</em>')
+      .replace(/_(.*?)_/g, '<em>$1</em>')
+      // Convert code blocks (temporarily disabled due to syntax issues)
   }
 
   function addMessage(role, content) {

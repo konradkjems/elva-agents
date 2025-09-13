@@ -74,13 +74,22 @@ export default function CreateWidget() {
   const [error, setError] = useState('');
 
   const handleInputChange = (section, key, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value
-      }
-    }));
+    if (section === 'name' || section === 'description') {
+      // Handle top-level fields
+      setFormData(prev => ({
+        ...prev,
+        [section]: value
+      }));
+    } else {
+      // Handle nested fields
+      setFormData(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          [key]: value
+        }
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -140,7 +149,7 @@ export default function CreateWidget() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => handleInputChange('name', 'name', e.target.value)}
+                  onChange={(e) => handleInputChange('name', '', e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   placeholder="My Customer Service Widget"
                 />
@@ -165,7 +174,7 @@ export default function CreateWidget() {
                 </label>
                 <textarea
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', 'description', e.target.value)}
+                  onChange={(e) => handleInputChange('description', '', e.target.value)}
                   rows={3}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   placeholder="Describe what this widget will be used for..."
@@ -177,7 +186,7 @@ export default function CreateWidget() {
           {/* OpenAI Configuration */}
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">OpenAI Configuration</h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Prompt ID *
@@ -190,34 +199,40 @@ export default function CreateWidget() {
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   placeholder="pmpt_..."
                 />
+                <p className="mt-2 text-sm text-gray-500">
+                  Enter the Prompt ID from your OpenAI platform. This identifies which AI assistant configuration to use.
+                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Version
-                </label>
-                <input
-                  type="text"
-                  value={formData.openai.version}
-                  onChange={(e) => handleInputChange('openai', 'version', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="26"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Model
-                </label>
-                <select
-                  value={formData.openai.model}
-                  onChange={(e) => handleInputChange('openai', 'model', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                >
-                  <option value="gpt-4o-mini">GPT-4o Mini</option>
-                  <option value="gpt-4o">GPT-4o</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                </select>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-blue-900 mb-2">ℹ️ Model & Version Information</h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-medium text-blue-700 mb-1">
+                      Model (Managed by OpenAI Platform)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.openai.model}
+                      readOnly
+                      className="block w-full rounded-md border-blue-200 bg-blue-50 text-blue-700 sm:text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-blue-700 mb-1">
+                      Version (Auto-updated)
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.openai.version}
+                      readOnly
+                      className="block w-full rounded-md border-blue-200 bg-blue-50 text-blue-700 sm:text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-blue-600">
+                  Model and version are automatically managed by the OpenAI platform based on your prompt configuration.
+                </p>
               </div>
             </div>
           </div>

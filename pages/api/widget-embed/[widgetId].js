@@ -1,4 +1,5 @@
 import clientPromise from '../../../lib/mongodb.js';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   // Handle CORS preflight requests
@@ -21,8 +22,15 @@ export default async function handler(req, res) {
     let widget;
     try {
       const client = await clientPromise;
-      const db = client.db('elva-agents');
-      widget = await db.collection('widgets').findOne({ _id: widgetId });
+      const db = client.db('chatwidgets');
+      
+      // Convert string ID to ObjectId if it's a valid ObjectId string
+      let queryId = widgetId;
+      if (ObjectId.isValid(widgetId)) {
+        queryId = new ObjectId(widgetId);
+      }
+      
+      widget = await db.collection('widgets').findOne({ _id: queryId });
     } catch (dbError) {
       console.log('Database error, using fallback widget data:', dbError.message);
       // Fallback to mock data if database fails
@@ -62,7 +70,7 @@ export default async function handler(req, res) {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/javascript');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes during development
 
     // Auto-detect if this should use Responses API or legacy
     const useResponsesAPI = widget.openai?.promptId && widget.openai?.promptId !== 'demo-prompt';
@@ -72,9 +80,28 @@ export default async function handler(req, res) {
 (function() {
   const WIDGET_CONFIG = ${JSON.stringify({
     widgetId: widgetId,
-    theme: widget.theme || {},
-    messages: widget.messages || {},
-    branding: widget.branding || {},
+    theme: {
+      buttonColor: widget.appearance?.themeColor || widget.theme?.buttonColor || '#4f46e5',
+      chatBg: widget.appearance?.chatBg || widget.theme?.chatBg || '#ffffff',
+      width: widget.appearance?.width || widget.theme?.width || 450,
+      height: widget.appearance?.height || widget.theme?.height || 600,
+      borderRadius: widget.appearance?.borderRadius || widget.theme?.borderRadius || 20,
+      shadow: widget.appearance?.shadow || widget.theme?.shadow || '0 20px 60px rgba(0,0,0,0.15)',
+      backdropBlur: widget.appearance?.backdropBlur || widget.theme?.backdropBlur || false
+    },
+    messages: {
+      welcomeMessage: widget.messages?.welcomeMessage || 'Hello! How can I help you today?',
+      popupMessage: widget.messages?.popupMessage || 'Hi! Need help?',
+      typingText: widget.messages?.typingText || 'AI is thinking...',
+      inputPlaceholder: widget.messages?.inputPlaceholder || 'Type your message...',
+      suggestedResponses: widget.messages?.suggestedResponses || []
+    },
+    branding: {
+      title: widget.branding?.title || widget.name || 'AI Assistant',
+      assistantName: widget.branding?.assistantName || 'Assistant',
+      companyName: widget.branding?.companyName || 'Company',
+      showBranding: widget.branding?.showBranding !== undefined ? widget.branding.showBranding : true
+    },
     apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
     openai: useResponsesAPI ? {
@@ -107,35 +134,33 @@ export default async function handler(req, res) {
     return (usePound ? '#' : '') + (r << 16 | g << 8 | b).toString(16).padStart(6, '0');
   }
 
-  // Create chat button with modern design
+  // Create chat button with modern design matching LivePreview
   const chatBtn = document.createElement("button");
   chatBtn.innerHTML = \`
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M20 2H4C2.9 2 2 2.9 2 4V18L6 14H20C21.1 14 22 13.1 22 12V4C22 2.9 21.1 2 20 2Z" fill="currentColor"/>
-      <circle cx="7" cy="8" r="1" fill="white"/>
-      <circle cx="12" cy="8" r="1" fill="white"/>
-      <circle cx="17" cy="8" r="1" fill="white"/>
+      <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    <span style="margin-left: 8px;">Chat</span>
   \`;
   chatBtn.style.cssText = \`
     position: fixed;
     bottom: 24px;
     right: 24px;
-    padding: 14px 20px;
-    border-radius: 50px;
-    background: linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}, \${adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)});
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: \${WIDGET_CONFIG.appearance?.useGradient ? 
+      \`linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'} 0%, \${WIDGET_CONFIG.appearance?.secondaryColor || adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)} 100%)\` : 
+      WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
     color: white;
     border: none;
     cursor: pointer;
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    font-weight: 600;
-    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
+    justify-content: center;
     backdrop-filter: blur(10px);
   \`;
   
@@ -150,6 +175,30 @@ export default async function handler(req, res) {
   };
   
   document.body.appendChild(chatBtn);
+
+  // Create popup message (initially hidden)
+  const popupMessage = document.createElement("div");
+  popupMessage.style.cssText = \`
+    position: fixed;
+    bottom: 100px;
+    right: 24px;
+    max-width: 280px;
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+    z-index: 10001;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    color: #1f2937;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+  \`;
+  
+  document.body.appendChild(popupMessage);
 
   // Create chat box with modern design matching LivePreview
   const chatBox = document.createElement("div");
@@ -167,7 +216,6 @@ export default async function handler(req, res) {
     box-shadow: \${WIDGET_CONFIG.theme.shadow || '0 20px 60px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.1)'};
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     backdrop-filter: \${WIDGET_CONFIG.theme.backdropBlur ? 'blur(20px)' : 'none'};
-    border: 1px solid rgba(255, 255, 255, 0.2);
     overflow: hidden;
     transition: all 0.3s ease;
   \`;
@@ -301,10 +349,66 @@ export default async function handler(req, res) {
   
   document.body.appendChild(chatBox);
 
+  // Track chat state to prevent popup conflicts
+  let chatIsOpen = false;
+  
+  // Show initial popup message after a short delay (only if chat is closed)
+  setTimeout(() => {
+    if (!chatIsOpen) {
+      showPopup();
+    }
+  }, 2000);
+
   // Close button functionality
   document.getElementById(\`closeBtn_\${WIDGET_CONFIG.widgetId}\`).onclick = () => {
     chatBox.style.display = "none";
+    chatIsOpen = false; // Update state
+    // Show popup after closing chat
+    setTimeout(() => {
+      showPopup();
+    }, 500);
   };
+
+  // Popup message functions
+  function showPopup() {
+    // Don't show popup if chat is open
+    if (chatIsOpen) return;
+    
+    if (WIDGET_CONFIG.messages?.popupMessage) {
+      popupMessage.innerHTML = \`
+        <button id="popupCloseBtn_\${WIDGET_CONFIG.widgetId}" style="position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border: none; background: none; color: #6b7280; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s ease;">×</button>
+        <div style="padding-right: 24px;">\${WIDGET_CONFIG.messages.popupMessage}</div>
+      \`;
+      popupMessage.style.opacity = '1';
+      popupMessage.style.transform = 'translateY(0)';
+      popupMessage.style.pointerEvents = 'auto';
+      
+      // Add event listener to close button
+      const closeBtn = document.getElementById(\`popupCloseBtn_\${WIDGET_CONFIG.widgetId}\`);
+      if (closeBtn) {
+        closeBtn.onmouseover = () => {
+          closeBtn.style.backgroundColor = '#f3f4f6';
+          closeBtn.style.color = '#374151';
+        };
+        closeBtn.onmouseout = () => {
+          closeBtn.style.backgroundColor = 'transparent';
+          closeBtn.style.color = '#6b7280';
+        };
+        closeBtn.onclick = () => {
+          hidePopup();
+        };
+      }
+    }
+  }
+  
+  function hidePopup() {
+    popupMessage.style.opacity = '0';
+    popupMessage.style.transform = 'translateY(20px)';
+    popupMessage.style.pointerEvents = 'none';
+  }
+  
+  // Make hidePopup globally accessible
+  window.hidePopup = hidePopup;
 
   // Toggle chat box visibility with smooth animations
   chatBtn.onclick = () => {
@@ -314,10 +418,19 @@ export default async function handler(req, res) {
       // Hide animation
       chatBox.style.transform = 'scale(0.95) translateY(10px)';
       chatBox.style.opacity = '0';
+      chatIsOpen = false; // Update state
       setTimeout(() => {
         chatBox.style.display = "none";
+        // Show popup after hiding chat
+        setTimeout(() => {
+          showPopup();
+        }, 500);
       }, 300);
     } else {
+      // Hide popup when opening chat
+      hidePopup();
+      chatIsOpen = true; // Update state
+      
       // Show animation
       chatBox.style.display = "flex";
       requestAnimationFrame(() => {
@@ -399,6 +512,28 @@ export default async function handler(req, res) {
     messages.scrollTop = messages.scrollHeight;
   }
 
+  function formatMessage(content) {
+    // Convert text to HTML with basic formatting
+    return content
+      // Convert line breaks to <br>
+      .replace(/\\n/g, '<br>')
+      // Convert bullet points (- item) to HTML list items
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      // Wrap consecutive list items in <ul>
+      .replace(/(<li>.*<\\/li>(\\s*<li>.*<\\/li>)*)/g, '<ul>$1</ul>')
+      // Convert numbered lists (1. item) to HTML ordered list
+      .replace(/^(\\d+)\\. (.+)$/gm, '<li>$2</li>')
+      // Wrap numbered list items in <ol>
+      .replace(/(<li>.*<\\/li>(\\s*<li>.*<\\/li>)*)/g, '<ol>$1</ol>')
+      // Convert bold text (**text** or __text__)
+      .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+      .replace(/__(.*?)__/g, '<strong>$1</strong>')
+      // Convert italic text (*text* or _text_)
+      .replace(/\\*(.*?)\\*/g, '<em>$1</em>')
+      .replace(/_(.*?)_/g, '<em>$1</em>')
+      // Convert code blocks (temporarily disabled due to syntax issues)
+  }
+
   function addMessage(role, content) {
     const messageDiv = document.createElement("div");
     const isUser = role === 'user';
@@ -423,7 +558,7 @@ export default async function handler(req, res) {
         box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
         word-wrap: break-word;
       \`;
-      messageBubble.textContent = content;
+      messageBubble.innerHTML = formatMessage(content);
       messageDiv.appendChild(messageBubble);
     } else {
       // Assistant message - with avatar and name like LivePreview
@@ -475,7 +610,7 @@ export default async function handler(req, res) {
         border: 1px solid #e5e7eb;
         word-wrap: break-word;
       \`;
-      messageBubble.textContent = content;
+      messageBubble.innerHTML = formatMessage(content);
       
       messageContent.appendChild(nameLabel);
       messageContent.appendChild(messageBubble);

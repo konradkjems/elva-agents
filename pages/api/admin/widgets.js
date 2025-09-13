@@ -232,7 +232,7 @@ export default async function handler(req, res) {
       // Get all widgets from MongoDB
       try {
         const client = await clientPromise;
-        const db = client.db('elva-agents');
+        const db = client.db('chatwidgets');
         const widgets = await db.collection('widgets').find({}).toArray();
         res.status(200).json(widgets);
       } catch (dbError) {
@@ -243,7 +243,7 @@ export default async function handler(req, res) {
       // Create new widget in MongoDB
       try {
         const client = await clientPromise;
-        const db = client.db('elva-agents');
+        const db = client.db('chatwidgets');
         const newWidget = {
           ...req.body,
           createdAt: new Date(),

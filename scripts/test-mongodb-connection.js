@@ -16,15 +16,17 @@ async function testConnection() {
     retryWrites: true,
     w: 'majority',
     tls: true,
-    tlsAllowInvalidCertificates: false,
-    tlsAllowInvalidHostnames: false,
+    tlsAllowInvalidCertificates: true,
+    tlsAllowInvalidHostnames: true,
     connectTimeoutMS: 10000,
     socketTimeoutMS: 45000,
     serverSelectionTimeoutMS: 10000,
     maxPoolSize: 10,
     minPoolSize: 5,
     maxIdleTimeMS: 30000,
-    heartbeatFrequencyMS: 10000
+    heartbeatFrequencyMS: 10000,
+    authSource: 'admin',
+    authMechanism: 'SCRAM-SHA-1'
   };
 
   let client;
@@ -36,7 +38,7 @@ async function testConnection() {
     console.log('✅ Successfully connected to MongoDB!');
     
     // Test database operations
-    const db = client.db('elva-agents');
+    const db = client.db('chatwidgets');
     
     // Check if widgets collection exists
     const collections = await db.listCollections().toArray();

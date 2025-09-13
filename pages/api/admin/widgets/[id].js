@@ -1,4 +1,5 @@
 import clientPromise from '../../../../lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 // Mock data for testing (fallback when MongoDB is unavailable)
 const mockWidgets = [
@@ -234,8 +235,15 @@ export default async function handler(req, res) {
       // Try to get widget from MongoDB first
       try {
         const client = await clientPromise;
-        const db = client.db('elva-agents');
-        const widget = await db.collection('widgets').findOne({ _id: id });
+        const db = client.db('chatwidgets');
+        
+        // Convert string ID to ObjectId if it's a valid ObjectId string
+        let queryId = id;
+        if (ObjectId.isValid(id)) {
+          queryId = new ObjectId(id);
+        }
+        
+        const widget = await db.collection('widgets').findOne({ _id: queryId });
         
         if (widget) {
           return res.status(200).json(widget);
@@ -256,21 +264,39 @@ export default async function handler(req, res) {
       // Try to update widget in MongoDB first
       try {
         const client = await clientPromise;
-        const db = client.db('elva-agents');
+        const db = client.db('chatwidgets');
+        
+        // Convert string ID to ObjectId if it's a valid ObjectId string
+        let queryId = id;
+        if (ObjectId.isValid(id)) {
+          queryId = new ObjectId(id);
+        }
         
         const updateData = {
           ...req.body,
           updatedAt: new Date()
         };
         
-        const result = await db.collection('widgets').findOneAndUpdate(
-          { _id: id },
-          { $set: updateData },
-          { returnDocument: 'after' }
+        // Remove _id from update data as it's immutable
+        delete updateData._id;
+        
+        // Use updateOne instead of findOneAndUpdate for better compatibility
+        const updateResult = await db.collection('widgets').updateOne(
+          { _id: queryId },
+          { $set: updateData }
         );
         
-        if (result.value) {
-          return res.status(200).json(result.value);
+        if (updateResult.modifiedCount > 0) {
+          // Fetch the updated document
+          const updatedWidget = await db.collection('widgets').findOne({ _id: queryId });
+          return res.status(200).json(updatedWidget);
+        } else if (updateResult.matchedCount === 0) {
+          // Document not found
+          return res.status(404).json({ error: 'Widget not found' });
+        } else {
+          // Document found but not modified (no changes)
+          const widget = await db.collection('widgets').findOne({ _id: queryId });
+          return res.status(200).json(widget);
         }
       } catch (dbError) {
         console.error('Database error, falling back to mock data:', dbError);
@@ -288,15 +314,24 @@ export default async function handler(req, res) {
         updatedAt: new Date()
       };
       
+      // Remove _id from update data as it's immutable
+      delete updateData._id;
+      
       mockWidgets[widgetIndex] = { ...mockWidgets[widgetIndex], ...updateData };
       res.status(200).json(mockWidgets[widgetIndex]);
     } else if (req.method === 'DELETE') {
       // Try to delete widget from MongoDB first
       try {
         const client = await clientPromise;
-        const db = client.db('elva-agents');
+        const db = client.db('chatwidgets');
         
-        const result = await db.collection('widgets').deleteOne({ _id: id });
+        // Convert string ID to ObjectId if it's a valid ObjectId string
+        let queryId = id;
+        if (ObjectId.isValid(id)) {
+          queryId = new ObjectId(id);
+        }
+        
+        const result = await db.collection('widgets').deleteOne({ _id: queryId });
         
         if (result.deletedCount > 0) {
           return res.status(200).json({ message: 'Widget deleted successfully' });
