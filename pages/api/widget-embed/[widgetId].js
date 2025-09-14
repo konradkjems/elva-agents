@@ -1790,9 +1790,15 @@ export default async function handler(req, res) {
         \`\${WIDGET_CONFIG.apiUrl}/api/respond\`;
         
       // Debug log to see what URL is being used
-      console.log('API Endpoint:', apiEndpoint);
-      console.log('WIDGET_CONFIG.apiUrl:', WIDGET_CONFIG.apiUrl);
-      console.log('Environment NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+      console.log('🚀 Sending request to:', apiEndpoint);
+      console.log('📋 Request payload:', {
+        widgetId: WIDGET_CONFIG.widgetId,
+        message: msg.substring(0, 50) + '...',
+        userId,
+        conversationId: currentConversationId
+      });
+      console.log('🔧 WIDGET_CONFIG.apiUrl:', WIDGET_CONFIG.apiUrl);
+      console.log('🌍 Environment NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
         
       // Create AbortController for timeout
       const controller = new AbortController();
@@ -1858,10 +1864,19 @@ export default async function handler(req, res) {
         }
       } else {
         // Handle specific error responses from the API
+        console.error('🚨 HTTP Error Response:', {
+          status: res.status,
+          statusText: res.statusText,
+          url: apiEndpoint,
+          headers: Object.fromEntries(res.headers.entries())
+        });
+        
         let errorMessage = 'Sorry, I encountered an error. Please try again.';
         
         try {
           const errorData = await res.json();
+          console.error('📄 Error response body:', errorData);
+          
           if (errorData.error) {
             // Use specific error message from API
             errorMessage = errorData.error;
@@ -1872,6 +1887,7 @@ export default async function handler(req, res) {
             }
           }
         } catch (parseError) {
+          console.error('❌ Failed to parse error response:', parseError);
           // If we can't parse the error response, use status-based messages
           if (res.status === 400) {
             errorMessage = 'Invalid request. Please check your message and try again.';
@@ -1892,18 +1908,30 @@ export default async function handler(req, res) {
         messages.removeChild(typingDiv);
       }
       
+      // Detailed error logging
+      console.error('❌ Fetch error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        apiEndpoint: apiEndpoint,
+        widgetId: WIDGET_CONFIG.widgetId,
+        timestamp: new Date().toISOString()
+      });
+      
       // Provide more specific error messages based on error type
       let errorMessage = 'Sorry, I encountered a connection error. Please try again.';
       
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         errorMessage = 'Network connection failed. Please check your internet connection and try again.';
+        console.error('🌐 Network error - possible CORS or connectivity issue');
       } else if (error.name === 'AbortError') {
         errorMessage = 'Request was cancelled. Please try again.';
+        console.error('⏹️ Request was aborted (timeout or manual cancellation)');
       } else if (error.message && error.message.includes('timeout')) {
         errorMessage = 'Request timed out. Please try again.';
-      } else if (WIDGET_CONFIG.apiUrl.includes('localhost')) {
-        // In development, show more details
-        errorMessage = 'Connection error: ' + error.message;
+        console.error('⏰ Request timed out after 30 seconds');
+      } else {
+        console.error('🔍 Unexpected error type:', error.name, error.message);
       }
       
       addMessage('assistant', errorMessage);
