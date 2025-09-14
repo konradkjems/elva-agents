@@ -125,7 +125,15 @@ export default async function handler(req, res) {
       imageSettings: widget.branding?.imageSettings || null,
       iconSizes: widget.branding?.iconSizes || null
     },
-    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://elva-agents.vercel.app',
+    apiUrl: (() => {
+      // Try to get the correct API URL
+      const envUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (envUrl && !envUrl.includes('localhost')) {
+        return envUrl;
+      }
+      // Default to Vercel URL
+      return 'https://elva-agents.vercel.app';
+    })(),
     apiType: useResponsesAPI ? 'responses' : 'legacy',
     openai: useResponsesAPI ? {
       promptId: widget.openai.promptId,
@@ -1788,6 +1796,10 @@ export default async function handler(req, res) {
       const apiEndpoint = WIDGET_CONFIG.apiType === 'responses' ? 
         \`\${WIDGET_CONFIG.apiUrl}/api/respond-responses\` : 
         \`\${WIDGET_CONFIG.apiUrl}/api/respond\`;
+        
+      // Debug log to see what URL is being used
+      console.log('API Endpoint:', apiEndpoint);
+      console.log('WIDGET_CONFIG.apiUrl:', WIDGET_CONFIG.apiUrl);
         
       // Create AbortController for timeout
       const controller = new AbortController();
