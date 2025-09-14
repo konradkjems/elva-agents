@@ -6,22 +6,24 @@ import WidgetCard from '../../components/admin/WidgetCard';
 export default function AdminDashboard() {
   const router = useRouter();
   const [widgets, setWidgets] = useState([]);
+  const [analyticsOverview, setAnalyticsOverview] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchWidgets();
+    fetchDashboardData();
   }, []);
 
-  const fetchWidgets = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/admin/widgets');
+      const response = await fetch('/api/admin/analytics-overview');
       if (!response.ok) {
-        throw new Error('Failed to fetch widgets');
+        throw new Error('Failed to fetch dashboard data');
       }
       const data = await response.json();
-      setWidgets(data);
+      setWidgets(data.widgets);
+      setAnalyticsOverview(data.overview);
     } catch (error) {
-      console.error('Failed to fetch widgets:', error);
+      console.error('Failed to fetch dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -65,7 +67,7 @@ export default function AdminDashboard() {
                 <div className="ml-5 w-0 flex-1">
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 truncate">Total Widgets</dt>
-                    <dd className="text-lg font-medium text-gray-900">{widgets.length}</dd>
+                    <dd className="text-lg font-medium text-gray-900">{analyticsOverview?.totalWidgets || 0}</dd>
                   </dl>
                 </div>
               </div>
@@ -86,7 +88,7 @@ export default function AdminDashboard() {
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 truncate">Active Widgets</dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {widgets.filter(w => w.status === 'active').length}
+                      {analyticsOverview?.activeWidgets || 0}
                     </dd>
                   </dl>
                 </div>
@@ -108,7 +110,7 @@ export default function AdminDashboard() {
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 truncate">Total Conversations</dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {widgets.reduce((sum, w) => sum + (w.analytics?.totalConversations || 0), 0)}
+                      {analyticsOverview?.totalConversations || 0}
                     </dd>
                   </dl>
                 </div>
@@ -130,10 +132,7 @@ export default function AdminDashboard() {
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 truncate">Avg Response Time</dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {widgets.length > 0 
-                        ? (widgets.reduce((sum, w) => sum + (w.analytics?.averageResponseTime || 0), 0) / widgets.length).toFixed(1)
-                        : '0'
-                      }s
+                      {analyticsOverview?.avgResponseTime || 0}ms
                     </dd>
                   </dl>
                 </div>

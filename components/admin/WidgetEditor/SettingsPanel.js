@@ -486,6 +486,23 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         placeholder="AI tænker..."
                       />
                     </div>
+
+                    <div>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={settings.messages?.showTypingText !== false}
+                          onChange={(e) => handleFieldChange('messages', 'showTypingText', e.target.checked)}
+                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                        />
+                        <span className="ml-2 text-sm font-medium text-gray-700">
+                          Show typing text with dots
+                        </span>
+                      </label>
+                      <p className="mt-1 text-xs text-gray-500">
+                        When disabled, only animated dots will be shown without any text
+                      </p>
+                    </div>
                   </div>
                 </div>
 

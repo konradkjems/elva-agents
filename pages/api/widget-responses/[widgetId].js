@@ -670,6 +670,10 @@ export default async function handler(req, res) {
       justify-content: flex-start;
       animation: slideIn 0.3s ease-out;
     \`;
+    
+    const showTypingText = WIDGET_CONFIG.messages?.showTypingText !== false;
+    const typingText = WIDGET_CONFIG.messages?.typingText || 'AI is thinking...';
+    
     typingDiv.innerHTML = \`
       <div class="widget-typing" style="
         background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
@@ -688,7 +692,7 @@ export default async function handler(req, res) {
           <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></div>
           <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
         </div>
-        <span style="font-weight: 500;">AI is thinking...</span>
+        \${showTypingText ? \`<span style="font-weight: 500;">\${typingText}</span>\` : ''}
       </div>
     \`;
     messages.appendChild(typingDiv);

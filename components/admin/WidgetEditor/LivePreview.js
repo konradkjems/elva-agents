@@ -492,8 +492,15 @@ export default function LivePreview({ widget, settings }) {
                         </div>
                         <div className="flex flex-col">
                           <div className="text-xs text-gray-500 mb-2 font-medium">{settings.branding?.title || 'AI Assistant'}</div>
-                          <div className="bg-gray-50 text-gray-800 px-4 py-3 rounded-2xl text-sm shadow-sm border border-gray-100" style={{ borderRadius: '18px 18px 18px 4px' }}>
-                            {settings.messages?.typingText || 'AI tænker...'}
+                          <div className="bg-gray-50 text-gray-800 px-4 py-3 rounded-2xl text-sm shadow-sm border border-gray-100 flex items-center gap-2" style={{ borderRadius: '18px 18px 18px 4px' }}>
+                            <div className="flex gap-1">
+                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                            {settings.messages?.showTypingText !== false && (
+                              <span>{settings.messages?.typingText || 'AI tænker...'}</span>
+                            )}
                           </div>
                         </div>
                       </div>

@@ -1765,13 +1765,16 @@ export default async function handler(req, res) {
       align-items: center;
       gap: 8px;
     \`;
+    const showTypingText = WIDGET_CONFIG.messages?.showTypingText !== false;
+    const typingText = WIDGET_CONFIG.messages?.typingText || 'AI is thinking...';
+    
     typingBubble.innerHTML = \`
       <div style="display: flex; gap: 4px;">
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></div>
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></div>
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
       </div>
-      <span style="font-weight: 500;">\${WIDGET_CONFIG.messages?.typingText || 'AI is thinking...'}</span>
+      \${showTypingText ? \`<span style="font-weight: 500;">\${typingText}</span>\` : ''}
     \`;
     
     typingContent.appendChild(typingNameLabel);
