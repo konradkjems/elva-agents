@@ -598,7 +598,7 @@ export default async function handler(req, res) {
   const poweredBy = document.createElement("div");
   poweredBy.style.cssText = \`
     text-align: center;
-    padding: 0px 20px 32px 16px;
+    padding: 0px 20px 16px 16px;
     font-size: 11px;
     color: \${themeColors.textColor};
     opacity: 0.6;
@@ -2217,6 +2217,37 @@ export default async function handler(req, res) {
     }
   }
 
+  // Store initial viewport height
+  let initialViewportHeight = window.innerHeight;
+  
+  // Function to handle mobile keyboard
+  function handleMobileKeyboard() {
+    if (window.innerWidth <= 768) {
+      const currentHeight = window.innerHeight;
+      const heightDifference = initialViewportHeight - currentHeight;
+      
+      // If keyboard is open (significant height reduction)
+      if (heightDifference > 150) {
+        // Adjust widget to stay visible above keyboard
+        if (chatBox.style.display === 'flex') {
+          chatBox.style.height = \`\${currentHeight - 16}px\`;
+          chatBox.style.bottom = '8px';
+          chatBox.style.top = '8px';
+          chatBox.style.position = 'fixed';
+        }
+        if (historyView.style.display === 'flex') {
+          historyView.style.height = \`\${currentHeight - 16}px\`;
+          historyView.style.bottom = '8px';
+          historyView.style.top = '8px';
+          historyView.style.position = 'fixed';
+        }
+      } else {
+        // Keyboard closed, restore normal positioning
+        updateMobileStyles();
+      }
+    }
+  }
+
   // Handle mobile responsiveness
   function updateMobileStyles() {
     if (window.innerWidth <= 768) { // Increased breakpoint for tablet support
@@ -2284,19 +2315,38 @@ export default async function handler(req, res) {
 
   window.addEventListener('resize', updateMobileStyles);
   window.addEventListener('resize', handleSafariViewport);
-  window.addEventListener('orientationchange', handleSafariViewport);
+  window.addEventListener('resize', handleMobileKeyboard);
+  window.addEventListener('orientationchange', () => {
+    // Update initial viewport height after orientation change
+    setTimeout(() => {
+      initialViewportHeight = window.innerHeight;
+      handleSafariViewport();
+      handleMobileKeyboard();
+    }, 500);
+  });
   
   // Handle Safari viewport changes on scroll (address bar hide/show)
   let lastHeight = window.innerHeight;
   window.addEventListener('scroll', () => {
     if (window.innerWidth <= 768 && Math.abs(window.innerHeight - lastHeight) > 50) {
       handleSafariViewport();
+      handleMobileKeyboard();
       lastHeight = window.innerHeight;
     }
   });
   
+  // Handle input focus/blur for keyboard detection
+  input.addEventListener('focus', () => {
+    setTimeout(handleMobileKeyboard, 300); // Delay to allow keyboard to open
+  });
+  
+  input.addEventListener('blur', () => {
+    setTimeout(handleMobileKeyboard, 300); // Delay to allow keyboard to close
+  });
+  
   updateMobileStyles();
   handleSafariViewport();
+  handleMobileKeyboard();
 
 })();
 `;
