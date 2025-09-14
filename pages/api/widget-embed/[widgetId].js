@@ -1783,11 +1783,12 @@ export default async function handler(req, res) {
     messages.appendChild(typingDiv);
     messages.scrollTop = messages.scrollHeight;
 
+    // Use appropriate API endpoint based on widget type
+    const apiEndpoint = WIDGET_CONFIG.apiType === 'responses' ? 
+      \`\${WIDGET_CONFIG.apiUrl}/api/respond-responses\` : 
+      \`\${WIDGET_CONFIG.apiUrl}/api/respond\`;
+
     try {
-      // Use appropriate API endpoint based on widget type
-      const apiEndpoint = WIDGET_CONFIG.apiType === 'responses' ? 
-        \`\${WIDGET_CONFIG.apiUrl}/api/respond-responses\` : 
-        \`\${WIDGET_CONFIG.apiUrl}/api/respond\`;
         
       // Debug log to see what URL is being used
       console.log('🚀 Sending request to:', apiEndpoint);
