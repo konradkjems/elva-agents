@@ -36,7 +36,8 @@ npm run deploy:production
 1. **Install Vercel CLI**: `npm i -g vercel`
 2. **Login**: `vercel login`
 3. **Deploy**: `vercel --prod`
-4. **Configure environment variables** from `vercel-env-vars.txt`
+4. **Configure environment variables** from `
+.txt`
 
 ### Step 4: Test Deployment
 1. **Follow**: `PRODUCTION_TESTING_GUIDE.md`
