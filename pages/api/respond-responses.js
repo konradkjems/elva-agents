@@ -27,8 +27,17 @@ export default async function handler(req, res) {
 
   try {
     const { widgetId, message, userId, conversationId } = req.body;
+    
+    console.log('📥 Received request:', {
+      widgetId,
+      message: message ? message.substring(0, 50) + '...' : 'null',
+      userId,
+      conversationId,
+      bodyKeys: Object.keys(req.body)
+    });
 
     if (!widgetId || !message || !userId) {
+      console.log('❌ Missing required fields:', { widgetId: !!widgetId, message: !!message, userId: !!userId });
       return res.status(400).json({ error: 'Missing required fields: widgetId, message, userId' });
     }
 
@@ -38,8 +47,16 @@ export default async function handler(req, res) {
     // Get widget configuration
     const widget = await db.collection("widgets").findOne({ _id: widgetId });
     if (!widget) {
+      console.log('❌ Widget not found:', widgetId);
       return res.status(404).json({ error: "Widget not found" });
     }
+    
+    console.log('✅ Widget found:', {
+      id: widget._id,
+      hasOpenAI: !!widget.openai,
+      promptId: widget.openai?.promptId,
+      version: widget.openai?.version
+    });
 
     // Check if widget has OpenAI prompt configuration for Responses API
     if (!widget.openai || !widget.openai.promptId) {
