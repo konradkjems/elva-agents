@@ -364,6 +364,7 @@ export default async function handler(req, res) {
 
   // Create chat box with modern design matching LivePreview
   const chatBox = document.createElement("div");
+  chatBox.className = 'widget-chat-box';
   chatBox.style.cssText = \`
     display: none;
     position: fixed;
@@ -386,6 +387,7 @@ export default async function handler(req, res) {
 
   // Create header matching LivePreview structure
   const header = document.createElement("div");
+  header.className = 'widget-header';
   header.style.cssText = \`
     background: linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}, \${adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)});
     color: white;
@@ -489,6 +491,7 @@ export default async function handler(req, res) {
 
   // Create messages container matching LivePreview
   const messages = document.createElement("div");
+  messages.className = 'widget-messages';
   messages.style.cssText = \`
     flex: 1;
     overflow-y: auto;
@@ -501,6 +504,7 @@ export default async function handler(req, res) {
 
     // Create input container matching LivePreview
     const inputContainer = document.createElement("div");
+    inputContainer.className = 'widget-input-container';
     inputContainer.style.cssText = \`
       background: \${themeColors.inputBg};
       border-radius: 0 0 \${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px;
@@ -594,7 +598,7 @@ export default async function handler(req, res) {
   const poweredBy = document.createElement("div");
   poweredBy.style.cssText = \`
     text-align: center;
-    padding: 0px 20px 8px 16px;
+    padding: 0px 20px 32px 16px;
     font-size: 11px;
     color: \${themeColors.textColor};
     opacity: 0.6;
@@ -696,7 +700,7 @@ export default async function handler(req, res) {
   const historyPoweredBy = document.createElement("div");
   historyPoweredBy.style.cssText = \`
     text-align: center;
-    padding: 8px 16px;
+    padding: 8px 16px 32px 32px;
     font-size: 11px;
     color: \${themeColors.textColor};
     opacity: 0.6;
@@ -2103,6 +2107,15 @@ export default async function handler(req, res) {
       color: \${themeColors.textColor} !important;
       opacity: 0.6 !important;
     }
+    
+    /* Safari viewport fix */
+    :root {
+      --vh: 1vh;
+    }
+    
+    .widget-chat-box {
+      height: calc(var(--vh, 1vh) * 100) !important;
+    }
   \`;
   document.head.appendChild(style);
 
@@ -2185,38 +2198,57 @@ export default async function handler(req, res) {
     }
   }
 
+  // Function to handle Safari viewport changes
+  function handleSafariViewport() {
+    if (window.innerWidth <= 768) {
+      // Force viewport update for Safari
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', \`\${vh}px\`);
+      
+      // Update chat box height with safe margins and Safari space
+      if (chatBox.style.display === 'flex') {
+        chatBox.style.height = \`calc(\${window.innerHeight}px - 16px - env(safe-area-inset-bottom, 20px))\`;
+        chatBox.style.bottom = \`calc(8px + env(safe-area-inset-bottom, 20px))\`;
+      }
+      if (historyView.style.display === 'flex') {
+        historyView.style.height = \`calc(\${window.innerHeight}px - 16px - env(safe-area-inset-bottom, 20px))\`;
+        historyView.style.bottom = \`calc(8px + env(safe-area-inset-bottom, 20px))\`;
+      }
+    }
+  }
+
   // Handle mobile responsiveness
   function updateMobileStyles() {
     if (window.innerWidth <= 768) { // Increased breakpoint for tablet support
-      // Mobile/Tablet full-screen mode
-      chatBox.style.width = '100vw';
-      chatBox.style.height = '100vh';
-      chatBox.style.borderRadius = '0';
-      chatBox.style.top = '0';
-      chatBox.style.left = '0';
-      chatBox.style.right = '0';
-      chatBox.style.bottom = '0';
+      // Mobile/Tablet full-screen mode with safe margins and bottom space for Safari
+      chatBox.style.width = 'calc(100vw - 16px)';
+      chatBox.style.height = 'calc(100vh - 16px - env(safe-area-inset-bottom, 20px))';
+      chatBox.style.borderRadius = '12px';
+      chatBox.style.top = '8px';
+      chatBox.style.left = '8px';
+      chatBox.style.right = '8px';
+      chatBox.style.bottom = 'calc(8px + env(safe-area-inset-bottom, 20px))';
       chatBox.style.position = 'fixed';
       chatBox.style.margin = '0';
       chatBox.style.padding = '0';
       
-      historyView.style.width = '100vw';
-      historyView.style.height = '100vh';
-      historyView.style.borderRadius = '0';
-      historyView.style.top = '0';
-      historyView.style.left = '0';
-      historyView.style.right = '0';
-      historyView.style.bottom = '0';
+      historyView.style.width = 'calc(100vw - 16px)';
+      historyView.style.height = 'calc(100vh - 16px - env(safe-area-inset-bottom, 20px))';
+      historyView.style.borderRadius = '12px';
+      historyView.style.top = '8px';
+      historyView.style.left = '8px';
+      historyView.style.right = '8px';
+      historyView.style.bottom = 'calc(8px + env(safe-area-inset-bottom, 20px))';
       historyView.style.position = 'fixed';
       historyView.style.margin = '0';
       historyView.style.padding = '0';
       
-      // Adjust header for full-screen
-      header.style.borderRadius = '0';
+      // Adjust header for mobile full-screen
+      header.style.borderRadius = '12px 12px 0 0';
       header.style.padding = '16px 20px';
       
-      // Adjust history header for full-screen
-      historyHeader.style.borderRadius = '0';
+      // Adjust history header for mobile full-screen
+      historyHeader.style.borderRadius = '12px 12px 0 0';
       historyHeader.style.padding = '16px 20px';
       
       // Adjust dropdown menu for mobile
@@ -2251,7 +2283,20 @@ export default async function handler(req, res) {
   }
 
   window.addEventListener('resize', updateMobileStyles);
+  window.addEventListener('resize', handleSafariViewport);
+  window.addEventListener('orientationchange', handleSafariViewport);
+  
+  // Handle Safari viewport changes on scroll (address bar hide/show)
+  let lastHeight = window.innerHeight;
+  window.addEventListener('scroll', () => {
+    if (window.innerWidth <= 768 && Math.abs(window.innerHeight - lastHeight) > 50) {
+      handleSafariViewport();
+      lastHeight = window.innerHeight;
+    }
+  });
+  
   updateMobileStyles();
+  handleSafariViewport();
 
 })();
 `;
