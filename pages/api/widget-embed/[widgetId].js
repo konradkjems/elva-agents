@@ -125,7 +125,7 @@ export default async function handler(req, res) {
       imageSettings: widget.branding?.imageSettings || null,
       iconSizes: widget.branding?.iconSizes || null
     },
-    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://elva-agents.vercel.app',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
     openai: useResponsesAPI ? {
       promptId: widget.openai.promptId,
