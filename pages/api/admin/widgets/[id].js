@@ -32,6 +32,7 @@ const mockWidgets = [
       welcomeMessage: 'Hej! 😊 Jeg er kundeservice agent for Elva Solutions. Du kan spørge mig om hvad som helst.',
       inputPlaceholder: 'Skriv en besked her',
       typingText: 'AI tænker...',
+      showTypingText: true,
       suggestedResponses: [
         'Hvad er fordelene ved at bruge Elva Solutions?',
         'Hvad koster det at få en AI-Agent?',
@@ -106,6 +107,7 @@ const mockWidgets = [
       welcomeMessage: 'Velkommen! Jeg hjælper dig med at finde den perfekte løsning for din virksomhed.',
       inputPlaceholder: 'Beskriv dine behov...',
       typingText: 'Analyserer...',
+      showTypingText: true,
       suggestedResponses: [
         'Hvad kan Elva Solutions tilbyde min virksomhed?',
         'Kan I hjælpe med automatisering?',

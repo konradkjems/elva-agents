@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     
     // Smart caching based on environment and widget update time
     const isDevelopment = false; // Always production in widget
-    const cacheTime = isDevelopment ? 10 : 300; // 10 seconds in dev, 5 minutes in production
+    const cacheTime = isDevelopment ? 10 : 30; // 10 seconds in dev, 30 seconds in production (reduced for testing)
     
     // Use ETag based on widget's updatedAt timestamp for better cache invalidation
     const etag = `"${widget.updatedAt ? new Date(widget.updatedAt).getTime() : Date.now()}"`;
@@ -86,6 +86,14 @@ export default async function handler(req, res) {
     }
     
     res.setHeader('Cache-Control', `public, max-age=${cacheTime}, must-revalidate`);
+
+    // Debug log for showTypingText setting
+    console.log('🔧 Widget Embed Debug:', {
+      widgetId: widgetId,
+      showTypingText: widget.messages?.showTypingText,
+      typingText: widget.messages?.typingText,
+      updatedAt: widget.updatedAt
+    });
 
     // Auto-detect if this should use Responses API or legacy
     const useResponsesAPI = widget.openai?.promptId && widget.openai?.promptId !== 'demo-prompt';
@@ -110,6 +118,7 @@ export default async function handler(req, res) {
       welcomeMessage: widget.messages?.welcomeMessage || 'Hello! How can I help you today?',
       popupMessage: widget.messages?.popupMessage || 'Hi! Need help?',
       typingText: widget.messages?.typingText || 'AI is thinking...',
+      showTypingText: widget.messages?.showTypingText !== false,
       inputPlaceholder: widget.messages?.inputPlaceholder || 'Type your message...',
       suggestedResponses: widget.messages?.suggestedResponses || [],
       bannerText: widget.messages?.bannerText || null,
@@ -703,6 +712,22 @@ export default async function handler(req, res) {
   // Track chat state to prevent popup conflicts
   let chatIsOpen = false;
   let historyIsOpen = false;
+  
+  // Function to prevent body scroll on mobile
+  function preventBodyScroll() {
+    if (window.innerWidth <= 768) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    }
+  }
+  
+  // Function to restore body scroll
+  function restoreBodyScroll() {
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+  }
 
   // Function to animate icon change
   function animateIconChange(newIconHTML) {
@@ -759,6 +784,8 @@ export default async function handler(req, res) {
   document.getElementById(\`closeBtn_\${WIDGET_CONFIG.widgetId}\`).onclick = () => {
     chatBox.style.display = "none";
     chatIsOpen = false; // Update state
+    // Restore body scroll on mobile
+    restoreBodyScroll();
     // Show popup after closing chat
     setTimeout(() => {
       showPopup();
@@ -773,6 +800,8 @@ export default async function handler(req, res) {
   document.getElementById(\`closeHistoryBtn_\${WIDGET_CONFIG.widgetId}\`).onclick = () => {
     historyView.style.display = "none";
     historyIsOpen = false;
+    // Restore body scroll on mobile
+    restoreBodyScroll();
     // Show popup after closing history
     setTimeout(() => {
       showPopup();
@@ -870,6 +899,9 @@ export default async function handler(req, res) {
     historyIsOpen = true;
     updatePositioning(); // Update positioning when opening history
     
+    // Prevent body scroll on mobile
+    preventBodyScroll();
+    
     // Animate icon to chevron down when history is open
     animateIconChange(\`
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
@@ -889,6 +921,9 @@ export default async function handler(req, res) {
     chatBox.style.display = 'flex';
     chatIsOpen = true;
     updatePositioning(); // Update positioning when returning to chat
+    
+    // Prevent body scroll on mobile (chat is still open)
+    preventBodyScroll();
     
     // Keep chevron down icon when chat is open (no animation needed as it's the same icon)
     // No need to animate since we're already showing chevron down
@@ -1209,6 +1244,9 @@ export default async function handler(req, res) {
       chatIsOpen = false;
       historyIsOpen = false;
       
+      // Restore body scroll on mobile
+      restoreBodyScroll();
+      
       setTimeout(() => {
         chatBox.style.display = "none";
         historyView.style.display = "none";
@@ -1221,6 +1259,9 @@ export default async function handler(req, res) {
       // Hide popup when opening chat
       hidePopup();
       chatIsOpen = true; // Update state
+
+      // Prevent body scroll on mobile
+      preventBodyScroll();
 
       // Animate icon to chevron down
       animateIconChange(\`
@@ -1752,6 +1793,9 @@ export default async function handler(req, res) {
     typingNameLabel.textContent = WIDGET_CONFIG.branding.title || 'AI Assistant';
     
     const typingBubble = document.createElement("div");
+    const showTypingText = WIDGET_CONFIG.messages?.showTypingText !== false;
+    const typingText = WIDGET_CONFIG.messages?.typingText || 'AI is thinking...';
+    
     typingBubble.style.cssText = \`
       background: \${themeColors.messageBg};
       color: \${themeColors.textColor};
@@ -1763,15 +1807,13 @@ export default async function handler(req, res) {
       border: 1px solid \${themeColors.borderColor};
       display: flex;
       align-items: center;
-      gap: 8px;
+      \${showTypingText ? 'gap: 8px;' : ''}
     \`;
-    const showTypingText = WIDGET_CONFIG.messages?.showTypingText !== false;
-    const typingText = WIDGET_CONFIG.messages?.typingText || 'AI is thinking...';
     
     typingBubble.innerHTML = \`
-      <div style="display: flex; gap: 4px;">
-        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></div>
-        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></div>
+      <div style="display: flex;">
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s; margin-right: 4px;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s; margin-right: 4px;"></div>
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
       </div>
       \${showTypingText ? \`<span style="font-weight: 500;">\${typingText}</span>\` : ''}
@@ -2069,6 +2111,11 @@ export default async function handler(req, res) {
     const placement = WIDGET_CONFIG.appearance?.placement || 'bottom-right';
     console.log('updatePositioning called with placement:', placement);
     
+    // Skip positioning updates if we're in mobile full-screen mode
+    if (window.innerWidth <= 768 && (chatIsOpen || historyIsOpen)) {
+      return; // Full-screen mode is handled in updateMobileStyles
+    }
+    
     // Clear all positioning properties first
     chatBox.style.left = '';
     chatBox.style.right = '';
@@ -2079,8 +2126,8 @@ export default async function handler(req, res) {
     historyView.style.top = '';
     historyView.style.bottom = '';
     
-    if (window.innerWidth <= 480) {
-      // Mobile positioning
+    if (window.innerWidth <= 768) {
+      // Mobile positioning (when closed)
       chatBox.style.width = 'calc(100vw - 40px)';
       chatBox.style.height = 'calc(100vh - 120px)';
       historyView.style.width = 'calc(100vw - 40px)';
@@ -2140,17 +2187,66 @@ export default async function handler(req, res) {
 
   // Handle mobile responsiveness
   function updateMobileStyles() {
-    // Update positioning based on placement
-    updatePositioning();
-    
-    if (window.innerWidth <= 480) {
+    if (window.innerWidth <= 768) { // Increased breakpoint for tablet support
+      // Mobile/Tablet full-screen mode
+      chatBox.style.width = '100vw';
+      chatBox.style.height = '100vh';
+      chatBox.style.borderRadius = '0';
+      chatBox.style.top = '0';
+      chatBox.style.left = '0';
+      chatBox.style.right = '0';
+      chatBox.style.bottom = '0';
+      chatBox.style.position = 'fixed';
+      chatBox.style.margin = '0';
+      chatBox.style.padding = '0';
+      
+      historyView.style.width = '100vw';
+      historyView.style.height = '100vh';
+      historyView.style.borderRadius = '0';
+      historyView.style.top = '0';
+      historyView.style.left = '0';
+      historyView.style.right = '0';
+      historyView.style.bottom = '0';
+      historyView.style.position = 'fixed';
+      historyView.style.margin = '0';
+      historyView.style.padding = '0';
+      
+      // Adjust header for full-screen
+      header.style.borderRadius = '0';
+      header.style.padding = '16px 20px';
+      
+      // Adjust history header for full-screen
+      historyHeader.style.borderRadius = '0';
+      historyHeader.style.padding = '16px 20px';
+      
       // Adjust dropdown menu for mobile
       menuDropdown.style.minWidth = '240px';
       menuDropdown.style.right = '-10px';
     } else {
+      // Desktop mode - reset to original positioning
+      chatBox.style.position = 'fixed';
+      chatBox.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px\`;
+      chatBox.style.margin = '';
+      chatBox.style.padding = '';
+      
+      historyView.style.position = 'fixed';
+      historyView.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px\`;
+      historyView.style.margin = '';
+      historyView.style.padding = '';
+      
+      // Reset headers for desktop
+      header.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0\`;
+      header.style.padding = '20px';
+      
+      historyHeader.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0\`;
+      historyHeader.style.padding = '20px';
+      
       // Reset dropdown menu for desktop
       menuDropdown.style.minWidth = '280px';
       menuDropdown.style.right = '0';
+      
+      // Update positioning for desktop
+      updatePositioning();
     }
   }
 

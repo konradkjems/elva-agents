@@ -73,6 +73,14 @@ export default async function handler(req, res) {
     
     res.setHeader('Cache-Control', `public, max-age=${cacheTime}, must-revalidate`);
 
+    // Debug log for showTypingText setting
+    console.log('🔧 Widget Responses Debug:', {
+      widgetId: widgetId,
+      showTypingText: widget.messages?.showTypingText,
+      typingText: widget.messages?.typingText,
+      updatedAt: widget.updatedAt
+    });
+
     // Generate the widget JavaScript with embedded configuration
     const widgetScript = `
 (function() {
@@ -91,6 +99,7 @@ export default async function handler(req, res) {
       welcomeMessage: widget.messages?.welcomeMessage || 'Hello! How can I help you today?',
       popupMessage: widget.messages?.popupMessage || 'Hi! Need help?',
       typingText: widget.messages?.typingText || 'AI is thinking...',
+      showTypingText: widget.messages?.showTypingText !== false,
       inputPlaceholder: widget.messages?.inputPlaceholder || 'Type your message...',
       suggestedResponses: widget.messages?.suggestedResponses || []
     },
@@ -685,11 +694,11 @@ export default async function handler(req, res) {
         border: 1px solid #e5e7eb;
         display: flex;
         align-items: center;
-        gap: 8px;
+        \${showTypingText ? 'gap: 8px;' : ''}
       ">
-        <div style="display: flex; gap: 4px;">
-          <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></div>
-          <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></div>
+        <div style="display: flex;">
+          <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s; margin-right: 4px;"></div>
+          <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s; margin-right: 4px;"></div>
           <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
         </div>
         \${showTypingText ? \`<span style="font-weight: 500;">\${typingText}</span>\` : ''}
