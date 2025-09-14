@@ -56,7 +56,22 @@ export default async function handler(req, res) {
 
     // Set content type to JavaScript
     res.setHeader('Content-Type', 'application/javascript');
-    res.setHeader('Cache-Control', 'public, max-age=300'); // Cache for 5 minutes during development
+    
+    // Smart caching based on environment and widget update time
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const cacheTime = isDevelopment ? 10 : 300; // 10 seconds in dev, 5 minutes in production
+    
+    // Use ETag based on widget's updatedAt timestamp for better cache invalidation
+    const etag = `"${widget.updatedAt ? new Date(widget.updatedAt).getTime() : Date.now()}"`;
+    res.setHeader('ETag', etag);
+    
+    // Check if client has cached version
+    if (req.headers['if-none-match'] === etag) {
+      res.status(304).end();
+      return;
+    }
+    
+    res.setHeader('Cache-Control', `public, max-age=${cacheTime}, must-revalidate`);
 
     // Generate the widget JavaScript with embedded configuration
     const widgetScript = `

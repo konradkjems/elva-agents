@@ -23,9 +23,62 @@ const sampleWidgets = [
       promptId: "pmpt_REPLACE_WITH_YOUR_PROMPT_ID", // Replace with your actual prompt ID
       version: null // Use latest version, or specify version number like "19"
     },
-    theme: {
-      buttonColor: "#4f46e5",
-      chatBg: "#ffffff"
+    appearance: {
+      theme: "light",
+      themeColor: "#4f46e5",
+      secondaryColor: "#8b5cf6",
+      width: 450,
+      height: 600,
+      placement: "bottom-right",
+      borderRadius: 20,
+      shadow: "0 20px 60px rgba(0,0,0,0.15)",
+      backdropBlur: true,
+      animationSpeed: "normal",
+      customCSS: "",
+      useGradient: true
+    },
+    messages: {
+      welcomeMessage: "Hello! How can I help you today?",
+      inputPlaceholder: "Type your message...",
+      typingText: "AI is thinking...",
+      suggestedResponses: [
+        "What can you help me with?",
+        "Tell me more about your services",
+        "How do I get started?",
+        "Contact support"
+      ],
+      popupMessage: "Hi! Need help?",
+      popupDelay: 5000,
+      autoClose: false,
+      closeButtonText: "Close"
+    },
+    branding: {
+      title: "AI Assistant",
+      assistantName: "Assistant",
+      avatarUrl: "",
+      logoUrl: "",
+      companyName: "Company",
+      customLogo: false,
+      showBranding: true
+    },
+    advanced: {
+      showCloseButton: true,
+      showConversationHistory: true,
+      showNewChatButton: true,
+      enableAnalytics: true,
+      trackEvents: ["message_sent", "conversation_started", "widget_opened"],
+      conversationRetention: 30,
+      maxConversations: 100,
+      language: "en",
+      timezone: "UTC"
+    },
+    analytics: {
+      totalConversations: 0,
+      totalMessages: 0,
+      averageResponseTime: 0,
+      satisfactionScore: 0,
+      lastActivity: new Date(),
+      monthlyStats: {}
     },
     createdAt: new Date(),
     updatedAt: new Date()
@@ -38,9 +91,62 @@ const sampleWidgets = [
       promptId: "pmpt_68aee2cd8bd881958ad99778533d3d750e3642c07a43035a", // Your Cottonshoppen prompt
       version: "19" // Lock to specific version for production stability
     },
-    theme: {
-      buttonColor: "#059669",
-      chatBg: "#f0fdf4"
+    appearance: {
+      theme: "light",
+      themeColor: "#059669",
+      secondaryColor: "#10b981",
+      width: 450,
+      height: 600,
+      placement: "bottom-right",
+      borderRadius: 20,
+      shadow: "0 20px 60px rgba(0,0,0,0.15)",
+      backdropBlur: true,
+      animationSpeed: "normal",
+      customCSS: "",
+      useGradient: true
+    },
+    messages: {
+      welcomeMessage: "Hej! 😊 Jeg er en virtuel Assistent for Cottonshoppen. Du kan spørge mig om hvad som helst",
+      inputPlaceholder: "Skriv en besked her",
+      typingText: "AI tænker...",
+      suggestedResponses: [
+        "Hvor ofte skal jeg bade min hund?",
+        "Hvad for en hundesnor skal jeg købe?",
+        "Hvilke produkter anbefaler du?",
+        "Hvordan returnerer jeg en vare?"
+      ],
+      popupMessage: "Hej! 👋 Har du brug for hjælp?",
+      popupDelay: 5000,
+      autoClose: false,
+      closeButtonText: "Luk"
+    },
+    branding: {
+      title: "Cottonshoppen Ai-Kundeservice",
+      assistantName: "Cottonshoppen.dk Assistent",
+      avatarUrl: "",
+      logoUrl: "",
+      companyName: "Cottonshoppen.dk",
+      customLogo: false,
+      showBranding: true
+    },
+    advanced: {
+      showCloseButton: true,
+      showConversationHistory: true,
+      showNewChatButton: true,
+      enableAnalytics: true,
+      trackEvents: ["message_sent", "conversation_started", "widget_opened"],
+      conversationRetention: 30,
+      maxConversations: 100,
+      language: "da",
+      timezone: "Europe/Copenhagen"
+    },
+    analytics: {
+      totalConversations: 0,
+      totalMessages: 0,
+      averageResponseTime: 0,
+      satisfactionScore: 0,
+      lastActivity: new Date(),
+      monthlyStats: {}
     },
     createdAt: new Date(),
     updatedAt: new Date()
@@ -53,9 +159,62 @@ const sampleWidgets = [
       promptId: "pmpt_REPLACE_WITH_YOUR_SUPPORT_PROMPT_ID", // Replace with support prompt ID
       version: null // Use latest version
     },
-    theme: {
-      buttonColor: "#dc2626",
-      chatBg: "#fef2f2"
+    appearance: {
+      theme: "light",
+      themeColor: "#dc2626",
+      secondaryColor: "#ef4444",
+      width: 400,
+      height: 550,
+      placement: "bottom-right",
+      borderRadius: 15,
+      shadow: "0 15px 45px rgba(0,0,0,0.12)",
+      backdropBlur: false,
+      animationSpeed: "fast",
+      customCSS: "",
+      useGradient: false
+    },
+    messages: {
+      welcomeMessage: "Hello! I'm here to help with any questions you might have.",
+      inputPlaceholder: "How can I help you?",
+      typingText: "Support agent is typing...",
+      suggestedResponses: [
+        "I need technical support",
+        "How do I reset my password?",
+        "What are your business hours?",
+        "Contact a human agent"
+      ],
+      popupMessage: "Need help? We're here for you!",
+      popupDelay: 3000,
+      autoClose: true,
+      closeButtonText: "Close"
+    },
+    branding: {
+      title: "Support Assistant",
+      assistantName: "Support Bot",
+      avatarUrl: "",
+      logoUrl: "",
+      companyName: "Your Company",
+      customLogo: false,
+      showBranding: true
+    },
+    advanced: {
+      showCloseButton: true,
+      showConversationHistory: true,
+      showNewChatButton: true,
+      enableAnalytics: true,
+      trackEvents: ["message_sent", "conversation_started", "widget_opened"],
+      conversationRetention: 14,
+      maxConversations: 50,
+      language: "en",
+      timezone: "UTC"
+    },
+    analytics: {
+      totalConversations: 0,
+      totalMessages: 0,
+      averageResponseTime: 0,
+      satisfactionScore: 0,
+      lastActivity: new Date(),
+      monthlyStats: {}
     },
     createdAt: new Date(),
     updatedAt: new Date()
