@@ -44,8 +44,14 @@ export default async function handler(req, res) {
     const client = await clientPromise;
     const db = client.db("chatwidgets");
     
+    // Convert string ID to ObjectId if it's a valid ObjectId string
+    let queryId = widgetId;
+    if (ObjectId.isValid(widgetId)) {
+      queryId = new ObjectId(widgetId);
+    }
+    
     // Get widget configuration
-    const widget = await db.collection("widgets").findOne({ _id: widgetId });
+    const widget = await db.collection("widgets").findOne({ _id: queryId });
     if (!widget) {
       console.log('❌ Widget not found:', widgetId);
       return res.status(404).json({ error: "Widget not found" });
