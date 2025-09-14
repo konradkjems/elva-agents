@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/javascript');
     
     // Smart caching based on environment and widget update time
-    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isDevelopment = false; // Always production in widget
     const cacheTime = isDevelopment ? 10 : 300; // 10 seconds in dev, 5 minutes in production
     
     // Use ETag based on widget's updatedAt timestamp for better cache invalidation
@@ -125,7 +125,7 @@ export default async function handler(req, res) {
       imageSettings: widget.branding?.imageSettings || null,
       iconSizes: widget.branding?.iconSizes || null
     },
-    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://elva-agents.vercel.app',
+    apiUrl: 'https://elva-agents.vercel.app',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
     openai: useResponsesAPI ? {
       promptId: widget.openai.promptId,
@@ -1799,7 +1799,7 @@ export default async function handler(req, res) {
         conversationId: currentConversationId
       });
       console.log('🔧 WIDGET_CONFIG.apiUrl:', WIDGET_CONFIG.apiUrl);
-      console.log('🌍 Environment NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+      console.log('🌍 Environment NEXT_PUBLIC_API_URL: Not available in browser');
         
       // Create AbortController for timeout
       const controller = new AbortController();
