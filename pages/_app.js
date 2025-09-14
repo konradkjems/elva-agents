@@ -1,14 +1,15 @@
 import { useEffect } from 'react';
 import Head from 'next/head';
+import { SessionProvider } from 'next-auth/react';
 import '../styles/globals.css';
 
-export default function App({ Component, pageProps }) {
+export default function App({ Component, pageProps: { session, ...pageProps } }) {
   useEffect(() => {
     // Add any global initialization logic here
   }, []);
 
   return (
-    <>
+    <SessionProvider session={session}>
       <Head>
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -170,6 +171,6 @@ export default function App({ Component, pageProps }) {
         }} />
       </Head>
       <Component {...pageProps} />
-    </>
+    </SessionProvider>
   );
 }

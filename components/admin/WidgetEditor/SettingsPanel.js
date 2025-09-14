@@ -10,15 +10,19 @@ import {
   InformationCircleIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  DocumentDuplicateIcon
+  DocumentDuplicateIcon,
+  ArrowsPointingOutIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import ColorPicker from './ColorPicker';
 import FileUpload from './FileUpload';
 import AdvancedSettings from './AdvancedSettings';
+import ImageZoomModal from './ImageZoomModal';
 
 export default function SettingsPanel({ settings, onChange, onSave, saving }) {
   const [activeTab, setActiveTab] = useState(0);
   const [validationErrors, setValidationErrors] = useState({});
+  const [isImageZoomModalOpen, setIsImageZoomModalOpen] = useState(false);
 
   const updateSetting = (section, key, value) => {
     // Clear validation error when user makes changes
@@ -146,7 +150,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           type="color"
                           value={settings.appearance?.themeColor || '#3b82f6'}
                           onChange={(e) => handleFieldChange('appearance', 'themeColor', e.target.value)}
-                          className="hidden"
+                          className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
+                          style={{ opacity: 0, position: 'absolute', zIndex: 1 }}
                         />
                         <input
                           type="text"
@@ -173,7 +178,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           type="color"
                           value={settings.appearance?.secondaryColor || '#8b5cf6'}
                           onChange={(e) => handleFieldChange('appearance', 'secondaryColor', e.target.value)}
-                          className="hidden"
+                          className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
+                          style={{ opacity: 0, position: 'absolute', zIndex: 1 }}
                         />
                         <input
                           type="text"
@@ -183,6 +189,52 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           placeholder="#8b5cf6"
                         />
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Theme Settings */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <PaintBrushIcon className="w-5 h-5 mr-2 text-green-600" />
+                    Theme Mode
+                  </h4>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Widget Theme
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { value: 'light', label: 'Light', icon: '☀️', description: 'Clean light theme' },
+                          { value: 'dark', label: 'Dark', icon: '🌙', description: 'Dark mode theme' },
+                          { value: 'auto', label: 'Auto', icon: '🔄', description: 'Follows system preference' }
+                        ].map((theme) => (
+                          <button
+                            key={theme.value}
+                            type="button"
+                            onClick={() => handleFieldChange('appearance', 'theme', theme.value)}
+                            className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                              settings.appearance?.theme === theme.value
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <div className="text-2xl mb-2">{theme.icon}</div>
+                              <div className="font-medium text-sm">{theme.label}</div>
+                              <div className="text-xs text-gray-500 mt-1">{theme.description}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+                      <strong>Note:</strong> Theme affects the overall appearance of the widget. 
+                      Light theme uses light backgrounds, Dark theme uses dark backgrounds, 
+                      and Auto theme follows the user's system preference.
                     </div>
                   </div>
                 </div>
@@ -463,6 +515,38 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Banner Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.messages?.bannerText || ''}
+                        onChange={(e) => handleFieldChange('messages', 'bannerText', e.target.value)}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        placeholder="X-Virksomhed står ikke til ansvar for svarene, der kun er vejledende."
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Disclaimer text shown under the header (optional)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Disclaimer Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.messages?.disclaimerText || ''}
+                        onChange={(e) => handleFieldChange('messages', 'disclaimerText', e.target.value)}
+                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        placeholder="Opgiv ikke personlige oplysninger"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Warning text shown above the input field
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Popup Delay (milliseconds)
                       </label>
                       <input
@@ -492,28 +576,71 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 <div className="bg-gray-50 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-purple-600" />
-                    Suggested Responses
+                    Suggested Responses (Max 5)
                   </h4>
                   
                   <div className="space-y-3">
                     <p className="text-sm text-gray-600 mb-4">
-                      Add quick response buttons that users can click to start conversations
+                      These quick response buttons appear when the chat starts
                     </p>
-                    {[0, 1, 2, 3].map((index) => (
-                      <div key={index}>
-                        <input
-                          type="text"
-                          value={settings.messages?.suggestedResponses?.[index] || ''}
-                          onChange={(e) => {
-                            const responses = [...(settings.messages?.suggestedResponses || [])];
-                            responses[index] = e.target.value;
-                            handleFieldChange('messages', 'suggestedResponses', responses);
-                          }}
-                          className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
-                          placeholder={`Suggested response ${index + 1}...`}
-                        />
-                      </div>
-                    ))}
+                    
+                    {/* Suggested Responses List */}
+                    <div className="space-y-2">
+                      {(settings.messages?.suggestedResponses || ['']).map((response, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={response}
+                            onChange={(e) => {
+                              const responses = [...(settings.messages?.suggestedResponses || [''])];
+                              responses[index] = e.target.value;
+                              handleFieldChange('messages', 'suggestedResponses', responses);
+                            }}
+                            className="flex-1 rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm px-3 py-2"
+                            placeholder={`Suggested response ${index + 1}...`}
+                          />
+                          {(settings.messages?.suggestedResponses || ['']).length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const responses = [...(settings.messages?.suggestedResponses || [''])];
+                                responses.splice(index, 1);
+                                handleFieldChange('messages', 'suggestedResponses', responses);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Add Response Button */}
+                    {(settings.messages?.suggestedResponses || ['']).length < 5 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const responses = [...(settings.messages?.suggestedResponses || ['']), ''];
+                          handleFieldChange('messages', 'suggestedResponses', responses);
+                        }}
+                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Response
+                      </button>
+                    )}
+                    
+                    {/* Max limit notice */}
+                    {(settings.messages?.suggestedResponses || ['']).length >= 5 && (
+                      <p className="text-xs text-gray-500 text-center">
+                        Maximum 5 responses reached
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -652,6 +779,23 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       label="Company Logo"
                       aspectRatio="16:9"
                     />
+
+                    {/* Image Zoom Customization */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Image Zoom & Position
+                      </label>
+                      <button
+                        onClick={() => setIsImageZoomModalOpen(true)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                      >
+                        <MagnifyingGlassIcon className="w-5 h-5 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700">Customize Image Zoom</span>
+                      </button>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Adjust zoom level and positioning of uploaded images
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -791,6 +935,35 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
           </Tab.Panels>
         </Tab.Group>
       </div>
+
+      {/* Image Zoom Modal */}
+      <ImageZoomModal
+        isOpen={isImageZoomModalOpen}
+        onClose={() => setIsImageZoomModalOpen(false)}
+        imageSettings={settings.branding?.imageSettings || {
+          avatarZoom: 1.0,
+          avatarOffsetX: 0,
+          avatarOffsetY: 0,
+          logoZoom: 1.0,
+          logoOffsetX: 0,
+          logoOffsetY: 0
+        }}
+        onSave={(imageSettings) => {
+          // Update settings directly to ensure imageSettings are saved
+          console.log('Saving imageSettings:', imageSettings);
+          onChange({
+            ...settings,
+            branding: {
+              ...settings.branding,
+              imageSettings: imageSettings
+            }
+          });
+        }}
+        widgetName={settings.name}
+        brandingTitle={settings.branding?.title}
+        avatarUrl={settings.branding?.avatarUrl}
+        logoUrl={settings.branding?.logoUrl}
+      />
     </div>
   );
 }

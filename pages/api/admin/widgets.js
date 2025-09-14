@@ -1,4 +1,5 @@
 import clientPromise from '../../../lib/mongodb';
+import { withAdmin } from '../../../lib/auth';
 
 // Mock data for testing (fallback)
 const mockWidgets = [
@@ -226,7 +227,7 @@ const mockWidgets = [
   }
 ];
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       // Get all widgets from MongoDB
@@ -267,3 +268,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withAdmin(handler);

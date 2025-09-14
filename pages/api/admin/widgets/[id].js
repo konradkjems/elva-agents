@@ -1,5 +1,6 @@
 import clientPromise from '../../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { withAdmin } from '../../../../lib/auth';
 
 // Mock data for testing (fallback when MongoDB is unavailable)
 const mockWidgets = [
@@ -227,7 +228,7 @@ const mockWidgets = [
   }
 ];
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   try {
     const { id } = req.query;
 
@@ -358,3 +359,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withAdmin(handler);

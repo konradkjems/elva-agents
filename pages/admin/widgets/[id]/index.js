@@ -64,6 +64,9 @@ export default function WidgetEditor() {
     setSaving(true);
     setSaveStatus(null);
     
+    console.log('Saving widget with settings:', settings);
+    console.log('Branding imageSettings:', settings.branding?.imageSettings);
+    
     try {
       const response = await fetch(`/api/admin/widgets/${id}`, {
         method: 'PUT',
@@ -271,5 +274,11 @@ export default function WidgetEditor() {
       )}
     </AdminLayout>
   );
+}
+
+export async function getServerSideProps() {
+  return {
+    props: {},
+  }
 }
 

@@ -56,23 +56,34 @@ export default function ColorPicker({ color, onChange, label, presetColors = [] 
 
       {/* Color Picker Popup */}
       {isOpen && (
-        <div className="absolute z-50 mt-2 p-4 bg-white rounded-lg shadow-lg border border-gray-200">
-          <input
-            type="color"
-            value={localColor}
-            onChange={(e) => handleColorChange(e.target.value)}
-            className="w-full h-32 rounded-lg border border-gray-300"
-          />
+        <div className="absolute z-[9999] mt-2 p-4 bg-white rounded-lg shadow-xl border border-gray-200" style={{ minWidth: '280px' }}>
+          {/* Custom Color Picker */}
+          <div className="mb-4">
+            <div className="text-sm font-medium text-gray-700 mb-2">Choose Color</div>
+            <input
+              type="color"
+              value={localColor}
+              onChange={(e) => handleColorChange(e.target.value)}
+              className="w-full h-32 rounded-lg border border-gray-300 cursor-pointer"
+              style={{ 
+                position: 'relative',
+                zIndex: 1,
+                appearance: 'none',
+                background: 'none',
+                border: '2px solid #d1d5db'
+              }}
+            />
+          </div>
           
           {/* Preset Colors */}
           {presetColors.length > 0 && (
-            <div className="mt-3">
-              <div className="text-xs font-medium text-gray-700 mb-2">Preset Colors</div>
-              <div className="flex space-x-2">
+            <div className="mb-4">
+              <div className="text-sm font-medium text-gray-700 mb-2">Preset Colors</div>
+              <div className="grid grid-cols-6 gap-2">
                 {presetColors.map((presetColor, index) => (
                   <button
                     key={index}
-                    className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                    className="w-8 h-8 rounded border-2 border-gray-300 hover:scale-110 transition-transform hover:border-gray-400"
                     style={{ backgroundColor: presetColor }}
                     onClick={() => handlePresetClick(presetColor)}
                     title={presetColor}
@@ -81,6 +92,16 @@ export default function ColorPicker({ color, onChange, label, presetColors = [] 
               </div>
             </div>
           )}
+          
+          {/* Close Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => setIsOpen(false)}
+              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Done
+            </button>
+          </div>
         </div>
       )}
     </div>

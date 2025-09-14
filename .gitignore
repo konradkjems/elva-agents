@@ -15,7 +15,6 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
-.env-example
 
 # Vercel
 .vercel
@@ -92,3 +91,7 @@ dist/
 # Temporary folders
 tmp/
 temp/
+
+# Generated deployment files (contain secrets)
+vercel-env-vars.txt
+DEPLOYMENT_INSTRUCTIONS.md

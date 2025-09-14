@@ -34,12 +34,27 @@ export default function FileUpload({
     setUploading(true);
 
     try {
-      // For now, create a mock URL since we don't have Cloudinary set up
-      const mockUrl = URL.createObjectURL(file);
-      onUpload(mockUrl);
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Upload to our API endpoint
+      const response = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      // Use the Cloudinary URL
+      onUpload(result.url);
     } catch (error) {
       console.error('Upload error:', error);
-      setError('Upload failed. Please try again.');
+      setError(error.message || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }

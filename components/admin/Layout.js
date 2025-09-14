@@ -1,8 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/router';
 import Sidebar from './Sidebar';
 
 export default function AdminLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    router.push('/admin/login');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -25,6 +55,17 @@ export default function AdminLayout({ children }) {
             <div className="flex flex-1"></div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               {/* User menu */}
+              <div className="flex items-center gap-x-4">
+                <span className="text-sm text-gray-700">
+                  Welcome, {session.user.name}
+                </span>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/admin/login' })}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -38,4 +79,5 @@ export default function AdminLayout({ children }) {
     </div>
   );
 }
+
 

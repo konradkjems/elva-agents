@@ -351,3 +351,9 @@ export default function CreateWidget() {
     </AdminLayout>
   );
 }
+
+export async function getServerSideProps() {
+  return {
+    props: {},
+  }
+}

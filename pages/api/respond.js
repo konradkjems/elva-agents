@@ -54,24 +54,39 @@ export default async function handler(req, res) {
     }
     
     if (!conversation) {
-      // Create new conversation
+      // Create new conversation with proper schema
       const newConversation = {
         widgetId,
-        userId,
         sessionId: `session_${Date.now()}`,
+        userId: userId || null,
+        startTime: new Date(),
+        endTime: null,
+        messageCount: 0,
         messages: [],
+        satisfaction: null,
+        tags: [],
+        metadata: {
+          userAgent: req.headers['user-agent'] || '',
+          ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress || '',
+          country: null,
+          referrer: null
+        },
         createdAt: new Date(),
         updatedAt: new Date()
       };
       const result = await db.collection("conversations").insertOne(newConversation);
       conversation = { ...newConversation, _id: result.insertedId };
+      console.log('✅ New conversation created:', conversation._id);
     }
 
     // Add user message to conversation
     const userMessage = {
-      role: "user",
+      id: new ObjectId().toString(),
+      type: "user",
       content: message,
-      timestamp: new Date()
+      timestamp: new Date(),
+      responseTime: null,
+      tokens: null
     };
     conversation.messages.push(userMessage);
 
@@ -84,21 +99,26 @@ export default async function handler(req, res) {
       }))
     ];
 
-    // Get AI response
+    // Get AI response with timing
+    const startTime = Date.now();
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: conversationInput,
       max_tokens: 200,
       temperature: 0.7
     });
+    const responseTime = Date.now() - startTime;
 
     const aiReply = response.choices[0].message.content;
 
     // Add AI response to conversation
     const aiMessage = {
-      role: "assistant",
+      id: new ObjectId().toString(),
+      type: "assistant",
       content: aiReply,
-      timestamp: new Date()
+      timestamp: new Date(),
+      responseTime: responseTime,
+      tokens: response.usage?.total_tokens || null
     };
     conversation.messages.push(aiMessage);
 
@@ -107,11 +127,21 @@ export default async function handler(req, res) {
       { _id: conversation._id },
       { 
         $set: { 
-          messages: conversation.messages, 
+          messages: conversation.messages,
+          messageCount: conversation.messages.length,
           updatedAt: new Date() 
         } 
       }
     );
+    console.log('📝 Conversation updated:', conversation._id, 'Messages:', conversation.messages.length, 'Response time:', responseTime + 'ms');
+
+    // Update analytics after successful conversation
+    try {
+      await updateAnalytics(db, widgetId, conversation);
+    } catch (analyticsError) {
+      console.error('Analytics update error:', analyticsError);
+      // Don't fail the response if analytics update fails
+    }
 
     res.json({ 
       reply: aiReply,
@@ -125,4 +155,65 @@ export default async function handler(req, res) {
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
+}
+
+// Helper function to update analytics
+async function updateAnalytics(db, widgetId, conversation) {
+  const analytics = db.collection('analytics');
+  const date = new Date(conversation.startTime);
+  const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Calculate metrics for this conversation
+  const messageCount = conversation.messageCount || conversation.messages?.length || 0;
+  const responseTimes = conversation.messages?.filter(m => m.responseTime).map(m => m.responseTime) || [];
+  const avgResponseTime = responseTimes.length > 0 
+    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
+    : 0;
+  
+  // Get or create analytics document for this day
+  const existingDoc = await analytics.findOne({ 
+    agentId: widgetId, 
+    date: new Date(dateKey) 
+  });
+  
+  if (existingDoc) {
+    // Update existing document
+    await analytics.updateOne(
+      { _id: existingDoc._id },
+      {
+        $inc: {
+          'metrics.conversations': 1,
+          'metrics.messages': messageCount
+        },
+        $set: {
+          'metrics.avgResponseTime': Math.round((existingDoc.metrics.avgResponseTime + avgResponseTime) / 2),
+          [`hourly.${date.getHours()}`]: (existingDoc.hourly[date.getHours().toString()] || 0) + 1
+        }
+      }
+    );
+  } else {
+    // Create new analytics document
+    const hourly = Array(24).fill(0);
+    hourly[date.getHours()] = 1;
+    
+    await analytics.insertOne({
+      agentId: widgetId,
+      date: new Date(dateKey),
+      metrics: {
+        conversations: 1,
+        messages: messageCount,
+        uniqueUsers: 1,
+        responseRate: 100,
+        avgResponseTime: Math.round(avgResponseTime),
+        satisfaction: null
+      },
+      hourly: hourly.reduce((acc, count, hour) => {
+        acc[hour.toString()] = count;
+        return acc;
+      }, {}),
+      createdAt: new Date()
+    });
+  }
+  
+  console.log('📊 Analytics updated for', widgetId, 'on', dateKey);
 }

@@ -95,6 +95,7 @@ export default async function handler(req, res) {
 (function() {
   const WIDGET_CONFIG = ${JSON.stringify({
     widgetId: widgetId,
+    name: widget.name || 'AI Assistant',
     theme: {
       buttonColor: widget.appearance?.themeColor || widget.theme?.buttonColor || '#4f46e5',
       chatBg: widget.appearance?.chatBg || widget.theme?.chatBg || '#ffffff',
@@ -102,27 +103,40 @@ export default async function handler(req, res) {
       height: widget.appearance?.height || widget.theme?.height || 600,
       borderRadius: widget.appearance?.borderRadius || widget.theme?.borderRadius || 20,
       shadow: widget.appearance?.shadow || widget.theme?.shadow || '0 20px 60px rgba(0,0,0,0.15)',
-      backdropBlur: widget.appearance?.backdropBlur || widget.theme?.backdropBlur || false
+      backdropBlur: widget.appearance?.backdropBlur || widget.theme?.backdropBlur || false,
+      themeMode: widget.appearance?.theme || 'light' // light, dark, auto
     },
     messages: {
       welcomeMessage: widget.messages?.welcomeMessage || 'Hello! How can I help you today?',
       popupMessage: widget.messages?.popupMessage || 'Hi! Need help?',
       typingText: widget.messages?.typingText || 'AI is thinking...',
       inputPlaceholder: widget.messages?.inputPlaceholder || 'Type your message...',
-      suggestedResponses: widget.messages?.suggestedResponses || []
+      suggestedResponses: widget.messages?.suggestedResponses || [],
+      bannerText: widget.messages?.bannerText || null,
+      disclaimerText: widget.messages?.disclaimerText || 'Opgiv ikke personlige oplysninger'
     },
     branding: {
       title: widget.branding?.title || widget.name || 'AI Assistant',
       assistantName: widget.branding?.assistantName || 'Assistant',
       companyName: widget.branding?.companyName || 'Company',
-      showBranding: widget.branding?.showBranding !== undefined ? widget.branding.showBranding : true
+      showBranding: widget.branding?.showBranding !== undefined ? widget.branding.showBranding : true,
+      avatarUrl: widget.branding?.avatarUrl || null,
+      logoUrl: widget.branding?.logoUrl || null,
+      imageSettings: widget.branding?.imageSettings || null,
+      iconSizes: widget.branding?.iconSizes || null
     },
     apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
     openai: useResponsesAPI ? {
       promptId: widget.openai.promptId,
       version: widget.openai.version || 'latest'
-    } : null
+    } : null,
+    appearance: {
+      placement: widget.appearance?.placement || 'bottom-right',
+      theme: widget.appearance?.theme || 'light',
+      useGradient: widget.appearance?.useGradient || false,
+      secondaryColor: widget.appearance?.secondaryColor || null
+    }
   })};
 
   // Generate or retrieve user ID
@@ -204,6 +218,70 @@ export default async function handler(req, res) {
     return (usePound ? '#' : '') + (r << 16 | g << 8 | b).toString(16).padStart(6, '0');
   }
 
+  // Helper function to get theme colors based on theme mode
+  function getThemeColors() {
+    const themeMode = WIDGET_CONFIG.theme.themeMode || 'light';
+    
+    if (themeMode === 'dark') {
+      return {
+        chatBg: '#1f2937', // gray-800
+        inputBg: '#1f2937', // same as chatBg
+        messageBg: '#1A1C23', // gray-600
+        textColor: '#f9fafb', // gray-50
+        borderColor: '#1A1C23' // gray-600
+      };
+    } else if (themeMode === 'auto') {
+      // Detect system preference
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        return {
+          chatBg: '#1f2937',
+          inputBg: '#1f2937', // same as chatBg
+          messageBg: '#4b5563',
+          textColor: '#f9fafb',
+          borderColor: '#4b5563'
+        };
+      } else {
+        return {
+          chatBg: '#ffffff',
+          inputBg: '#ffffff', // same as chatBg
+          messageBg: '#f3f4f6',
+          textColor: '#374151',
+          borderColor: '#e5e7eb'
+        };
+      }
+    } else {
+      // Light theme (default)
+      return {
+        chatBg: '#ffffff',
+        inputBg: '#ffffff', // same as chatBg
+        messageBg: '#f3f4f6',
+        textColor: '#374151',
+        borderColor: '#e5e7eb'
+      };
+    }
+  }
+
+  const themeColors = getThemeColors();
+
+  // Helper function to generate smart AI icon based on widget name
+  function generateAIIcon(widgetName, brandingTitle) {
+    // Use branding title if available, otherwise use widget name
+    const name = brandingTitle || widgetName || 'AI';
+    
+    // Extract first letter or initials
+    if (name.includes(' ')) {
+      // Multiple words - use initials
+      const words = name.split(' ').filter(word => word.length > 0);
+      if (words.length >= 2) {
+        return words[0][0].toUpperCase() + words[1][0].toUpperCase();
+      }
+    }
+    
+    // Single word or fallback - use first letter
+    return name[0]?.toUpperCase() || 'A';
+  }
+
   // Create chat button with modern design matching LivePreview
   const chatBtn = document.createElement("button");
   chatBtn.innerHTML = \`
@@ -213,10 +291,12 @@ export default async function handler(req, res) {
   \`;
   chatBtn.style.cssText = \`
     position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 60px;
-    height: 60px;
+    \${WIDGET_CONFIG.appearance?.placement === 'bottom-left' ? 'bottom: 24px; left: 24px;' : 
+      WIDGET_CONFIG.appearance?.placement === 'top-right' ? 'top: 24px; right: 24px;' :
+      WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 24px; left: 24px;' :
+      'bottom: 24px; right: 24px;'}
+    width: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px;
+    height: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px;
     border-radius: 50%;
     background: \${WIDGET_CONFIG.appearance?.useGradient ? 
       \`linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'} 0%, \${WIDGET_CONFIG.appearance?.secondaryColor || adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)} 100%)\` : 
@@ -227,10 +307,11 @@ export default async function handler(req, res) {
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
+    transition: all 0.3s ease, transform 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
     backdrop-filter: blur(10px);
   \`;
   
@@ -250,18 +331,20 @@ export default async function handler(req, res) {
   const popupMessage = document.createElement("div");
   popupMessage.style.cssText = \`
     position: fixed;
-    bottom: 100px;
-    right: 24px;
+    \${WIDGET_CONFIG.appearance?.placement === 'bottom-left' ? 'bottom: 100px; left: 24px;' : 
+      WIDGET_CONFIG.appearance?.placement === 'top-right' ? 'top: 100px; right: 24px;' :
+      WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 100px; left: 24px;' :
+      'bottom: 100px; right: 24px;'}
     max-width: 280px;
-    background: white;
+    background: \${themeColors.chatBg};
     border-radius: 16px;
     padding: 16px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.1);
-    border: 1px solid #e5e7eb;
+    border: 1px solid \${themeColors.borderColor};
     z-index: 10001;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
-    color: #1f2937;
+    color: \${themeColors.textColor};
     opacity: 0;
     transform: translateY(20px);
     transition: all 0.3s ease;
@@ -275,11 +358,13 @@ export default async function handler(req, res) {
   chatBox.style.cssText = \`
     display: none;
     position: fixed;
-    bottom: 80px;
-    right: 24px;
+    \${WIDGET_CONFIG.appearance?.placement === 'bottom-left' ? 'bottom: 80px; left: 24px;' : 
+      WIDGET_CONFIG.appearance?.placement === 'top-right' ? 'top: 80px; right: 24px;' :
+      WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 80px; left: 24px;' :
+      'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 600}px;
-    background: \${WIDGET_CONFIG.theme.chatBg || '#ffffff'};
+    background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
     z-index: 10000;
@@ -305,19 +390,22 @@ export default async function handler(req, res) {
   \`;
   header.innerHTML = \`
     <div style="display: flex; align-items: center; gap: 12px; position: relative; z-index: 10;">
-      <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; backdrop-filter: blur(10px);">
-        E
+      <div style="width: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px; height: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; backdrop-filter: blur(10px); overflow: hidden;">
+        \${WIDGET_CONFIG.branding?.avatarUrl ? 
+          \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+          generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)
+        }
       </div>
       <div>
-        <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.title || 'AI Assistant'}</div>
+        <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant'}</div>
         <div style="font-size: 12px; opacity: 0.9;">Online now</div>
       </div>
     </div>
     
     <div style="display: flex; align-items: center; gap: 8px; position: relative; z-index: 10;">
       <div style="position: relative;">
-        <button id="menuBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button id="menuBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.15)'" onmouseout="this.style.backgroundColor='transparent'">
+          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
           </svg>
         </button>
@@ -327,10 +415,10 @@ export default async function handler(req, res) {
            position: absolute;
            top: 100%;
            right: 0;
-           background: white;
+           background: \${themeColors.chatBg};
            border-radius: 12px;
            box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.1);
-           border: 1px solid #e5e7eb;
+           border: 1px solid \${themeColors.borderColor};
            min-width: 200px;
            z-index: 10002;
            opacity: 0;
@@ -347,13 +435,13 @@ export default async function handler(req, res) {
               border: none;
               text-align: left;
               font-size: 14px;
-              color: #1f2937;
+              color: \${themeColors.textColor};
               cursor: pointer;
               transition: all 0.2s ease;
               display: flex;
               align-items: center;
               gap: 12px;
-            " onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+            " onmouseover="this.style.backgroundColor='\${themeColors.messageBg}'" onmouseout="this.style.backgroundColor='transparent'">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
@@ -366,13 +454,13 @@ export default async function handler(req, res) {
               border: none;
               text-align: left;
               font-size: 14px;
-              color: #1f2937;
+              color: \${themeColors.textColor};
               cursor: pointer;
               transition: all 0.2s ease;
               display: flex;
               align-items: center;
               gap: 12px;
-            " onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+            " onmouseover="this.style.backgroundColor='\${themeColors.messageBg}'" onmouseout="this.style.backgroundColor='transparent'">
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
@@ -382,8 +470,8 @@ export default async function handler(req, res) {
         </div>
       </div>
       
-      <button id="closeBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button id="closeBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.15)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
@@ -396,23 +484,22 @@ export default async function handler(req, res) {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
-    background: #f9fafb;
+    background: \${themeColors.chatBg};
     scrollbar-width: thin;
     scrollbar-color: #cbd5e0 transparent;
     height: calc(100% - 200px);
   \`;
 
-  // Create input container matching LivePreview
-  const inputContainer = document.createElement("div");
-  inputContainer.style.cssText = \`
-    padding: 16px;
-    border-top: 1px solid #e5e7eb;
-    background: white;
-    border-radius: 0 0 \${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px;
-  \`;
+    // Create input container matching LivePreview
+    const inputContainer = document.createElement("div");
+    inputContainer.style.cssText = \`
+      background: \${themeColors.inputBg};
+      border-radius: 0 0 \${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px;
+    \`;
 
   const inputWrapper = document.createElement("div");
   inputWrapper.style.cssText = \`
+    padding: 10px;
     display: flex;
     gap: 12px;
     align-items: center;
@@ -420,15 +507,17 @@ export default async function handler(req, res) {
 
   const input = document.createElement("input");
   input.type = "text";
+  input.className = "widget-input";
   input.placeholder = WIDGET_CONFIG.messages.inputPlaceholder || "Type your message...";
   input.style.cssText = \`
     flex: 1;
     padding: 12px 16px;
-    border: 1px solid #d1d5db;
+    border: 1px solid \${themeColors.borderColor};
     border-radius: 24px;
     outline: none;
     font-size: 14px;
-    background: #f9fafb;
+    background: \${themeColors.inputBg};
+    color: \${themeColors.textColor};
     transition: all 0.2s ease;
   \`;
 
@@ -440,8 +529,8 @@ export default async function handler(req, res) {
     </svg>
   \`;
   sendButton.style.cssText = \`
-    width: 44px;
-    height: 44px;
+    width: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px;
+    height: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px;
     background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
     color: white;
     border: none;
@@ -455,14 +544,28 @@ export default async function handler(req, res) {
   \`;
 
   // Add hover effects
+  input.onmouseover = () => {
+    if (WIDGET_CONFIG.theme.themeMode === 'dark') {
+      input.style.borderColor = '#6b7280'; // gray-500 for dark mode
+    } else {
+      input.style.borderColor = '#9ca3af'; // gray-400 for light mode
+      input.style.background = '#f9fafb'; // gray-50 for light mode hover
+    }
+  };
+  
+  input.onmouseout = () => {
+    input.style.borderColor = themeColors.borderColor;
+    input.style.background = themeColors.inputBg;
+  };
+  
   input.onfocus = () => {
     input.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
-    input.style.background = 'white';
+    input.style.background = themeColors.inputBg;
   };
   
   input.onblur = () => {
-    input.style.borderColor = '#d1d5db';
-    input.style.background = '#f9fafb';
+    input.style.borderColor = themeColors.borderColor;
+    input.style.background = themeColors.inputBg;
   };
 
   sendButton.onmouseover = () => {
@@ -478,10 +581,42 @@ export default async function handler(req, res) {
   inputWrapper.appendChild(input);
   inputWrapper.appendChild(sendButton);
   inputContainer.appendChild(inputWrapper);
+  // Create powered by text
+  const poweredBy = document.createElement("div");
+  poweredBy.style.cssText = \`
+    text-align: center;
+    padding: 0px 20px 8px 16px;
+    font-size: 11px;
+    color: \${themeColors.textColor};
+    opacity: 0.6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  \`;
+  poweredBy.innerHTML = \`Powered by <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`;
+  // Create banner (if bannerText is provided)
+  let banner = null;
+  if (WIDGET_CONFIG.messages.bannerText) {
+    banner = document.createElement("div");
+    banner.style.cssText = \`
+      padding: 8px 16px;
+      background: \${themeColors.messageBg};
+      border-bottom: 1px solid \${themeColors.borderColor};
+      font-size: 12px;
+      color: \${themeColors.textColor};
+      opacity: 0.8;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      text-align: center;
+      line-height: 1.4;
+    \`;
+    banner.textContent = WIDGET_CONFIG.messages.bannerText;
+  }
   
   chatBox.appendChild(header);
+  if (banner) {
+    chatBox.appendChild(banner);
+  }
   chatBox.appendChild(messages);
   chatBox.appendChild(inputContainer);
+  chatBox.appendChild(poweredBy);
   
   document.body.appendChild(chatBox);
 
@@ -490,11 +625,13 @@ export default async function handler(req, res) {
   historyView.style.cssText = \`
     display: none;
     position: fixed;
-    bottom: 80px;
-    right: 24px;
+    \${WIDGET_CONFIG.appearance?.placement === 'bottom-left' ? 'bottom: 80px; left: 24px;' : 
+      WIDGET_CONFIG.appearance?.placement === 'top-right' ? 'top: 80px; right: 24px;' :
+      WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 80px; left: 24px;' :
+      'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 600}px;
-    background: white;
+    background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
     z-index: 10000;
@@ -541,18 +678,75 @@ export default async function handler(req, res) {
     flex: 1;
     overflow-y: auto;
     padding: 0;
-    background: white;
+    background: \${themeColors.chatBg};
     scrollbar-width: thin;
     scrollbar-color: #cbd5e0 transparent;
   \`;
 
+  // Create powered by text for history view
+  const historyPoweredBy = document.createElement("div");
+  historyPoweredBy.style.cssText = \`
+    text-align: center;
+    padding: 8px 16px;
+    font-size: 11px;
+    color: \${themeColors.textColor};
+    opacity: 0.6;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  \`;
+  historyPoweredBy.innerHTML = \`Powered by <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`;
+
   historyView.appendChild(historyHeader);
   historyView.appendChild(historyContent);
+  historyView.appendChild(historyPoweredBy);
   document.body.appendChild(historyView);
 
   // Track chat state to prevent popup conflicts
   let chatIsOpen = false;
   let historyIsOpen = false;
+
+  // Function to animate icon change
+  function animateIconChange(newIconHTML) {
+    const currentIcon = chatBtn.querySelector('svg');
+    if (!currentIcon) return;
+    
+    // Create new icon element
+    const newIcon = document.createElement('div');
+    newIcon.innerHTML = newIconHTML;
+    const newSvg = newIcon.querySelector('svg');
+    
+    if (!newSvg) return;
+    
+    // Set initial styles for animation
+    newSvg.style.cssText = \`
+      width: 27.5px;
+      height: 27.5px;
+      position: absolute;
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.8);
+      transition: all 0.3s ease;
+    \`;
+    
+    // Add new icon to button
+    chatBtn.appendChild(newSvg);
+    
+    // Animate out current icon
+    currentIcon.style.transition = 'all 0.3s ease';
+    currentIcon.style.opacity = '0';
+    currentIcon.style.transform = 'rotate(90deg) scale(0.8)';
+    
+    // Animate in new icon
+    setTimeout(() => {
+      newSvg.style.opacity = '1';
+      newSvg.style.transform = 'rotate(0deg) scale(1)';
+    }, 50);
+    
+    // Clean up old icon
+    setTimeout(() => {
+      if (currentIcon.parentNode) {
+        currentIcon.parentNode.removeChild(currentIcon);
+      }
+    }, 300);
+  }
   
   // Show initial popup message after a short delay (only if chat is closed)
   setTimeout(() => {
@@ -650,6 +844,9 @@ export default async function handler(req, res) {
     // Clear conversation messages array
     currentConversationMessages = [];
     
+    // Clear input
+    input.value = '';
+    
     // Show welcome message
     setTimeout(() => {
       showWelcomeMessage();
@@ -671,6 +868,14 @@ export default async function handler(req, res) {
     // Show history view
     historyView.style.display = 'flex';
     historyIsOpen = true;
+    updatePositioning(); // Update positioning when opening history
+    
+    // Animate icon to chevron down when history is open
+    animateIconChange(\`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+        <path d="m6 9 6 6 6-6"></path>
+      </svg>
+    \`);
     
     // Load and display conversation history
     loadConversationHistory();
@@ -683,6 +888,10 @@ export default async function handler(req, res) {
     // Show chat view
     chatBox.style.display = 'flex';
     chatIsOpen = true;
+    updatePositioning(); // Update positioning when returning to chat
+    
+    // Keep chevron down icon when chat is open (no animation needed as it's the same icon)
+    // No need to animate since we're already showing chevron down
   }
 
   function loadConversationHistory() {
@@ -700,7 +909,8 @@ export default async function handler(req, res) {
         height: 100%;
         padding: 40px 20px;
         text-align: center;
-        color: #6b7280;
+        color: \${themeColors.textColor};
+        opacity: 0.7;
       \`;
       emptyState.innerHTML = \`
         <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">💬</div>
@@ -761,7 +971,7 @@ export default async function handler(req, res) {
         <div style="
           font-size: 14px;
           font-weight: 500;
-          color: #1f2937;
+          color: \${themeColors.textColor};
           margin-bottom: 4px;
           white-space: nowrap;
           overflow: hidden;
@@ -769,7 +979,8 @@ export default async function handler(req, res) {
         ">\${conversation.title}</div>
         <div style="
           font-size: 12px;
-          color: #6b7280;
+          color: \${themeColors.textColor};
+          opacity: 0.7;
         ">\${displayDate} • \${conversation.messageCount} beskeder</div>
       </div>
       
@@ -803,7 +1014,7 @@ export default async function handler(req, res) {
     
     // Add hover effects
     item.onmouseover = () => {
-      item.style.backgroundColor = '#f9fafb';
+      item.style.backgroundColor = themeColors.messageBg;
     };
     
     item.onmouseout = () => {
@@ -834,6 +1045,12 @@ export default async function handler(req, res) {
     
     // Clear conversation messages array
     currentConversationMessages = [];
+    
+    // Remove any existing suggested responses
+    const existingResponses = inputContainer.querySelector('.suggested-responses');
+    if (existingResponses) {
+      inputContainer.removeChild(existingResponses);
+    }
     
     // Load conversation messages
     conversation.messages.forEach(msg => {
@@ -982,6 +1199,13 @@ export default async function handler(req, res) {
         historyView.style.opacity = '0';
       }
       
+      // Animate icon back to chat bubble
+      animateIconChange(\`
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+          <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+        </svg>
+      \`);
+      
       chatIsOpen = false;
       historyIsOpen = false;
       
@@ -998,14 +1222,26 @@ export default async function handler(req, res) {
       hidePopup();
       chatIsOpen = true; // Update state
 
+      // Animate icon to chevron down
+      animateIconChange(\`
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+          <path d="m6 9 6 6 6-6"></path>
+        </svg>
+      \`);
+
       // Show animation
       chatBox.style.display = "flex";
+      updatePositioning(); // Update positioning when opening
       requestAnimationFrame(() => {
         chatBox.style.transform = 'scale(1) translateY(0)';
         chatBox.style.opacity = '1';
       });
 
-      if (messages.children.length === 0) {
+      // Only show welcome message if there are no messages AND no suggested responses
+      const hasMessages = messages.children.length > 0;
+      const hasSuggestedResponses = inputContainer.querySelector('.suggested-responses');
+      
+      if (!hasMessages && !hasSuggestedResponses) {
         setTimeout(() => {
           showWelcomeMessage();
         }, 300);
@@ -1014,52 +1250,104 @@ export default async function handler(req, res) {
   };
 
   function showWelcomeMessage() {
+    // Check if welcome message already exists
+    const existingWelcome = messages.querySelector('.messageBubble');
+    if (existingWelcome) return; // Welcome message already exists
+    
     const welcomeMsg = WIDGET_CONFIG.messages?.welcomeMessage || 'Hello! How can I help you today?';
     addMessage('assistant', welcomeMsg);
     
     // Show suggested responses if available and no messages yet
     if (WIDGET_CONFIG.messages?.suggestedResponses?.length > 0) {
       showSuggestedResponses();
+    } else {
+      // Show disclaimer even if no suggested responses
+      showDisclaimer();
     }
+  }
+
+  function showDisclaimer() {
+    // Remove any existing disclaimer
+    const existingDisclaimer = inputContainer.querySelector('.disclaimer-text');
+    if (existingDisclaimer) {
+      inputContainer.removeChild(existingDisclaimer);
+    }
+    
+    // Create disclaimer text
+    const disclaimer = document.createElement("div");
+    disclaimer.className = 'disclaimer-text';
+    disclaimer.style.cssText = \`
+      padding: 8px 16px;
+      font-size: 10px;
+      color: \${themeColors.textColor};
+      opacity: 0.5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      text-align: center;
+      font-style: italic;
+      width: 100%;
+    \`;
+    disclaimer.textContent = WIDGET_CONFIG.messages.disclaimerText;
+    
+    // Add to input container above input field
+    inputContainer.insertBefore(disclaimer, inputWrapper);
   }
 
   function showSuggestedResponses() {
     const suggestedResponses = WIDGET_CONFIG.messages?.suggestedResponses || [];
-    if (suggestedResponses.length === 0) return;
+    const validResponses = suggestedResponses.filter(response => response && response.trim());
+    if (validResponses.length === 0) return;
+    
+    // Remove any existing suggested responses and disclaimer first (they are in inputContainer)
+    const existingResponses = inputContainer.querySelector('.suggested-responses');
+    if (existingResponses) {
+      inputContainer.removeChild(existingResponses);
+    }
+    const existingDisclaimer = inputContainer.querySelector('.disclaimer-text');
+    if (existingDisclaimer) {
+      inputContainer.removeChild(existingDisclaimer);
+    }
     
     // Create suggested responses container
     const responsesContainer = document.createElement('div');
+    responsesContainer.className = 'suggested-responses';
     responsesContainer.style.cssText = \`
-      margin: 12px 0;
+      padding: 12px 16px 8px 16px;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       justify-content: flex-end;
     \`;
     
-    suggestedResponses.forEach((response, index) => {
+    validResponses.forEach((response, index) => {
       const button = document.createElement('button');
       button.textContent = response;
       button.style.cssText = \`
         padding: 6px 12px;
         font-size: 12px;
-        color: #6b7280;
-        background: #f3f4f6;
-        border: 1px solid #d1d5db;
-        border-radius: 16px;
+        color: \${themeColors.textColor};
+        background: \${themeColors.messageBg};
+        border: 1px solid \${themeColors.borderColor};
+        border-radius: 9999px;
         cursor: pointer;
         transition: all 0.2s ease;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
       \`;
       
       button.onmouseover = () => {
-        button.style.background = '#e5e7eb';
-        button.style.borderColor = '#9ca3af';
+        if (WIDGET_CONFIG.theme.themeMode === 'dark') {
+          button.style.background = '#6b7280'; // gray-500 for dark mode hover
+          button.style.borderColor = '#6b7280';
+        } else {
+          button.style.background = themeColors.borderColor;
+          button.style.borderColor = themeColors.borderColor;
+        }
       };
       
       button.onmouseout = () => {
-        button.style.background = '#f3f4f6';
-        button.style.borderColor = '#d1d5db';
+        button.style.background = themeColors.messageBg;
+        button.style.borderColor = themeColors.borderColor;
       };
       
       button.onclick = () => {
@@ -1074,9 +1362,26 @@ export default async function handler(req, res) {
       responsesContainer.appendChild(button);
     });
     
-    // Add to messages container
-    messages.appendChild(responsesContainer);
-    messages.scrollTop = messages.scrollHeight;
+    // Add to input container above input field
+    inputContainer.insertBefore(responsesContainer, inputWrapper);
+    
+    // Create disclaimer text under suggested responses (outside responsesContainer for proper centering)
+    const disclaimer = document.createElement("div");
+    disclaimer.className = 'disclaimer-text';
+    disclaimer.style.cssText = \`
+      padding: 4px 0px 0px 0px;
+      font-size: 10px;
+      color: \${themeColors.textColor};
+      opacity: 0.5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      text-align: center;
+      font-style: italic;
+      width: 100%;
+    \`;
+    disclaimer.textContent = WIDGET_CONFIG.messages.disclaimerText;
+    
+    // Add disclaimer after responsesContainer
+    inputContainer.insertBefore(disclaimer, inputWrapper);
   }
 
   function formatMessage(content) {
@@ -1176,8 +1481,8 @@ export default async function handler(req, res) {
       
       const avatar = document.createElement("div");
       avatar.style.cssText = \`
-        width: 32px;
-        height: 32px;
+        width: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
+        height: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
         background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
         border-radius: 50%;
         display: flex;
@@ -1186,7 +1491,9 @@ export default async function handler(req, res) {
         flex-shrink: 0;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       \`;
-      avatar.innerHTML = '<span style="color: white; font-size: 12px; font-weight: 600;">E</span>';
+      avatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+        \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+        \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
       
       const messageContent = document.createElement("div");
       messageContent.style.cssText = \`
@@ -1197,22 +1504,23 @@ export default async function handler(req, res) {
       const nameLabel = document.createElement("div");
       nameLabel.style.cssText = \`
         font-size: 12px;
-        color: #6b7280;
+        color: \${themeColors.textColor};
         margin-bottom: 8px;
         font-weight: 500;
+        opacity: 0.7;
       \`;
-      nameLabel.textContent = WIDGET_CONFIG.branding.title || 'AI Assistant';
+      nameLabel.textContent = WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant';
       
       const messageBubble = document.createElement("div");
       messageBubble.style.cssText = \`
-        background: #f9fafb;
-        color: #1f2937;
+        background: \${themeColors.messageBg};
+        color: \${themeColors.textColor};
         padding: 12px 16px;
         border-radius: 18px 18px 18px 4px;
         font-size: 14px;
         max-width: 320px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e5e7eb;
+        border: 1px solid \${themeColors.borderColor};
         word-wrap: break-word;
         line-height: 1.5;
       \`;
@@ -1230,10 +1538,168 @@ export default async function handler(req, res) {
     messages.scrollTop = messages.scrollHeight;
   }
 
+  function addMessageWithTypewriter(role, content) {
+    const messageDiv = document.createElement("div");
+    const isUser = role === 'user';
+    
+    // Store the original raw content for history saving
+    messageDiv.setAttribute('data-original-content', content);
+    messageDiv.setAttribute('data-role', role);
+    
+    // Also store in our conversation messages array
+    currentConversationMessages.push({
+      role: role,
+      content: content,
+      timestamp: new Date().toISOString()
+    });
+    
+    messageDiv.style.cssText = \`
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: \${isUser ? 'flex-end' : 'flex-start'};
+      animation: slideIn 0.3s ease-out;
+    \`;
+    
+    if (isUser) {
+      // User messages don't need typewriter effect
+      addMessage(role, content);
+      return;
+    } else {
+      // Assistant message with typewriter effect
+      const assistantContainer = document.createElement("div");
+      assistantContainer.style.cssText = \`
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      \`;
+      
+      const avatar = document.createElement("div");
+      avatar.style.cssText = \`
+        width: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
+        height: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
+        background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      \`;
+      avatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+        \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+        \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
+      
+      const messageContent = document.createElement("div");
+      messageContent.style.cssText = \`
+        display: flex;
+        flex-direction: column;
+      \`;
+      
+      const nameLabel = document.createElement("div");
+      nameLabel.style.cssText = \`
+        font-size: 12px;
+        color: \${themeColors.textColor};
+        margin-bottom: 8px;
+        font-weight: 500;
+        opacity: 0.7;
+      \`;
+      nameLabel.textContent = WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant';
+      
+      const messageBubble = document.createElement("div");
+      messageBubble.style.cssText = \`
+        background: \${themeColors.messageBg};
+        color: \${themeColors.textColor};
+        padding: 12px 16px;
+        border-radius: 18px 18px 18px 4px;
+        font-size: 14px;
+        max-width: 320px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid \${themeColors.borderColor};
+        word-wrap: break-word;
+        line-height: 1.5;
+        position: relative;
+      \`;
+      messageBubble.className = 'messageBubble';
+      
+      // Add blinking cursor
+      const cursor = document.createElement("span");
+      cursor.style.cssText = \`
+        display: inline-block;
+        width: 2px;
+        height: 16px;
+        background: \${themeColors.textColor};
+        margin-left: 2px;
+        animation: blink 1s infinite;
+        vertical-align: middle;
+      \`;
+      
+      messageContent.appendChild(nameLabel);
+      messageContent.appendChild(messageBubble);
+      assistantContainer.appendChild(avatar);
+      assistantContainer.appendChild(messageContent);
+      messageDiv.appendChild(assistantContainer);
+      
+      messages.appendChild(messageDiv);
+      messages.scrollTop = messages.scrollHeight;
+      
+      // Start typewriter effect
+      startTypewriterEffect(messageBubble, content, cursor);
+    }
+  }
+
+  function startTypewriterEffect(element, text, cursor) {
+    let currentText = '';
+    const speed = 5; // milliseconds per character
+    
+    // Add cursor initially
+    element.appendChild(cursor);
+    
+    function typeNextCharacter() {
+      if (currentText.length < text.length) {
+        // Add next character
+        currentText += text[currentText.length];
+        
+        // Apply formatting to current text and display it
+        try {
+          const formatted = formatMessage(currentText);
+          element.innerHTML = formatted + '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+        } catch (error) {
+          // If formatting fails, show plain text with cursor
+          element.innerHTML = currentText + '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+        }
+        
+        // Scroll to bottom to keep up with typing
+        messages.scrollTop = messages.scrollHeight;
+        
+        // Schedule next character
+        setTimeout(typeNextCharacter, speed);
+      } else {
+        // Remove cursor and apply final formatting
+        try {
+          element.innerHTML = formatMessage(text);
+        } catch (error) {
+          element.innerHTML = text;
+        }
+      }
+    }
+    
+    // Start typing after a short delay
+    setTimeout(typeNextCharacter, 100);
+  }
+
   // Handle message sending
+  let isSending = false;
   async function sendMessage() {
     const msg = input.value.trim();
-    if (msg === "") return;
+    if (msg === "" || isSending) return;
+    
+    isSending = true;
+    
+    // Remove suggested responses if they exist (they are in inputContainer, not messages)
+    const existingResponses = inputContainer.querySelector('.suggested-responses');
+    if (existingResponses) {
+      inputContainer.removeChild(existingResponses);
+    }
     
     // Add user message to UI
     addMessage('user', msg);
@@ -1278,31 +1744,32 @@ export default async function handler(req, res) {
     const typingNameLabel = document.createElement("div");
     typingNameLabel.style.cssText = \`
       font-size: 12px;
-      color: #6b7280;
+      color: \${themeColors.textColor};
       margin-bottom: 8px;
       font-weight: 500;
+      opacity: 0.7;
     \`;
     typingNameLabel.textContent = WIDGET_CONFIG.branding.title || 'AI Assistant';
     
     const typingBubble = document.createElement("div");
     typingBubble.style.cssText = \`
-      background: #f9fafb;
-      color: #1f2937;
+      background: \${themeColors.messageBg};
+      color: \${themeColors.textColor};
       padding: 12px 16px;
       border-radius: 18px 18px 18px 4px;
       font-size: 14px;
       max-width: 320px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border: 1px solid #e5e7eb;
+      border: 1px solid \${themeColors.borderColor};
       display: flex;
       align-items: center;
       gap: 8px;
     \`;
     typingBubble.innerHTML = \`
       <div style="display: flex; gap: 4px;">
-        <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></div>
-        <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></div>
-        <div style="width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
       </div>
       <span style="font-weight: 500;">\${WIDGET_CONFIG.messages?.typingText || 'AI is thinking...'}</span>
     \`;
@@ -1353,7 +1820,8 @@ export default async function handler(req, res) {
           localStorage.setItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`, currentConversationId);
         }
 
-        addMessage('assistant', data.reply);
+        // Add message with typewriter effect
+        addMessageWithTypewriter('assistant', data.reply);
         
         // Save conversation to history
         // Use the stored raw messages to preserve formatting for history
@@ -1434,18 +1902,23 @@ export default async function handler(req, res) {
       }
       
       addMessage('assistant', errorMessage);
+    } finally {
+      isSending = false;
     }
   }
 
   // Enter key to send message
   input.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !isSending) {
       sendMessage();
     }
   });
 
-  // Send button click
-  sendButton.onclick = sendMessage;
+  // Send button click with debouncing
+  sendButton.onclick = () => {
+    if (isSending) return;
+    sendMessage();
+  };
 
   // Add CSS animations
   const style = document.createElement('style');
@@ -1467,6 +1940,15 @@ export default async function handler(req, res) {
       }
       40% {
         transform: scale(1);
+      }
+    }
+    
+    @keyframes blink {
+      0%, 50% {
+        opacity: 1;
+      }
+      51%, 100% {
+        opacity: 0;
       }
     }
     
@@ -1536,36 +2018,99 @@ export default async function handler(req, res) {
     .messageBubble br {
       line-height: 1.2 !important;
     }
+    
+    /* Theme-aware input placeholder */
+    .widget-input::placeholder {
+      color: \${themeColors.textColor} !important;
+      opacity: 0.6 !important;
+    }
   \`;
   document.head.appendChild(style);
 
-  // Handle mobile responsiveness
-  function updateMobileStyles() {
+  // Update positioning based on placement
+  function updatePositioning() {
+    const placement = WIDGET_CONFIG.appearance?.placement || 'bottom-right';
+    console.log('updatePositioning called with placement:', placement);
+    
+    // Clear all positioning properties first
+    chatBox.style.left = '';
+    chatBox.style.right = '';
+    chatBox.style.top = '';
+    chatBox.style.bottom = '';
+    historyView.style.left = '';
+    historyView.style.right = '';
+    historyView.style.top = '';
+    historyView.style.bottom = '';
+    
     if (window.innerWidth <= 480) {
+      // Mobile positioning
       chatBox.style.width = 'calc(100vw - 40px)';
       chatBox.style.height = 'calc(100vh - 120px)';
-      chatBox.style.right = '20px';
-      chatBox.style.bottom = '70px';
-      
       historyView.style.width = 'calc(100vw - 40px)';
       historyView.style.height = 'calc(100vh - 120px)';
-      historyView.style.right = '20px';
-      historyView.style.bottom = '70px';
       
+      if (placement === 'bottom-left') {
+        chatBox.style.left = '20px';
+        chatBox.style.bottom = '74px'; // Lige over ikonet på mobile
+        historyView.style.left = '20px';
+        historyView.style.bottom = '74px';
+      } else if (placement === 'top-right') {
+        chatBox.style.right = '20px';
+        chatBox.style.top = '74px'; // Lige under ikonet på mobile
+        historyView.style.right = '20px';
+        historyView.style.top = '74px';
+      } else if (placement === 'top-left') {
+        chatBox.style.left = '20px';
+        chatBox.style.top = '74px'; // Lige under ikonet på mobile
+        historyView.style.left = '20px';
+        historyView.style.top = '74px';
+      } else {
+        chatBox.style.right = '20px';
+        chatBox.style.bottom = '74px'; // Lige over ikonet på mobile
+        historyView.style.right = '20px';
+        historyView.style.bottom = '74px';
+      }
+    } else {
+      // Desktop positioning
+      chatBox.style.width = \`\${WIDGET_CONFIG.theme.width || 400}px\`;
+      chatBox.style.height = \`\${WIDGET_CONFIG.theme.height || 600}px\`;
+      historyView.style.width = \`\${WIDGET_CONFIG.theme.width || 400}px\`;
+      historyView.style.height = \`\${WIDGET_CONFIG.theme.height || 600}px\`;
+      
+      if (placement === 'bottom-left') {
+        chatBox.style.left = '24px';
+        chatBox.style.bottom = '90px'; // Lige over ikonet (24px + 60px button height)
+        historyView.style.left = '24px';
+        historyView.style.bottom = '90px';
+      } else if (placement === 'top-right') {
+        chatBox.style.right = '24px';
+        chatBox.style.top = '90px'; // Lige under ikonet (24px + 60px button height)
+        historyView.style.right = '24px';
+        historyView.style.top = '90px';
+      } else if (placement === 'top-left') {
+        chatBox.style.left = '24px';
+        chatBox.style.top = '90px'; // Lige under ikonet (24px + 60px button height)
+        historyView.style.left = '24px';
+        historyView.style.top = '90px';
+      } else {
+        chatBox.style.right = '24px';
+        chatBox.style.bottom = '90px'; // Lige over ikonet (24px + 60px button height)
+        historyView.style.right = '24px';
+        historyView.style.bottom = '90px';
+      }
+    }
+  }
+
+  // Handle mobile responsiveness
+  function updateMobileStyles() {
+    // Update positioning based on placement
+    updatePositioning();
+    
+    if (window.innerWidth <= 480) {
       // Adjust dropdown menu for mobile
       menuDropdown.style.minWidth = '240px';
       menuDropdown.style.right = '-10px';
     } else {
-      chatBox.style.width = '\${WIDGET_CONFIG.theme.width || 400}px';
-      chatBox.style.height = '\${WIDGET_CONFIG.theme.height || 600}px';
-      chatBox.style.right = '24px';
-      chatBox.style.bottom = '80px';
-      
-      historyView.style.width = '\${WIDGET_CONFIG.theme.width || 400}px';
-      historyView.style.height = '\${WIDGET_CONFIG.theme.height || 600}px';
-      historyView.style.right = '24px';
-      historyView.style.bottom = '80px';
-      
       // Reset dropdown menu for desktop
       menuDropdown.style.minWidth = '280px';
       menuDropdown.style.right = '0';
