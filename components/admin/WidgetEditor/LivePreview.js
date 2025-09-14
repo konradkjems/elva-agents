@@ -158,13 +158,25 @@ export default function LivePreview({ widget, settings }) {
     const baseWidth = settings.appearance?.width || 450;
     const baseHeight = settings.appearance?.height || 600;
     
-    // Adjust dimensions for mobile view
-    const width = deviceView === 'mobile' 
-      ? Math.min(baseWidth, 320) 
-      : baseWidth;
-    const height = deviceView === 'mobile' 
-      ? Math.min(baseHeight, 500) 
-      : baseHeight;
+    if (deviceView === 'mobile') {
+      // Mobile bottom sheet style
+      return {
+        width: '100%',
+        height: '70%',
+        borderRadius: '20px 20px 0 0',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        backgroundColor: '#ffffff',
+        backdropFilter: settings.appearance?.backdropBlur ? 'blur(20px)' : 'none',
+        position: 'absolute',
+        bottom: '0',
+        left: '0',
+        right: '0'
+      };
+    }
+    
+    // Desktop view
+    const width = baseWidth;
+    const height = baseHeight;
 
     return {
       width: `${width}px`,
@@ -262,13 +274,15 @@ export default function LivePreview({ widget, settings }) {
             }`}
             style={getWidgetStyles()}
           >
+            {/* Mobile Bottom Sheet Handle removed per user request */}
+
             {/* Header */}
             <div 
               className="flex items-center justify-between p-5 text-white relative overflow-visible"
               style={{ 
                 backgroundColor: useGradient ? 'transparent' : themeColor,
                 background: useGradient ? `linear-gradient(135deg, ${themeColor} 0%, ${secondaryColor} 100%)` : themeColor,
-                borderRadius: `${settings.appearance?.borderRadius || 20}px ${settings.appearance?.borderRadius || 20}px 0 0`
+                borderRadius: deviceView === 'mobile' ? '0' : `${settings.appearance?.borderRadius || 20}px ${settings.appearance?.borderRadius || 20}px 0 0`
               }}
             >
               <div className="flex items-center gap-3 relative z-10">
@@ -595,13 +609,15 @@ export default function LivePreview({ widget, settings }) {
               }`}
               style={getWidgetStyles()}
             >
+              {/* Mobile Bottom Sheet Handle for History removed per user request */}
+
               {/* History Header */}
               <div 
                 className="flex items-center justify-between p-5 text-white relative overflow-hidden"
                 style={{ 
                   backgroundColor: useGradient ? 'transparent' : themeColor,
                   background: useGradient ? `linear-gradient(135deg, ${themeColor} 0%, ${secondaryColor} 100%)` : themeColor,
-                  borderRadius: `${settings.appearance?.borderRadius || 20}px ${settings.appearance?.borderRadius || 20}px 0 0`
+                  borderRadius: deviceView === 'mobile' ? '0' : `${settings.appearance?.borderRadius || 20}px ${settings.appearance?.borderRadius || 20}px 0 0`
                 }}
               >
                 <div className="flex items-center gap-3 relative z-10">

@@ -364,7 +364,7 @@ export default async function handler(req, res) {
 
   // Create chat box with modern design matching LivePreview
   const chatBox = document.createElement("div");
-  chatBox.className = 'widget-chat-box';
+  chatBox.className = 'mobile-chat-box mobile-scroll';
   chatBox.style.cssText = \`
     display: none;
     position: fixed;
@@ -383,11 +383,11 @@ export default async function handler(req, res) {
     backdrop-filter: \${WIDGET_CONFIG.theme.backdropBlur ? 'blur(20px)' : 'none'};
     overflow: visible;
     transition: all 0.3s ease;
+    will-change: transform, opacity;
   \`;
 
   // Create header matching LivePreview structure
   const header = document.createElement("div");
-  header.className = 'widget-header';
   header.style.cssText = \`
     background: linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}, \${adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)});
     color: white;
@@ -491,7 +491,6 @@ export default async function handler(req, res) {
 
   // Create messages container matching LivePreview
   const messages = document.createElement("div");
-  messages.className = 'widget-messages';
   messages.style.cssText = \`
     flex: 1;
     overflow-y: auto;
@@ -504,7 +503,6 @@ export default async function handler(req, res) {
 
     // Create input container matching LivePreview
     const inputContainer = document.createElement("div");
-    inputContainer.className = 'widget-input-container';
     inputContainer.style.cssText = \`
       background: \${themeColors.inputBg};
       border-radius: 0 0 \${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px;
@@ -598,7 +596,7 @@ export default async function handler(req, res) {
   const poweredBy = document.createElement("div");
   poweredBy.style.cssText = \`
     text-align: center;
-    padding: 0px 20px 16px 16px;
+    padding: 0px 20px 8px 16px;
     font-size: 11px;
     color: \${themeColors.textColor};
     opacity: 0.6;
@@ -635,6 +633,7 @@ export default async function handler(req, res) {
 
   // Create conversation history view
   const historyView = document.createElement("div");
+  historyView.className = 'mobile-chat-box mobile-scroll';
   historyView.style.cssText = \`
     display: none;
     position: fixed;
@@ -653,6 +652,7 @@ export default async function handler(req, res) {
     backdrop-filter: \${WIDGET_CONFIG.theme.backdropBlur ? 'blur(20px)' : 'none'};
     overflow: hidden;
     transition: all 0.3s ease;
+    will-change: transform, opacity;
   \`;
 
   // Create history header
@@ -700,7 +700,7 @@ export default async function handler(req, res) {
   const historyPoweredBy = document.createElement("div");
   historyPoweredBy.style.cssText = \`
     text-align: center;
-    padding: 8px 16px 32px 32px;
+    padding: 8px 16px;
     font-size: 11px;
     color: \${themeColors.textColor};
     opacity: 0.6;
@@ -716,22 +716,7 @@ export default async function handler(req, res) {
   // Track chat state to prevent popup conflicts
   let chatIsOpen = false;
   let historyIsOpen = false;
-  
-  // Function to prevent body scroll on mobile
-  function preventBodyScroll() {
-    if (window.innerWidth <= 768) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-    }
-  }
-  
-  // Function to restore body scroll
-  function restoreBodyScroll() {
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
-  }
+  let popupDismissed = false; // Track if user has dismissed the popup
 
   // Function to animate icon change
   function animateIconChange(newIconHTML) {
@@ -777,22 +762,29 @@ export default async function handler(req, res) {
     }, 300);
   }
   
-  // Show initial popup message after a short delay (only if chat is closed)
+  // Show initial popup message after a short delay (only if chat is closed and not dismissed)
   setTimeout(() => {
-    if (!chatIsOpen) {
+    if (!chatIsOpen && !popupDismissed) {
       showPopup();
     }
   }, 2000);
 
   // Close button functionality
   document.getElementById(\`closeBtn_\${WIDGET_CONFIG.widgetId}\`).onclick = () => {
+    // Animate icon back to chat bubble
+    animateIconChange(\`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+        <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+      </svg>
+    \`);
+    
     chatBox.style.display = "none";
     chatIsOpen = false; // Update state
-    // Restore body scroll on mobile
-    restoreBodyScroll();
-    // Show popup after closing chat
+    // Show popup after closing chat (only if not dismissed)
     setTimeout(() => {
-      showPopup();
+      if (!popupDismissed) {
+        showPopup();
+      }
     }, 500);
   };
 
@@ -802,13 +794,20 @@ export default async function handler(req, res) {
   };
 
   document.getElementById(\`closeHistoryBtn_\${WIDGET_CONFIG.widgetId}\`).onclick = () => {
+    // Animate icon back to chat bubble
+    animateIconChange(\`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+        <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+      </svg>
+    \`);
+    
     historyView.style.display = "none";
     historyIsOpen = false;
-    // Restore body scroll on mobile
-    restoreBodyScroll();
-    // Show popup after closing history
+    // Show popup after closing history (only if not dismissed)
     setTimeout(() => {
-      showPopup();
+      if (!popupDismissed) {
+        showPopup();
+      }
     }, 500);
   };
 
@@ -903,9 +902,6 @@ export default async function handler(req, res) {
     historyIsOpen = true;
     updatePositioning(); // Update positioning when opening history
     
-    // Prevent body scroll on mobile
-    preventBodyScroll();
-    
     // Animate icon to chevron down when history is open
     animateIconChange(\`
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
@@ -925,9 +921,6 @@ export default async function handler(req, res) {
     chatBox.style.display = 'flex';
     chatIsOpen = true;
     updatePositioning(); // Update positioning when returning to chat
-    
-    // Prevent body scroll on mobile (chat is still open)
-    preventBodyScroll();
     
     // Keep chevron down icon when chat is open (no animation needed as it's the same icon)
     // No need to animate since we're already showing chevron down
@@ -1183,8 +1176,8 @@ export default async function handler(req, res) {
 
   // Popup message functions
   function showPopup() {
-    // Don't show popup if chat is open
-    if (chatIsOpen) return;
+    // Don't show popup if chat is open or if user has dismissed it
+    if (chatIsOpen || popupDismissed) return;
     
     if (WIDGET_CONFIG.messages?.popupMessage) {
       popupMessage.innerHTML = \`
@@ -1217,6 +1210,7 @@ export default async function handler(req, res) {
     popupMessage.style.opacity = '0';
     popupMessage.style.transform = 'translateY(20px)';
     popupMessage.style.pointerEvents = 'none';
+    popupDismissed = true; // Mark popup as dismissed by user
   }
   
   // Make hidePopup globally accessible
@@ -1248,24 +1242,20 @@ export default async function handler(req, res) {
       chatIsOpen = false;
       historyIsOpen = false;
       
-      // Restore body scroll on mobile
-      restoreBodyScroll();
-      
       setTimeout(() => {
         chatBox.style.display = "none";
         historyView.style.display = "none";
-        // Show popup after hiding
+        // Show popup after hiding (only if not dismissed)
         setTimeout(() => {
-          showPopup();
+          if (!popupDismissed) {
+            showPopup();
+          }
         }, 500);
       }, 300);
     } else {
       // Hide popup when opening chat
       hidePopup();
       chatIsOpen = true; // Update state
-
-      // Prevent body scroll on mobile
-      preventBodyScroll();
 
       // Animate icon to chevron down
       animateIconChange(\`
@@ -2108,26 +2098,155 @@ export default async function handler(req, res) {
       opacity: 0.6 !important;
     }
     
-    /* Safari viewport fix */
-    :root {
-      --vh: 1vh;
+    /* Mobile-optimized animations */
+    @media (max-width: 768px) {
+      @keyframes mobileSlideIn {
+        from {
+          opacity: 0;
+          transform: translateY(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes mobileSlideOut {
+        from {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: translateY(100%);
+        }
+      }
+      
+      @keyframes mobileBounce {
+        0%, 20%, 53%, 80%, 100% {
+          transform: translate3d(0,0,0);
+        }
+        40%, 43% {
+          transform: translate3d(0, -8px, 0);
+        }
+        70% {
+          transform: translate3d(0, -4px, 0);
+        }
+        90% {
+          transform: translate3d(0, -2px, 0);
+        }
+      }
+      
+      /* Mobile-specific styles */
+      .mobile-chat-box {
+        animation: mobileSlideIn 0.3s ease-out;
+        will-change: transform, opacity;
+      }
+      
+      .mobile-chat-box.closing {
+        animation: mobileSlideOut 0.2s ease-in;
+      }
+      
+      /* Bottom sheet handle styles removed per user request */
+      
+      /* Improved touch targets for mobile */
+      button, input, .clickable {
+        min-height: 44px;
+        min-width: 44px;
+        touch-action: manipulation;
+      }
+      
+      /* Prevent text selection on mobile */
+      .no-select {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+      
+      /* Smooth scrolling for mobile */
+      .mobile-scroll {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+      }
+      
+      /* Mobile-optimized shadows */
+      .mobile-shadow {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      }
+      
+      /* Reduce motion for users who prefer it */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
     }
     
-    .widget-chat-box {
-      height: calc(var(--vh, 1vh) * 100) !important;
+    /* Safe area support for iOS */
+    @supports (padding: max(0px)) {
+      .safe-area-top {
+        padding-top: max(20px, env(safe-area-inset-top));
+      }
+      
+      .safe-area-bottom {
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+      }
+      
+      .safe-area-left {
+        padding-left: max(20px, env(safe-area-inset-left));
+      }
+      
+      .safe-area-right {
+        padding-right: max(20px, env(safe-area-inset-right));
+      }
     }
   \`;
   document.head.appendChild(style);
 
-  // Update positioning based on placement
+  // Enhanced mobile detection and safe area handling
+  function isMobile() {
+    return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+  
+  function getSafeAreaInsets() {
+    // Get CSS environment variables for safe areas (iOS)
+    const style = getComputedStyle(document.documentElement);
+    const top = parseInt(style.getPropertyValue('--sat') || '0');
+    const bottom = parseInt(style.getPropertyValue('--sab') || '0');
+    const left = parseInt(style.getPropertyValue('--sal') || '0');
+    const right = parseInt(style.getPropertyValue('--sar') || '0');
+    
+    return { top, bottom, left, right };
+  }
+  
+  function getViewportHeight() {
+    // Use visual viewport API for better mobile keyboard handling
+    if (window.visualViewport) {
+      return window.visualViewport.height;
+    }
+    return window.innerHeight;
+  }
+  
+  function getViewportWidth() {
+    if (window.visualViewport) {
+      return window.visualViewport.width;
+    }
+    return window.innerWidth;
+  }
+
+  // Update positioning based on placement with enhanced mobile support
   function updatePositioning() {
     const placement = WIDGET_CONFIG.appearance?.placement || 'bottom-right';
-    console.log('updatePositioning called with placement:', placement);
+    const mobile = isMobile();
+    const safeArea = getSafeAreaInsets();
+    const vh = getViewportHeight();
+    const vw = getViewportWidth();
     
-    // Skip positioning updates if we're in mobile full-screen mode
-    if (window.innerWidth <= 768 && (chatIsOpen || historyIsOpen)) {
-      return; // Full-screen mode is handled in updateMobileStyles
-    }
+    console.log('updatePositioning called:', { placement, mobile, safeArea, vh, vw });
     
     // Clear all positioning properties first
     chatBox.style.left = '';
@@ -2139,36 +2258,44 @@ export default async function handler(req, res) {
     historyView.style.top = '';
     historyView.style.bottom = '';
     
-    if (window.innerWidth <= 768) {
-      // Mobile positioning (when closed)
-      chatBox.style.width = 'calc(100vw - 40px)';
-      chatBox.style.height = 'calc(100vh - 120px)';
-      historyView.style.width = 'calc(100vw - 40px)';
-      historyView.style.height = 'calc(100vh - 120px)';
+    if (mobile) {
+      // Enhanced mobile positioning with safe areas and keyboard handling
+      const buttonSize = WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60;
+      const margin = Math.max(20, safeArea.left, safeArea.right);
+      const topMargin = Math.max(20, safeArea.top);
+      const bottomMargin = Math.max(20, safeArea.bottom);
       
-      if (placement === 'bottom-left') {
-        chatBox.style.left = '20px';
-        chatBox.style.bottom = '74px'; // Lige over ikonet på mobile
-        historyView.style.left = '20px';
-        historyView.style.bottom = '74px';
-      } else if (placement === 'top-right') {
-        chatBox.style.right = '20px';
-        chatBox.style.top = '74px'; // Lige under ikonet på mobile
-        historyView.style.right = '20px';
-        historyView.style.top = '74px';
-      } else if (placement === 'top-left') {
-        chatBox.style.left = '20px';
-        chatBox.style.top = '74px'; // Lige under ikonet på mobile
-        historyView.style.left = '20px';
-        historyView.style.top = '74px';
-      } else {
-        chatBox.style.right = '20px';
-        chatBox.style.bottom = '74px'; // Lige over ikonet på mobile
-        historyView.style.right = '20px';
-        historyView.style.bottom = '74px';
-      }
+      // Calculate available space accounting for safe areas
+      const availableWidth = vw - (margin * 2);
+      const availableHeight = vh - (topMargin + bottomMargin + buttonSize + 20);
+      
+      // Set responsive dimensions
+      chatBox.style.width = \`\${Math.min(availableWidth, 400)}px\`;
+      chatBox.style.height = \`\${Math.min(availableHeight, 600)}px\`;
+      historyView.style.width = \`\${Math.min(availableWidth, 400)}px\`;
+      historyView.style.height = \`\${Math.min(availableHeight, 600)}px\`;
+      
+      // Mobile bottom sheet positioning (always at bottom for mobile)
+      chatBox.style.borderRadius = '20px 20px 0 0'; // Bottom sheet style
+      chatBox.style.bottom = '0'; // Always at bottom for mobile
+      chatBox.style.left = '0';
+      chatBox.style.right = '0';
+      chatBox.style.top = 'auto';
+      chatBox.style.width = '100%';
+      chatBox.style.height = \`\${Math.min(availableHeight, 80)}vh\`; // Max 80% of viewport height
+      
+      historyView.style.borderRadius = '20px 20px 0 0';
+      historyView.style.bottom = '0';
+      historyView.style.left = '0';
+      historyView.style.right = '0';
+      historyView.style.top = 'auto';
+      historyView.style.width = '100%';
+      historyView.style.height = \`\${Math.min(availableHeight, 80)}vh\`;
+      
+      // Bottom sheet handle removed per user request
+      
     } else {
-      // Desktop positioning
+      // Desktop positioning (unchanged)
       chatBox.style.width = \`\${WIDGET_CONFIG.theme.width || 400}px\`;
       chatBox.style.height = \`\${WIDGET_CONFIG.theme.height || 600}px\`;
       historyView.style.width = \`\${WIDGET_CONFIG.theme.width || 400}px\`;
@@ -2176,177 +2303,237 @@ export default async function handler(req, res) {
       
       if (placement === 'bottom-left') {
         chatBox.style.left = '24px';
-        chatBox.style.bottom = '90px'; // Lige over ikonet (24px + 60px button height)
+        chatBox.style.bottom = '90px';
         historyView.style.left = '24px';
         historyView.style.bottom = '90px';
       } else if (placement === 'top-right') {
         chatBox.style.right = '24px';
-        chatBox.style.top = '90px'; // Lige under ikonet (24px + 60px button height)
+        chatBox.style.top = '90px';
         historyView.style.right = '24px';
         historyView.style.top = '90px';
       } else if (placement === 'top-left') {
         chatBox.style.left = '24px';
-        chatBox.style.top = '90px'; // Lige under ikonet (24px + 60px button height)
+        chatBox.style.top = '90px';
         historyView.style.left = '24px';
         historyView.style.top = '90px';
       } else {
         chatBox.style.right = '24px';
-        chatBox.style.bottom = '90px'; // Lige over ikonet (24px + 60px button height)
+        chatBox.style.bottom = '90px';
         historyView.style.right = '24px';
         historyView.style.bottom = '90px';
       }
-    }
-  }
-
-  // Function to handle Safari viewport changes
-  function handleSafariViewport() {
-    if (window.innerWidth <= 768) {
-      // Force viewport update for Safari
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', \`\${vh}px\`);
       
-      // Update chat box height with safe margins and Safari space
-      if (chatBox.style.display === 'flex') {
-        chatBox.style.height = \`calc(\${window.innerHeight}px - 16px - env(safe-area-inset-bottom, 20px))\`;
-        chatBox.style.bottom = \`calc(8px + env(safe-area-inset-bottom, 20px))\`;
-      }
-      if (historyView.style.display === 'flex') {
-        historyView.style.height = \`calc(\${window.innerHeight}px - 16px - env(safe-area-inset-bottom, 20px))\`;
-        historyView.style.bottom = \`calc(8px + env(safe-area-inset-bottom, 20px))\`;
-      }
+      // Reset mobile-specific styles for desktop
+      chatBox.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px\`;
+      historyView.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px\`;
     }
   }
 
-  // Store initial viewport height
-  let initialViewportHeight = window.innerHeight;
-  
-  // Function to handle mobile keyboard
-  function handleMobileKeyboard() {
-    if (window.innerWidth <= 768) {
-      const currentHeight = window.innerHeight;
-      const heightDifference = initialViewportHeight - currentHeight;
-      
-      // If keyboard is open (significant height reduction)
-      if (heightDifference > 150) {
-        // Adjust widget to stay visible above keyboard
-        if (chatBox.style.display === 'flex') {
-          chatBox.style.height = \`\${currentHeight - 16}px\`;
-          chatBox.style.bottom = '8px';
-          chatBox.style.top = '8px';
-          chatBox.style.position = 'fixed';
-        }
-        if (historyView.style.display === 'flex') {
-          historyView.style.height = \`\${currentHeight - 16}px\`;
-          historyView.style.bottom = '8px';
-          historyView.style.top = '8px';
-          historyView.style.position = 'fixed';
-        }
-      } else {
-        // Keyboard closed, restore normal positioning
-        updateMobileStyles();
-      }
-    }
-  }
-
-  // Handle mobile responsiveness
+  // Enhanced mobile responsiveness with visual viewport support
   function updateMobileStyles() {
-    if (window.innerWidth <= 768) { // Increased breakpoint for tablet support
-      // Mobile/Tablet full-screen mode with safe margins and bottom space for Safari
-      chatBox.style.width = 'calc(100vw - 16px)';
-      chatBox.style.height = 'calc(100vh - 16px - env(safe-area-inset-bottom, 20px))';
-      chatBox.style.borderRadius = '12px';
-      chatBox.style.top = '8px';
-      chatBox.style.left = '8px';
-      chatBox.style.right = '8px';
-      chatBox.style.bottom = 'calc(8px + env(safe-area-inset-bottom, 20px))';
-      chatBox.style.position = 'fixed';
-      chatBox.style.margin = '0';
-      chatBox.style.padding = '0';
-      
-      historyView.style.width = 'calc(100vw - 16px)';
-      historyView.style.height = 'calc(100vh - 16px - env(safe-area-inset-bottom, 20px))';
-      historyView.style.borderRadius = '12px';
-      historyView.style.top = '8px';
-      historyView.style.left = '8px';
-      historyView.style.right = '8px';
-      historyView.style.bottom = 'calc(8px + env(safe-area-inset-bottom, 20px))';
-      historyView.style.position = 'fixed';
-      historyView.style.margin = '0';
-      historyView.style.padding = '0';
-      
-      // Adjust header for mobile full-screen
-      header.style.borderRadius = '12px 12px 0 0';
-      header.style.padding = '16px 20px';
-      
-      // Adjust history header for mobile full-screen
-      historyHeader.style.borderRadius = '12px 12px 0 0';
-      historyHeader.style.padding = '16px 20px';
-      
-      // Adjust dropdown menu for mobile
+    // Update positioning based on placement
+    updatePositioning();
+    
+    const mobile = isMobile();
+    
+    if (mobile) {
+      // Enhanced mobile dropdown adjustments
       menuDropdown.style.minWidth = '240px';
       menuDropdown.style.right = '-10px';
+      
+      // Add mobile-specific touch improvements
+      chatBox.style.touchAction = 'pan-y';
+      historyView.style.touchAction = 'pan-y';
+      
+      // Improve touch targets
+      const buttons = chatBox.querySelectorAll('button');
+      buttons.forEach(btn => {
+        btn.style.minHeight = '44px';
+        btn.style.minWidth = '44px';
+      });
+      
+      // Add mobile-specific input improvements
+      const inputs = chatBox.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.style.fontSize = '16px'; // Prevent zoom on iOS
+        input.style.minHeight = '44px';
+      });
+      
     } else {
-      // Desktop mode - reset to original positioning
-      chatBox.style.position = 'fixed';
-      chatBox.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px\`;
-      chatBox.style.margin = '';
-      chatBox.style.padding = '';
-      
-      historyView.style.position = 'fixed';
-      historyView.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px\`;
-      historyView.style.margin = '';
-      historyView.style.padding = '';
-      
-      // Reset headers for desktop
-      header.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0\`;
-      header.style.padding = '20px';
-      
-      historyHeader.style.borderRadius = \`\${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0\`;
-      historyHeader.style.padding = '20px';
-      
-      // Reset dropdown menu for desktop
+      // Reset desktop styles
       menuDropdown.style.minWidth = '280px';
       menuDropdown.style.right = '0';
       
-      // Update positioning for desktop
-      updatePositioning();
+      chatBox.style.touchAction = '';
+      historyView.style.touchAction = '';
+      
+      const buttons = chatBox.querySelectorAll('button');
+      buttons.forEach(btn => {
+        btn.style.minHeight = '';
+        btn.style.minWidth = '';
+      });
+      
+      const inputs = chatBox.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.style.fontSize = '';
+        input.style.minHeight = '';
+      });
     }
   }
 
+  // Enhanced event listeners for mobile responsiveness
   window.addEventListener('resize', updateMobileStyles);
-  window.addEventListener('resize', handleSafariViewport);
-  window.addEventListener('resize', handleMobileKeyboard);
+  
+  // Visual viewport API for better mobile keyboard handling
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateMobileStyles);
+  }
+  
+  // Orientation change handling
   window.addEventListener('orientationchange', () => {
-    // Update initial viewport height after orientation change
-    setTimeout(() => {
-      initialViewportHeight = window.innerHeight;
-      handleSafariViewport();
-      handleMobileKeyboard();
-    }, 500);
-  });
-  
-  // Handle Safari viewport changes on scroll (address bar hide/show)
-  let lastHeight = window.innerHeight;
-  window.addEventListener('scroll', () => {
-    if (window.innerWidth <= 768 && Math.abs(window.innerHeight - lastHeight) > 50) {
-      handleSafariViewport();
-      handleMobileKeyboard();
-      lastHeight = window.innerHeight;
-    }
-  });
-  
-  // Handle input focus/blur for keyboard detection
-  input.addEventListener('focus', () => {
-    setTimeout(handleMobileKeyboard, 300); // Delay to allow keyboard to open
-  });
-  
-  input.addEventListener('blur', () => {
-    setTimeout(handleMobileKeyboard, 300); // Delay to allow keyboard to close
+    setTimeout(updateMobileStyles, 100); // Small delay for orientation change
   });
   
   updateMobileStyles();
-  handleSafariViewport();
-  handleMobileKeyboard();
+
+  // Enhanced mobile touch gestures
+  function addTouchGestures() {
+    if (!isMobile()) return;
+    
+    let startY = 0;
+    let startX = 0;
+    let isDragging = false;
+    let dragThreshold = 50;
+    
+    // Add touch event listeners to chat box
+    chatBox.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      isDragging = false;
+    }, { passive: true });
+    
+    chatBox.addEventListener('touchmove', (e) => {
+      if (!startY) return;
+      
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const deltaY = currentY - startY;
+      const deltaX = currentX - startX;
+      
+      // Detect swipe direction
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+        isDragging = true;
+        
+        // Swipe down to close (only if scrolled to top)
+        if (deltaY > 0 && chatBox.scrollTop === 0) {
+          const opacity = Math.max(0.3, 1 - (deltaY / 200));
+          chatBox.style.opacity = opacity;
+          chatBox.style.transform = \`translateY(\${Math.min(deltaY * 0.5, 100)}px)\`;
+        }
+      }
+    }, { passive: true });
+    
+    chatBox.addEventListener('touchend', (e) => {
+      if (!isDragging || !startY) {
+        // Reset styles
+        chatBox.style.opacity = '';
+        chatBox.style.transform = '';
+        return;
+      }
+      
+      const deltaY = e.changedTouches[0].clientY - startY;
+      
+      // Close widget if swiped down enough
+      if (deltaY > dragThreshold && chatBox.scrollTop === 0) {
+        chatBox.style.display = 'none';
+        chatIsOpen = false;
+        
+        // Animate icon back to chat bubble
+        animateIconChange(\`
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+            <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+          </svg>
+        \`);
+        
+        // Show popup after closing (only if not dismissed)
+        setTimeout(() => {
+          if (!popupDismissed) {
+            showPopup();
+          }
+        }, 500);
+      } else {
+        // Reset styles if not enough swipe
+        chatBox.style.opacity = '';
+        chatBox.style.transform = '';
+      }
+      
+      isDragging = false;
+      startY = 0;
+    }, { passive: true });
+    
+    // Add similar gestures to history view
+    historyView.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      isDragging = false;
+    }, { passive: true });
+    
+    historyView.addEventListener('touchmove', (e) => {
+      if (!startY) return;
+      
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const deltaY = currentY - startY;
+      const deltaX = currentX - startX;
+      
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+        isDragging = true;
+        
+        if (deltaY > 0 && historyView.scrollTop === 0) {
+          const opacity = Math.max(0.3, 1 - (deltaY / 200));
+          historyView.style.opacity = opacity;
+          historyView.style.transform = \`translateY(\${Math.min(deltaY * 0.5, 100)}px)\`;
+        }
+      }
+    }, { passive: true });
+    
+    historyView.addEventListener('touchend', (e) => {
+      if (!isDragging || !startY) {
+        historyView.style.opacity = '';
+        historyView.style.transform = '';
+        return;
+      }
+      
+      const deltaY = e.changedTouches[0].clientY - startY;
+      
+      if (deltaY > dragThreshold && historyView.scrollTop === 0) {
+        historyView.style.display = 'none';
+        historyIsOpen = false;
+        
+        // Animate icon back to chat bubble
+        animateIconChange(\`
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+            <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+          </svg>
+        \`);
+        
+        setTimeout(() => {
+          if (!popupDismissed) {
+            showPopup();
+          }
+        }, 500);
+      } else {
+        historyView.style.opacity = '';
+        historyView.style.transform = '';
+      }
+      
+      isDragging = false;
+      startY = 0;
+    }, { passive: true });
+  }
+  
+  // Initialize touch gestures after a short delay to ensure elements are ready
+  setTimeout(addTouchGestures, 1000);
 
 })();
 `;
