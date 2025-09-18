@@ -87,12 +87,14 @@ export default async function handler(req, res) {
     
     res.setHeader('Cache-Control', `public, max-age=${cacheTime}, must-revalidate`);
 
-    // Debug log for showTypingText setting
+    // Debug log for widget configuration
     console.log('🔧 Widget Embed Debug:', {
       widgetId: widgetId,
       showTypingText: widget.messages?.showTypingText,
       typingText: widget.messages?.typingText,
-      updatedAt: widget.updatedAt
+      updatedAt: widget.updatedAt,
+      widgetLogoUrl: widget.branding?.widgetLogoUrl,
+      branding: widget.branding
     });
 
     // Auto-detect if this should use Responses API or legacy
@@ -131,6 +133,7 @@ export default async function handler(req, res) {
       showBranding: widget.branding?.showBranding !== undefined ? widget.branding.showBranding : true,
       avatarUrl: widget.branding?.avatarUrl || null,
       logoUrl: widget.branding?.logoUrl || null,
+      widgetLogoUrl: widget.branding?.widgetLogoUrl || widget.branding?.customWidgetLogo || widget.branding?.companyLogo || widget.branding?.logoUrl || null,
       imageSettings: widget.branding?.imageSettings || null,
       iconSizes: widget.branding?.iconSizes || null
     },
@@ -144,7 +147,8 @@ export default async function handler(req, res) {
       placement: widget.appearance?.placement || 'bottom-right',
       theme: widget.appearance?.theme || 'light',
       useGradient: widget.appearance?.useGradient || false,
-      secondaryColor: widget.appearance?.secondaryColor || null
+      secondaryColor: widget.appearance?.secondaryColor || null,
+      onlineIndicatorColor: widget.appearance?.onlineIndicatorColor || '#3FD128'
     }
   })};
 
@@ -273,6 +277,9 @@ export default async function handler(req, res) {
 
   const themeColors = getThemeColors();
 
+  // Track widget minimized state (defined early to avoid initialization errors)
+  let widgetIsMinimized = true;
+
   // Helper function to generate smart AI icon based on widget name
   function generateAIIcon(widgetName, brandingTitle) {
     // Use branding title if available, otherwise use widget name
@@ -291,13 +298,70 @@ export default async function handler(req, res) {
     return name[0]?.toUpperCase() || 'A';
   }
 
+  // Helper function to generate chat bubble icon without online indicator
+  function generateChatBubbleIcon() {
+    return \`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 24px; height: 24px;">
+        <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
+      </svg>
+    \`;
+  }
+
+  // Helper function to generate chevron down icon for open state
+  function generateChevronIcon() {
+    return \`
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 24px; height: 24px;">
+        <path d="m6 9 6 6 6-6"></path>
+      </svg>
+    \`;
+  }
+
+  // Helper function to generate widget content (logo or chat bubble)
+  function generateWidgetContent(isMinimized = null, forceIcon = false) {
+    // Use global state if no parameter provided
+    const shouldShowMinimized = isMinimized !== null ? isMinimized : widgetIsMinimized;
+    
+    // Debug logging
+    console.log('🔧 generateWidgetContent Debug:', {
+      isMinimized,
+      shouldShowMinimized,
+      widgetIsMinimized,
+      forceIcon,
+      widgetLogoUrl: WIDGET_CONFIG.branding?.widgetLogoUrl,
+      branding: WIDGET_CONFIG.branding
+    });
+    
+    // If forceIcon is true, always show the chat bubble (for open state)
+    if (forceIcon) {
+      console.log('🔵 Forcing default chat bubble icon');
+      return generateChatBubbleIcon();
+    }
+    
+    if (shouldShowMinimized && WIDGET_CONFIG.branding?.widgetLogoUrl) {
+      // Show custom logo when minimized
+      const buttonSize = WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60;
+      const logoSize = Math.round(buttonSize * 0.6); // Logo is 60% of button size
+      
+      console.log('🖼️ Using custom logo:', WIDGET_CONFIG.branding.widgetLogoUrl);
+      
+      return \`
+        <img src="\${WIDGET_CONFIG.branding.widgetLogoUrl}" 
+             alt="Widget Logo" 
+             class="widget-logo"
+             style="width: \${logoSize}px; height: \${logoSize}px; object-fit: contain; transition: all 0.3s ease;" 
+             onerror="console.error('Failed to load widget logo:', this.src)" 
+             onload="console.log('Widget logo loaded successfully:', this.src)" />
+      \`;
+    } else {
+      // Show chat bubble icon with original sizing
+      console.log('🔵 Using default chat bubble icon');
+      return generateChatBubbleIcon();
+    }
+  }
+
   // Create chat button with modern design matching LivePreview
   const chatBtn = document.createElement("button");
-  chatBtn.innerHTML = \`
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
-      <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
-    </svg>
-  \`;
+  chatBtn.innerHTML = generateWidgetContent(true); // Start minimized
   chatBtn.style.cssText = \`
     position: fixed;
     \${WIDGET_CONFIG.appearance?.placement === 'bottom-left' ? 'bottom: 24px; left: 24px;' : 
@@ -335,6 +399,26 @@ export default async function handler(req, res) {
   };
   
   document.body.appendChild(chatBtn);
+
+  // Create online indicator as separate element
+  const onlineIndicator = document.createElement("div");
+  onlineIndicator.className = 'online-indicator';
+  onlineIndicator.style.cssText = \`
+    position: fixed;
+    \${WIDGET_CONFIG.appearance?.placement === 'bottom-left' ? 'bottom: 64px; left: 56px;' : 
+      WIDGET_CONFIG.appearance?.placement === 'top-right' ? 'top: 14px; right: 22px;' :
+      WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 14px; left: 56px;' :
+      'bottom: 64px; right: 22px;'}
+    width: 14px;
+    height: 14px;
+    background: \${WIDGET_CONFIG.appearance.onlineIndicatorColor};
+    border: 1px solid white;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10001;
+  \`;
+  
+  document.body.appendChild(onlineIndicator);
 
   // Create popup message (initially hidden)
   const popupMessage = document.createElement("div");
@@ -409,7 +493,10 @@ export default async function handler(req, res) {
       </div>
       <div>
         <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant'}</div>
-        <div style="font-size: 12px; opacity: 0.9;">Online now</div>
+        <div style="font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 6px;">
+          <div style="width: 6px; height: 6px; background: \${WIDGET_CONFIG.appearance.onlineIndicatorColor}; border-radius: 50%; animation: pulse 2s infinite;"></div>
+          Tilgængelig nu
+        </div>
       </div>
     </div>
     
@@ -602,7 +689,7 @@ export default async function handler(req, res) {
     opacity: 0.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
-  poweredBy.innerHTML = \`Powered by <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`;
+  poweredBy.innerHTML = \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`;
   // Create banner (if bannerText is provided)
   let banner = null;
   if (WIDGET_CONFIG.messages.bannerText) {
@@ -706,7 +793,7 @@ export default async function handler(req, res) {
     opacity: 0.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
-  historyPoweredBy.innerHTML = \`Powered by <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`;
+  historyPoweredBy.innerHTML = \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`;
 
   historyView.appendChild(historyHeader);
   historyView.appendChild(historyContent);
@@ -718,40 +805,63 @@ export default async function handler(req, res) {
   let historyIsOpen = false;
   let popupDismissed = false; // Track if user has dismissed the popup
 
-  // Function to animate icon change
+  // Function to animate icon change with support for both SVG and images
   function animateIconChange(newIconHTML) {
-    const currentIcon = chatBtn.querySelector('svg');
+    const currentIcon = chatBtn.querySelector('svg, img');
     if (!currentIcon) return;
     
     // Create new icon element
     const newIcon = document.createElement('div');
     newIcon.innerHTML = newIconHTML;
-    const newSvg = newIcon.querySelector('svg');
+    const newElement = newIcon.querySelector('svg, img');
     
-    if (!newSvg) return;
+    if (!newElement) return;
     
     // Set initial styles for animation
-    newSvg.style.cssText = \`
-      width: 27.5px;
-      height: 27.5px;
-      position: absolute;
-      opacity: 0;
-      transform: rotate(-90deg) scale(0.8);
-      transition: all 0.3s ease;
-    \`;
+    if (newElement.tagName === 'SVG') {
+      newElement.style.cssText = \`
+        width: 24px;
+        height: 24px;
+        position: absolute;
+        opacity: 0;
+        transform: rotate(-90deg) scale(0.8);
+        transition: all 0.3s ease;
+      \`;
+    } else {
+      // For images
+      const buttonSize = WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60;
+      const logoSize = Math.round(buttonSize * 0.6);
+      newElement.style.cssText = \`
+        width: \${logoSize}px;
+        height: \${logoSize}px;
+        object-fit: contain;
+        position: absolute;
+        opacity: 0;
+        transform: scale(0.8);
+        transition: all 0.3s ease;
+      \`;
+    }
     
     // Add new icon to button
-    chatBtn.appendChild(newSvg);
+    chatBtn.appendChild(newElement);
     
     // Animate out current icon
     currentIcon.style.transition = 'all 0.3s ease';
     currentIcon.style.opacity = '0';
-    currentIcon.style.transform = 'rotate(90deg) scale(0.8)';
+    if (currentIcon.tagName === 'SVG') {
+      currentIcon.style.transform = 'rotate(90deg) scale(0.8)';
+    } else {
+      currentIcon.style.transform = 'scale(0.8)';
+    }
     
     // Animate in new icon
     setTimeout(() => {
-      newSvg.style.opacity = '1';
-      newSvg.style.transform = 'rotate(0deg) scale(1)';
+      newElement.style.opacity = '1';
+      if (newElement.tagName === 'SVG') {
+        newElement.style.transform = 'rotate(0deg) scale(1)';
+      } else {
+        newElement.style.transform = 'scale(1)';
+      }
     }, 50);
     
     // Clean up old icon
@@ -771,12 +881,9 @@ export default async function handler(req, res) {
 
   // Close button functionality
   document.getElementById(\`closeBtn_\${WIDGET_CONFIG.widgetId}\`).onclick = () => {
-    // Animate icon back to chat bubble
-    animateIconChange(\`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
-        <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
-      </svg>
-    \`);
+    // Animate icon back to minimized state (logo or chat bubble)
+    widgetIsMinimized = true;
+    animateIconChange(generateWidgetContent());
     
     chatBox.style.display = "none";
     chatIsOpen = false; // Update state
@@ -794,12 +901,9 @@ export default async function handler(req, res) {
   };
 
   document.getElementById(\`closeHistoryBtn_\${WIDGET_CONFIG.widgetId}\`).onclick = () => {
-    // Animate icon back to chat bubble
-    animateIconChange(\`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
-        <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
-      </svg>
-    \`);
+    // Animate icon back to minimized state (logo or chat bubble)
+    widgetIsMinimized = true;
+    animateIconChange(generateWidgetContent());
     
     historyView.style.display = "none";
     historyIsOpen = false;
@@ -1239,6 +1343,7 @@ export default async function handler(req, res) {
         </svg>
       \`);
       
+      widgetIsMinimized = true;
       chatIsOpen = false;
       historyIsOpen = false;
       
@@ -1255,14 +1360,11 @@ export default async function handler(req, res) {
     } else {
       // Hide popup when opening chat
       hidePopup();
+      widgetIsMinimized = false;
       chatIsOpen = true; // Update state
 
-      // Animate icon to chevron down
-      animateIconChange(\`
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
-          <path d="m6 9 6 6 6-6"></path>
-        </svg>
-      \`);
+      // Animate icon to chevron down (open state)
+      animateIconChange(generateChevronIcon());
 
       // Show animation
       chatBox.style.display = "flex";
@@ -1284,21 +1386,149 @@ export default async function handler(req, res) {
     }
   };
 
+  function showTypingIndicatorForWelcome(callback) {
+    // Create typing indicator for welcome message
+    const typingDiv = document.createElement("div");
+    typingDiv.style.cssText = \`
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      animation: slideIn 0.3s ease-out;
+    \`;
+    
+    // Create timestamp for typing indicator
+    const timestamp = document.createElement("div");
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('da-DK', { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+    timestamp.textContent = timeString;
+    timestamp.style.cssText = \`
+      font-size: 10px;
+      color: \${themeColors.textColor};
+      opacity: 0.5;
+      margin: 6px 8px 4px 44px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    \`;
+    
+    // Create message content container
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      justify-content: flex-start;
+      width: 100%;
+    \`;
+    
+    const typingContainer = document.createElement("div");
+    typingContainer.style.cssText = \`
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    \`;
+    
+    const typingAvatar = document.createElement("div");
+    typingAvatar.style.cssText = \`
+      width: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
+      height: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
+      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    \`;
+    typingAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+      \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+      \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
+    
+    const typingContent = document.createElement("div");
+    typingContent.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+    \`;
+    
+    const typingNameLabel = document.createElement("div");
+    typingNameLabel.style.cssText = \`
+      font-size: 12px;
+      color: \${themeColors.textColor};
+      margin-bottom: 8px;
+      font-weight: 500;
+      opacity: 0.7;
+    \`;
+    typingNameLabel.textContent = WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant';
+    
+    const typingBubble = document.createElement("div");
+    const showTypingText = WIDGET_CONFIG.messages?.showTypingText !== false;
+    const typingText = WIDGET_CONFIG.messages?.typingText || 'AI is thinking...';
+    
+    typingBubble.style.cssText = \`
+      background: \${themeColors.messageBg};
+      color: \${themeColors.textColor};
+      padding: 12px 16px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      max-width: 320px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid \${themeColors.borderColor};
+      display: flex;
+      align-items: center;
+      \${showTypingText ? 'gap: 8px;' : ''}
+    \`;
+    
+    typingBubble.innerHTML = \`
+      <div style="display: flex;">
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s; margin-right: 4px;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s; margin-right: 4px;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
+      </div>
+      \${showTypingText ? \`<span style="font-weight: 500;">\${typingText}</span>\` : ''}
+    \`;
+    
+    typingContent.appendChild(typingNameLabel);
+    typingContent.appendChild(typingBubble);
+    typingContainer.appendChild(typingAvatar);
+    typingContainer.appendChild(typingContent);
+    messageContentDiv.appendChild(typingContainer);
+    
+    typingDiv.appendChild(messageContentDiv);
+    typingDiv.appendChild(timestamp);
+    
+    messages.appendChild(typingDiv);
+    messages.scrollTop = messages.scrollHeight;
+    
+    // Remove typing indicator after 1.5 seconds and call callback
+    setTimeout(() => {
+      if (typingDiv.parentNode) {
+        messages.removeChild(typingDiv);
+      }
+      callback();
+    }, 1500);
+  }
+
   function showWelcomeMessage() {
     // Check if welcome message already exists
     const existingWelcome = messages.querySelector('.messageBubble');
     if (existingWelcome) return; // Welcome message already exists
     
     const welcomeMsg = WIDGET_CONFIG.messages?.welcomeMessage || 'Hello! How can I help you today?';
-    addMessage('assistant', welcomeMsg);
     
-    // Show suggested responses if available and no messages yet
-    if (WIDGET_CONFIG.messages?.suggestedResponses?.length > 0) {
-      showSuggestedResponses();
-    } else {
-      // Show disclaimer even if no suggested responses
-      showDisclaimer();
-    }
+    // Show typing indicator first, then typewriter effect
+    showTypingIndicatorForWelcome(() => {
+      addMessageWithTypewriter('assistant', welcomeMsg);
+      
+      // Show suggested responses after typewriter effect completes
+      setTimeout(() => {
+        if (WIDGET_CONFIG.messages?.suggestedResponses?.length > 0) {
+          showSuggestedResponses();
+        } else {
+          // Show disclaimer even if no suggested responses
+          showDisclaimer();
+        }
+      }, welcomeMsg.length * 5 + 500); // Wait for typewriter to finish
+    });
   }
 
   function showDisclaimer() {
@@ -1486,8 +1716,33 @@ export default async function handler(req, res) {
     messageDiv.style.cssText = \`
       margin-bottom: 16px;
       display: flex;
-      justify-content: \${isUser ? 'flex-end' : 'flex-start'};
+      flex-direction: column;
+      align-items: \${isUser ? 'flex-end' : 'flex-start'};
       animation: slideIn 0.3s ease-out;
+    \`;
+    
+    // Create timestamp
+    const timestamp = document.createElement("div");
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('da-DK', { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+    timestamp.textContent = timeString;
+    timestamp.style.cssText = \`
+      font-size: 10px;
+      color: \${themeColors.textColor};
+      opacity: 0.5;
+      margin: 6px 8px 4px \${isUser ? '8px' : '44px'};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    \`;
+    
+    // Create message content container
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      justify-content: \${isUser ? 'flex-end' : 'flex-start'};
+      width: 100%;
     \`;
     
     if (isUser) {
@@ -1504,7 +1759,7 @@ export default async function handler(req, res) {
         word-wrap: break-word;
       \`;
       messageBubble.innerHTML = formatMessage(content);
-      messageDiv.appendChild(messageBubble);
+      messageContentDiv.appendChild(messageBubble);
     } else {
       // Assistant message - with avatar and name like LivePreview
       const assistantContainer = document.createElement("div");
@@ -1566,8 +1821,12 @@ export default async function handler(req, res) {
       messageContent.appendChild(messageBubble);
       assistantContainer.appendChild(avatar);
       assistantContainer.appendChild(messageContent);
-      messageDiv.appendChild(assistantContainer);
+      messageContentDiv.appendChild(assistantContainer);
     }
+    
+    // Add message content and timestamp to main container
+    messageDiv.appendChild(messageContentDiv);
+    messageDiv.appendChild(timestamp);
     
     messages.appendChild(messageDiv);
     messages.scrollTop = messages.scrollHeight;
@@ -1591,8 +1850,33 @@ export default async function handler(req, res) {
     messageDiv.style.cssText = \`
       margin-bottom: 16px;
       display: flex;
-      justify-content: \${isUser ? 'flex-end' : 'flex-start'};
+      flex-direction: column;
+      align-items: \${isUser ? 'flex-end' : 'flex-start'};
       animation: slideIn 0.3s ease-out;
+    \`;
+    
+    // Create timestamp
+    const timestamp = document.createElement("div");
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('da-DK', { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+    timestamp.textContent = timeString;
+    timestamp.style.cssText = \`
+      font-size: 10px;
+      color: \${themeColors.textColor};
+      opacity: 0.5;
+      margin: 6px 8px 4px \${isUser ? '8px' : '44px'};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    \`;
+    
+    // Create message content container
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      justify-content: \${isUser ? 'flex-end' : 'flex-start'};
+      width: 100%;
     \`;
     
     if (isUser) {
@@ -1672,7 +1956,11 @@ export default async function handler(req, res) {
       messageContent.appendChild(messageBubble);
       assistantContainer.appendChild(avatar);
       assistantContainer.appendChild(messageContent);
-      messageDiv.appendChild(assistantContainer);
+      messageContentDiv.appendChild(assistantContainer);
+      
+      // Add message content and timestamp to main container
+      messageDiv.appendChild(messageContentDiv);
+      messageDiv.appendChild(timestamp);
       
       messages.appendChild(messageDiv);
       messages.scrollTop = messages.scrollHeight;
@@ -2025,6 +2313,21 @@ export default async function handler(req, res) {
       }
     }
     
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    
     .widget-typing div:nth-child(1) {
       animation-delay: -0.32s;
     }
@@ -2238,6 +2541,36 @@ export default async function handler(req, res) {
     return window.innerWidth;
   }
 
+  // Update online indicator position based on chat button placement
+  function updateOnlineIndicatorPosition() {
+    const placement = WIDGET_CONFIG.appearance?.placement || 'bottom-right';
+    const buttonSize = WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60;
+    
+    // Position indicator in top-right area of chat button (moved more to the left)
+    if (placement === 'bottom-left') {
+      onlineIndicator.style.bottom = \`\${24 + buttonSize - 14}px\`;
+      onlineIndicator.style.left = \`\${24 + buttonSize - 22}px\`;
+      onlineIndicator.style.right = 'auto';
+      onlineIndicator.style.top = 'auto';
+    } else if (placement === 'top-right') {
+      onlineIndicator.style.top = '14px';
+      onlineIndicator.style.right = '22px';
+      onlineIndicator.style.bottom = 'auto';
+      onlineIndicator.style.left = 'auto';
+    } else if (placement === 'top-left') {
+      onlineIndicator.style.top = '14px';
+      onlineIndicator.style.left = \`\${24 + buttonSize - 22}px\`;
+      onlineIndicator.style.right = 'auto';
+      onlineIndicator.style.bottom = 'auto';
+    } else {
+      // bottom-right (default)
+      onlineIndicator.style.bottom = \`\${24 + buttonSize - 18}px\`;
+      onlineIndicator.style.right = '22px';
+      onlineIndicator.style.top = 'auto';
+      onlineIndicator.style.left = 'auto';
+    }
+  }
+
   // Update positioning based on placement with enhanced mobile support
   function updatePositioning() {
     const placement = WIDGET_CONFIG.appearance?.placement || 'bottom-right';
@@ -2333,6 +2666,7 @@ export default async function handler(req, res) {
   function updateMobileStyles() {
     // Update positioning based on placement
     updatePositioning();
+    updateOnlineIndicatorPosition();
     
     const mobile = isMobile();
     
@@ -2395,6 +2729,7 @@ export default async function handler(req, res) {
   });
   
   updateMobileStyles();
+  updateOnlineIndicatorPosition();
 
   // Enhanced mobile touch gestures
   function addTouchGestures() {
@@ -2446,14 +2781,11 @@ export default async function handler(req, res) {
       // Close widget if swiped down enough
       if (deltaY > dragThreshold && chatBox.scrollTop === 0) {
         chatBox.style.display = 'none';
+        widgetIsMinimized = true;
         chatIsOpen = false;
         
-        // Animate icon back to chat bubble
-        animateIconChange(\`
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
-            <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
-          </svg>
-        \`);
+        // Animate icon back to minimized state
+        animateIconChange(generateWidgetContent());
         
         // Show popup after closing (only if not dismissed)
         setTimeout(() => {
@@ -2508,14 +2840,11 @@ export default async function handler(req, res) {
       
       if (deltaY > dragThreshold && historyView.scrollTop === 0) {
         historyView.style.display = 'none';
+        widgetIsMinimized = true;
         historyIsOpen = false;
         
-        // Animate icon back to chat bubble
-        animateIconChange(\`
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
-            <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
-          </svg>
-        \`);
+        // Animate icon back to minimized state
+        animateIconChange(generateWidgetContent());
         
         setTimeout(() => {
           if (!popupDismissed) {

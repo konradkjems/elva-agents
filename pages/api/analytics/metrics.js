@@ -13,29 +13,37 @@ export default async function handler(req, res) {
 
     const { 
       widgetId, 
-      period = '7d', // 1d, 7d, 30d, 90d, all
-      timezone = 'UTC'
+      period = '7d', // 1d, 7d, 30d, 90d, all, custom
+      timezone = 'UTC',
+      startDate: customStartDate,
+      endDate: customEndDate
     } = req.query;
 
     // Calculate date range
     const now = new Date();
     let startDate;
+    let endDate = now;
     
-    switch (period) {
-      case '1d':
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-      case '7d':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case '30d':
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        break;
-      case '90d':
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        startDate = null; // All time
+    if (period === 'custom' && customStartDate && customEndDate) {
+      startDate = new Date(customStartDate);
+      endDate = new Date(customEndDate);
+    } else {
+      switch (period) {
+        case '1d':
+          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '90d':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = null; // All time
+      }
     }
 
     // Build query for analytics collection
@@ -44,7 +52,11 @@ export default async function handler(req, res) {
       query.agentId = widgetId;
     }
     if (startDate) {
-      query.date = { $gte: startDate };
+      if (period === 'custom' && endDate) {
+        query.date = { $gte: startDate, $lte: endDate };
+      } else {
+        query.date = { $gte: startDate };
+      }
     }
 
     // Get analytics data for the period
@@ -63,7 +75,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       period,
       startDate: startDate?.toISOString(),
-      endDate: now.toISOString(),
+      endDate: endDate?.toISOString(),
       metrics,
       widgetMetrics,
       dataPoints: analyticsData.length

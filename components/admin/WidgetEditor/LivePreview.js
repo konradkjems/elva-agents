@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { 
-  ChatBubbleLeftRightIcon, 
-  XMarkIcon, 
-  PaperAirplaneIcon,
-  ArrowPathIcon,
-  DevicePhoneMobileIcon,
-  ComputerDesktopIcon
-} from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  MessageCircle,
+  X,
+  Send,
+  RotateCcw,
+  Smartphone,
+  Monitor
+} from 'lucide-react';
 
 export default function LivePreview({ widget, settings }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -218,42 +221,35 @@ export default function LivePreview({ widget, settings }) {
       {/* Device View Controls */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium text-gray-700">Preview:</span>
-          <button
+          <span className="text-sm font-medium">Preview:</span>
+          <Button
+            variant={deviceView === 'desktop' ? 'default' : 'ghost'}
+            size="sm"
             onClick={() => setDeviceView('desktop')}
-            className={`p-2 rounded-lg transition-colors ${
-              deviceView === 'desktop' 
-                ? 'bg-blue-100 text-blue-700' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
           >
-            <ComputerDesktopIcon className="w-5 h-5" />
-          </button>
-          <button
+            <Monitor className="w-4 h-4" />
+          </Button>
+          <Button
+            variant={deviceView === 'mobile' ? 'default' : 'ghost'}
+            size="sm"
             onClick={() => setDeviceView('mobile')}
-            className={`p-2 rounded-lg transition-colors ${
-              deviceView === 'mobile' 
-                ? 'bg-blue-100 text-blue-700' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
           >
-            <DevicePhoneMobileIcon className="w-5 h-5" />
-          </button>
+            <Smartphone className="w-4 h-4" />
+          </Button>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => {
-              setMessages([]);
-              setInputValue('');
-              setIsTyping(false);
-            }}
-            className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
-            title="Clear chat"
-          >
-            <ArrowPathIcon className="w-5 h-5" />
-          </button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setMessages([]);
+            setInputValue('');
+            setIsTyping(false);
+          }}
+          title="Clear chat"
+        >
+          <RotateCcw className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Preview Container */}
@@ -379,7 +375,7 @@ export default function LivePreview({ widget, settings }) {
                   onClick={() => setIsOpen(false)}
                   className="text-white hover:text-gray-200 transition-colors duration-200 p-1 rounded-full hover:bg-white/10"
                 >
-                  <XMarkIcon className="w-5 h-5" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -639,7 +635,7 @@ export default function LivePreview({ widget, settings }) {
                   onClick={() => setShowConversationHistory(false)}
                   className="text-white hover:text-gray-200 transition-colors duration-200 p-1 rounded-full hover:bg-white/10"
                 >
-                  <XMarkIcon className="w-5 h-5" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
