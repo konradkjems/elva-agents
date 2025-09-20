@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import ModernLayout from '../../components/admin/ModernLayout';
-import ModernWidgetCard from '../../components/admin/ModernWidgetCard';
+import ModernLayout from '../../../components/admin/ModernLayout';
+import ModernWidgetCard from '../../../components/admin/ModernWidgetCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

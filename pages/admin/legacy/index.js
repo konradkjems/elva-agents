@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import AdminLayout from '../../components/admin/Layout';
-import WidgetCard from '../../components/admin/WidgetCard';
+import AdminLayout from '../../../components/admin/Layout';
+import WidgetCard from '../../../components/admin/WidgetCard';
 
 export default function AdminDashboard() {
   const router = useRouter();
