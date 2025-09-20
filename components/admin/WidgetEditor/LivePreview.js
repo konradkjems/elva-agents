@@ -11,13 +11,20 @@ import {
   Monitor
 } from 'lucide-react';
 
-export default function LivePreview({ widget, settings }) {
+export default function LivePreview({ widget, settings, showMobilePreview = true }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showPopup, setShowPopup] = useState(true);
   const [deviceView, setDeviceView] = useState('desktop'); // 'desktop', 'mobile'
+  
+  // Force desktop view when mobile preview is disabled
+  useEffect(() => {
+    if (!showMobilePreview && deviceView === 'mobile') {
+      setDeviceView('desktop');
+    }
+  }, [showMobilePreview, deviceView]);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false);
 
@@ -219,24 +226,26 @@ export default function LivePreview({ widget, settings }) {
   return (
     <div className="relative h-full">
       {/* Device View Controls */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <span className="text-sm font-medium">Preview:</span>
-          <Button
-            variant={deviceView === 'desktop' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setDeviceView('desktop')}
-          >
-            <Monitor className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={deviceView === 'mobile' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setDeviceView('mobile')}
-          >
-            <Smartphone className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className={`flex items-center mb-4 ${showMobilePreview ? 'justify-between' : 'justify-end'}`}>
+        {showMobilePreview && (
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">Preview:</span>
+            <Button
+              variant={deviceView === 'desktop' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDeviceView('desktop')}
+            >
+              <Monitor className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={deviceView === 'mobile' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setDeviceView('mobile')}
+            >
+              <Smartphone className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
         
         <Button
           variant="ghost"
