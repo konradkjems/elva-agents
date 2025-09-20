@@ -74,7 +74,7 @@ export default async function handler(req, res) {
           demoSettings: {
             ...demoSettings,
             demoId,
-            demoUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/demo/${demoId}`,
+            demoUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/demo/${demoId}`,
             usageLimits: {
               ...demoSettings.usageLimits,
               currentUsage: {
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
         // If it's a demo widget, capture screenshot asynchronously
         if (isDemoMode && demoSettings?.clientWebsiteUrl) {
           // Don't await screenshot capture to avoid blocking the response
-          fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/screenshot`, {
+          fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/screenshot`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
