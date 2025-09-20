@@ -15,6 +15,28 @@ export default async function handler(req, res) {
         isDemoMode: true 
       }).sort({ createdAt: -1 }).toArray();
 
+      // Update demo URLs for existing demos if they contain localhost
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      
+      for (const demo of demos) {
+        if (demo.demoSettings?.demoUrl && demo.demoSettings.demoUrl.includes('localhost')) {
+          const newDemoUrl = `${baseUrl}/demo/${demo._id}`;
+          
+          await db.collection('widgets').updateOne(
+            { _id: demo._id },
+            { 
+              $set: { 
+                'demoSettings.demoUrl': newDemoUrl,
+                updatedAt: new Date()
+              }
+            }
+          );
+          
+          // Update the demo object for the response
+          demo.demoSettings.demoUrl = newDemoUrl;
+        }
+      }
+
       return res.status(200).json(demos);
     }
 
