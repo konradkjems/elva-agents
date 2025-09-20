@@ -49,11 +49,15 @@ export default function ModernSidebar({ open, setOpen }) {
       {/* Logo and Brand */}
       <div className="flex h-16 shrink-0 items-center border-b px-6">
         <div className="flex items-center space-x-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-            <MessageCircle className="h-5 w-5 text-white" />
+          <div className="flex h-10 w-10 items-center justify-center">
+            <img 
+              src="/images/Elva Logo Icon 2.svg" 
+              alt="Elva Solutions" 
+              className="h-10 w-10"
+            />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Elva Admin</h1>
+            <h1 className="text-lg font-semibold text-foreground">Elva-Agents</h1>
             <p className="text-xs text-muted-foreground">AI Chat Platform</p>
           </div>
         </div>

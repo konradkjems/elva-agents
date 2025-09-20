@@ -230,12 +230,101 @@ const mockWidgets = [
 async function handler(req, res) {
   try {
     if (req.method === 'GET') {
-      // Get all widgets from MongoDB
+      // Get all widgets from MongoDB with analytics data
       try {
         const client = await clientPromise;
         const db = client.db('chatwidgets');
         const widgets = await db.collection('widgets').find({}).toArray();
-        res.status(200).json(widgets);
+        console.log('📊 Found widgets:', widgets.map(w => ({ id: w._id, name: w.name, slug: w.slug })));
+        const analytics = db.collection('analytics');
+        
+        // Debug: Show all analytics records to understand the data structure
+        const allAnalytics = await analytics.find({}).limit(5).toArray();
+        console.log('📊 Sample analytics records:', allAnalytics.map(a => ({ 
+          agentId: a.agentId, 
+          widgetId: a.widgetId, 
+          date: a.date, 
+          conversations: a.metrics?.conversations 
+        })));
+        
+        // Fetch analytics data for each widget
+        const widgetsWithStats = await Promise.all(widgets.map(async (widget) => {
+          try {
+            // Get analytics data for this widget - check multiple agentId formats
+            const widgetIdString = widget._id.toString();
+            
+            // Try different formats and fields that might be used in analytics
+            const queries = [
+              { agentId: widget._id },                    // ObjectId format
+              { agentId: widgetIdString },                // String format
+              { agentId: `cottonshoppen-widget-${widgetIdString}` }, // With prefix like in image
+              { agentId: widget.name },                   // Widget name
+              { agentId: widget.slug },                   // Widget slug if exists
+              { widgetId: widget._id },                   // Try widgetId field instead
+              { widgetId: widgetIdString },               // String widgetId
+              { widgetId: `cottonshoppen-widget-${widgetIdString}` }, // Prefixed widgetId
+              // Try to find by partial match if the format is consistent
+              { agentId: new RegExp(widgetIdString) },    // Regex match for ObjectId in agentId
+              { agentId: new RegExp('cottonshoppen-widget') } // Find any cottonshoppen widget
+            ].filter(q => Object.values(q)[0]); // Remove undefined values
+            
+            let analyticsData = [];
+            let foundWithQuery = null;
+            
+            for (const query of queries) {
+              const data = await analytics.find(query).toArray();
+              if (data.length > 0) {
+                analyticsData = data;
+                foundWithQuery = query;
+                break;
+              }
+            }
+            
+            console.log(`📊 Widget ${widget.name} (${widget._id}): Found ${analyticsData.length} analytics records with query:`, foundWithQuery);
+            if (analyticsData.length > 0) {
+              console.log(`📊 Sample analytics data:`, analyticsData[0]);
+            }
+            
+            // Calculate stats
+            const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
+            const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
+            const totalResponseTimes = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
+            const avgResponseTime = analyticsData.length > 0 ? Math.round(totalResponseTimes / analyticsData.length) : 0;
+            
+            // Calculate unique users (approximate based on conversations)
+            const uniqueUsers = Math.ceil(totalConversations * 0.8); // Rough estimate
+            
+            return {
+              ...widget,
+              stats: {
+                totalConversations,
+                totalMessages,
+                uniqueUsers,
+                responseTime: avgResponseTime,
+                analyticsDataPoints: analyticsData.length
+              }
+            };
+          } catch (error) {
+            console.error(`Error fetching analytics for widget ${widget._id}:`, error);
+            return {
+              ...widget,
+              stats: {
+                totalConversations: 0,
+                totalMessages: 0,
+                uniqueUsers: 0,
+                responseTime: 0,
+                analyticsDataPoints: 0
+              }
+            };
+          }
+        }));
+        
+        console.log('📊 Sending widgets with stats:', widgetsWithStats.map(w => ({ 
+          name: w.name, 
+          id: w._id, 
+          stats: w.stats 
+        })));
+        res.status(200).json(widgetsWithStats);
       } catch (dbError) {
         console.error('Database error, falling back to mock data:', dbError);
         res.status(200).json(mockWidgets);

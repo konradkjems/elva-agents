@@ -144,7 +144,7 @@ export default function ModernAdminDashboard() {
     },
     {
       title: 'Active Widgets', 
-      value: widgets.filter(w => w.isActive).length || 0,
+      value: analyticsOverview?.activeWidgets || widgets.filter(w => w.status === 'active' || w.isActive === true).length || 0,
       icon: Activity
     },
     {

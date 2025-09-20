@@ -301,7 +301,7 @@ export default async function handler(req, res) {
   // Helper function to generate chat bubble icon without online indicator
   function generateChatBubbleIcon() {
     return \`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 24px; height: 24px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 32px; height: 32px;">
         <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
       </svg>
     \`;
@@ -310,7 +310,7 @@ export default async function handler(req, res) {
   // Helper function to generate chevron down icon for open state
   function generateChevronIcon() {
     return \`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 24px; height: 24px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 32px; height: 32px;">
         <path d="m6 9 6 6 6-6"></path>
       </svg>
     \`;
@@ -328,6 +328,9 @@ export default async function handler(req, res) {
       widgetIsMinimized,
       forceIcon,
       widgetLogoUrl: WIDGET_CONFIG.branding?.widgetLogoUrl,
+      logoUrl: WIDGET_CONFIG.branding?.logoUrl,
+      customWidgetLogo: WIDGET_CONFIG.branding?.customWidgetLogo,
+      companyLogo: WIDGET_CONFIG.branding?.companyLogo,
       branding: WIDGET_CONFIG.branding
     });
     
@@ -337,24 +340,34 @@ export default async function handler(req, res) {
       return generateChatBubbleIcon();
     }
     
-    if (shouldShowMinimized && WIDGET_CONFIG.branding?.widgetLogoUrl) {
-      // Show custom logo when minimized
-      const buttonSize = WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60;
-      const logoSize = Math.round(buttonSize * 0.6); // Logo is 60% of button size
-      
-      console.log('🖼️ Using custom logo:', WIDGET_CONFIG.branding.widgetLogoUrl);
+    // Check for any available logo URL (prioritize widgetLogoUrl, then fallback to others)
+    const logoUrl = WIDGET_CONFIG.branding?.widgetLogoUrl || 
+                   WIDGET_CONFIG.branding?.customWidgetLogo || 
+                   WIDGET_CONFIG.branding?.companyLogo || 
+                   WIDGET_CONFIG.branding?.logoUrl;
+    
+    console.log('🎯 Logo Decision Logic:', {
+      shouldShowMinimized,
+      logoUrl,
+      hasLogoUrl: !!logoUrl,
+      willShowLogo: shouldShowMinimized && logoUrl
+    });
+    
+    if (shouldShowMinimized && logoUrl) {
+      // Show custom logo when minimized - use same size as chat bubble icon (32x32px)
+      console.log('🖼️ Using custom logo:', logoUrl);
       
       return \`
-        <img src="\${WIDGET_CONFIG.branding.widgetLogoUrl}" 
+        <img src="\${logoUrl}" 
              alt="Widget Logo" 
              class="widget-logo"
-             style="width: \${logoSize}px; height: \${logoSize}px; object-fit: contain; transition: all 0.3s ease;" 
-             onerror="console.error('Failed to load widget logo:', this.src)" 
+             style="width: 32px; height: 32px; object-fit: contain; transition: all 0.3s ease;" 
+             onerror="console.error('Failed to load widget logo:', this.src); this.style.display='none';" 
              onload="console.log('Widget logo loaded successfully:', this.src)" />
       \`;
     } else {
-      // Show chat bubble icon with original sizing
-      console.log('🔵 Using default chat bubble icon');
+      // Show chat bubble icon with consistent sizing
+      console.log('🔵 Using default chat bubble icon - shouldShowMinimized:', shouldShowMinimized, 'logoUrl:', logoUrl);
       return generateChatBubbleIcon();
     }
   }
@@ -416,6 +429,7 @@ export default async function handler(req, res) {
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     z-index: 10001;
+    display: block;
   \`;
   
   document.body.appendChild(onlineIndicator);
@@ -528,7 +542,7 @@ export default async function handler(req, res) {
           <div style="padding: 8px 0;">
             <button class="menu-option" data-action="new-conversation" style="
               width: 100%;
-              padding: 12px 16px;
+              padding: 12px 4px 12px 16px;
               background: none;
               border: none;
               text-align: left;
@@ -547,7 +561,7 @@ export default async function handler(req, res) {
             </button>
             <button class="menu-option" data-action="view-conversations" style="
               width: 100%;
-              padding: 12px 16px;
+              padding: 12px 4px 12px 16px;
               background: none;
               border: none;
               text-align: left;
@@ -805,10 +819,28 @@ export default async function handler(req, res) {
   let historyIsOpen = false;
   let popupDismissed = false; // Track if user has dismissed the popup
 
+  // Control online indicator visibility based on chat state and device type
+  function updateOnlineIndicatorVisibility() {
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile && chatIsOpen) {
+      // Hide on mobile when chat is open to prevent covering send button
+      onlineIndicator.style.display = 'none';
+    } else {
+      // Show in all other cases (desktop always, mobile when chat is closed)
+      onlineIndicator.style.display = 'block';
+    }
+  }
+
   // Function to animate icon change with support for both SVG and images
   function animateIconChange(newIconHTML) {
+    console.log('🔄 animateIconChange called with:', newIconHTML.substring(0, 100) + '...');
     const currentIcon = chatBtn.querySelector('svg, img');
-    if (!currentIcon) return;
+    if (!currentIcon) {
+      console.log('❌ No current icon found in chatBtn');
+      return;
+    }
+    console.log('📱 Current icon type:', currentIcon.tagName, 'Current icon src:', currentIcon.src || 'SVG');
     
     // Create new icon element
     const newIcon = document.createElement('div');
@@ -820,20 +852,18 @@ export default async function handler(req, res) {
     // Set initial styles for animation
     if (newElement.tagName === 'SVG') {
       newElement.style.cssText = \`
-        width: 24px;
-        height: 24px;
+        width: 32px;
+        height: 32px;
         position: absolute;
         opacity: 0;
         transform: rotate(-90deg) scale(0.8);
         transition: all 0.3s ease;
       \`;
     } else {
-      // For images
-      const buttonSize = WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60;
-      const logoSize = Math.round(buttonSize * 0.6);
+      // For images - use consistent 32x32px size
       newElement.style.cssText = \`
-        width: \${logoSize}px;
-        height: \${logoSize}px;
+        width: 32px;
+        height: 32px;
         object-fit: contain;
         position: absolute;
         opacity: 0;
@@ -1247,7 +1277,7 @@ export default async function handler(req, res) {
       right: 20px;
       background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
       color: white;
-      padding: 12px 16px;
+      padding: 12px 4px 12px 16px;
       border-radius: 8px;
       font-size: 14px;
       z-index: 10003;
@@ -1336,16 +1366,15 @@ export default async function handler(req, res) {
         historyView.style.opacity = '0';
       }
       
-      // Animate icon back to chat bubble
-      animateIconChange(\`
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
-          <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
-        </svg>
-      \`);
-      
       widgetIsMinimized = true;
       chatIsOpen = false;
       historyIsOpen = false;
+      
+      // Update online indicator visibility when chat closes
+      updateOnlineIndicatorVisibility();
+      
+      // Animate icon back to minimized state (logo or chat bubble)
+      animateIconChange(generateWidgetContent());
       
       setTimeout(() => {
         chatBox.style.display = "none";
@@ -1362,6 +1391,9 @@ export default async function handler(req, res) {
       hidePopup();
       widgetIsMinimized = false;
       chatIsOpen = true; // Update state
+
+      // Update online indicator visibility when chat opens
+      updateOnlineIndicatorVisibility();
 
       // Animate icon to chevron down (open state)
       animateIconChange(generateChevronIcon());
@@ -1467,24 +1499,24 @@ export default async function handler(req, res) {
     typingBubble.style.cssText = \`
       background: \${themeColors.messageBg};
       color: \${themeColors.textColor};
-      padding: 12px 16px;
+      padding: 12px \${showTypingText ? '16px' : '12px'} 12px 16px;
       border-radius: 18px 18px 18px 4px;
       font-size: 14px;
-      max-width: 320px;
+      max-width: \${showTypingText ? '320px' : 'fit-content'};
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       border: 1px solid \${themeColors.borderColor};
       display: flex;
       align-items: center;
-      \${showTypingText ? 'gap: 8px;' : ''}
+      width: fit-content;
     \`;
     
     typingBubble.innerHTML = \`
-      <div style="display: flex;">
+      <div style="display: flex; align-items: center; gap: 0; width: fit-content;">
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s; margin-right: 4px;"></div>
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s; margin-right: 4px;"></div>
-        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; margin-right: \${showTypingText ? '8px' : '0'};"></div>
+        \${showTypingText ? \`<span style="font-weight: 500; margin: 0; padding: 0; display: inline-block;">\${typingText}</span>\` : ''}
       </div>
-      \${showTypingText ? \`<span style="font-weight: 500;">\${typingText}</span>\` : ''}
     \`;
     
     typingContent.appendChild(typingNameLabel);
@@ -1751,7 +1783,7 @@ export default async function handler(req, res) {
       messageBubble.style.cssText = \`
         background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
         color: white;
-        padding: 12px 16px;
+        padding: 12px 4px 12px 16px;
         border-radius: 18px 18px 4px 18px;
         font-size: 14px;
         max-width: 80%;
@@ -1805,7 +1837,7 @@ export default async function handler(req, res) {
       messageBubble.style.cssText = \`
         background: \${themeColors.messageBg};
         color: \${themeColors.textColor};
-        padding: 12px 16px;
+        padding: 12px 4px 12px 16px;
         border-radius: 18px 18px 18px 4px;
         font-size: 14px;
         max-width: 320px;
@@ -1928,7 +1960,7 @@ export default async function handler(req, res) {
       messageBubble.style.cssText = \`
         background: \${themeColors.messageBg};
         color: \${themeColors.textColor};
-        padding: 12px 16px;
+        padding: 12px 4px 12px 16px;
         border-radius: 18px 18px 18px 4px;
         font-size: 14px;
         max-width: 320px;
@@ -2081,24 +2113,24 @@ export default async function handler(req, res) {
     typingBubble.style.cssText = \`
       background: \${themeColors.messageBg};
       color: \${themeColors.textColor};
-      padding: 12px 16px;
+      padding: 12px \${showTypingText ? '16px' : '12px'} 12px 16px;
       border-radius: 18px 18px 18px 4px;
       font-size: 14px;
-      max-width: 320px;
+      max-width: \${showTypingText ? '320px' : 'fit-content'};
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       border: 1px solid \${themeColors.borderColor};
       display: flex;
       align-items: center;
-      \${showTypingText ? 'gap: 8px;' : ''}
+      width: fit-content;
     \`;
     
     typingBubble.innerHTML = \`
-      <div style="display: flex;">
+      <div style="display: flex; align-items: center; gap: 0; width: fit-content;">
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.32s; margin-right: 4px;"></div>
         <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; animation-delay: -0.16s; margin-right: 4px;"></div>
-        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both;"></div>
+        <div style="width: 6px; height: 6px; background: \${themeColors.textColor}; opacity: 0.6; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; margin-right: \${showTypingText ? '8px' : '0'};"></div>
+        \${showTypingText ? \`<span style="font-weight: 500; margin: 0; padding: 0; display: inline-block;">\${typingText}</span>\` : ''}
       </div>
-      \${showTypingText ? \`<span style="font-weight: 500;">\${typingText}</span>\` : ''}
     \`;
     
     typingContent.appendChild(typingNameLabel);
@@ -2668,6 +2700,11 @@ export default async function handler(req, res) {
     updatePositioning();
     updateOnlineIndicatorPosition();
     
+    // Only update online indicator visibility if chatIsOpen is defined
+    if (typeof updateOnlineIndicatorVisibility === 'function' && typeof chatIsOpen !== 'undefined') {
+      updateOnlineIndicatorVisibility();
+    }
+    
     const mobile = isMobile();
     
     if (mobile) {
@@ -2863,6 +2900,13 @@ export default async function handler(req, res) {
   
   // Initialize touch gestures after a short delay to ensure elements are ready
   setTimeout(addTouchGestures, 1000);
+
+  // Initialize online indicator visibility after everything is set up
+  setTimeout(() => {
+    if (typeof updateOnlineIndicatorVisibility === 'function') {
+      updateOnlineIndicatorVisibility();
+    }
+  }, 100);
 
 })();
 `;

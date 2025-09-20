@@ -30,11 +30,20 @@ export default async function handler(req, res) {
     const avgSatisfaction = analyticsData.length > 0 ? totalSatisfaction / analyticsData.length : null;
 
     // Calculate active widgets (widgets with status 'active')
-    const activeWidgets = allWidgets.filter(widget => widget.status === 'active');
+    console.log('📊 Widget statuses:', allWidgets.map(w => ({ name: w.name, status: w.status, isActive: w.isActive })));
+    const activeWidgets = allWidgets.filter(widget => widget.status === 'active' || widget.isActive === true);
+    console.log('📊 Active widgets count:', activeWidgets.length);
 
     // Get analytics for each widget
     const widgetsWithAnalytics = allWidgets.map(widget => {
-      const widgetAnalytics = analyticsData.filter(data => data.agentId === widget._id);
+      // Try different agentId formats for matching
+      const widgetIdString = widget._id.toString();
+      const widgetAnalytics = analyticsData.filter(data => 
+        data.agentId === widget._id || 
+        data.agentId === widgetIdString ||
+        data.agentId === widget.name ||
+        data.agentId === widget.slug
+      );
       console.log(`📊 Widget ${widget.name} (${widget._id}): Found ${widgetAnalytics.length} analytics records`);
       
       const widgetTotalConversations = widgetAnalytics.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
@@ -45,6 +54,13 @@ export default async function handler(req, res) {
 
       return {
         ...widget,
+        stats: {
+          totalConversations: widgetTotalConversations,
+          totalMessages: widgetTotalMessages,
+          uniqueUsers: Math.ceil(widgetTotalConversations * 0.8), // Estimate
+          responseTime: Math.round(widgetAvgResponseTime),
+          lastActivity: widgetAnalytics.length > 0 ? widgetAnalytics[0].date : widget.createdAt
+        },
         analytics: {
           totalConversations: widgetTotalConversations,
           totalMessages: widgetTotalMessages,
@@ -54,7 +70,7 @@ export default async function handler(req, res) {
       };
     });
 
-    return res.status(200).json({
+    const response = {
       overview: {
         totalWidgets: allWidgets.length,
         activeWidgets: activeWidgets.length,
@@ -63,7 +79,10 @@ export default async function handler(req, res) {
         avgSatisfaction: avgSatisfaction ? Math.round(avgSatisfaction * 10) / 10 : null
       },
       widgets: widgetsWithAnalytics
-    });
+    };
+    
+    console.log('📊 Sending overview response:', response.overview);
+    return res.status(200).json(response);
 
   } catch (error) {
     console.error('Analytics overview API error:', error);

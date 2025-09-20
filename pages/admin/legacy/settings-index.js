@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
-import ModernLayout from '../../../components/admin/ModernLayout';
+import Layout from '../../../components/admin/Layout';
 import { 
   Cog6ToothIcon,
   KeyIcon,
@@ -80,16 +80,16 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <ModernLayout>
+      <Layout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
         </div>
-      </ModernLayout>
+      </Layout>
     );
   }
 
   return (
-    <ModernLayout>
+    <Layout>
       <Head>
         <title>Settings - Elva Agents</title>
       </Head>
@@ -147,7 +147,7 @@ export default function Settings() {
           {activeTab === 5 && <BackupSettings settings={settings} onSave={saveSettings} />}
         </div>
       </div>
-    </ModernLayout>
+    </Layout>
   );
 }
 
