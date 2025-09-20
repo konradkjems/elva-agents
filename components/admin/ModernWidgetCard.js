@@ -36,7 +36,7 @@ export default function ModernWidgetCard({ widget }) {
   };
 
   const handleView = () => {
-    window.open(`/widget/${widget._id}`, '_blank');
+    window.open(`/widget-preview/${widget._id}`, '_blank');
   };
 
   const handleDuplicate = async () => {

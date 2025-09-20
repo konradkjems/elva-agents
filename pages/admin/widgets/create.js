@@ -1,16 +1,47 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import AdminLayout from '../../../components/admin/Layout';
+import ModernLayout from '../../../components/admin/ModernLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import {
+  ArrowLeft,
+  Save,
+  Settings,
+  Palette,
+  MessageSquare,
+  Sparkles,
+  Globe,
+  Zap,
+  Plus,
+  AlertTriangle
+} from 'lucide-react';
 
 export default function CreateWidget() {
   const router = useRouter();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    isDemoMode: false,
     openai: {
-      promptId: '',
-      version: '26',
-      model: 'gpt-4o-mini'
+      promptId: ''
+    },
+    demoSettings: {
+      clientWebsiteUrl: '',
+      clientInfo: '',
+      usageLimits: {
+        maxInteractions: 50,
+        maxViews: 100,
+        expiresAt: null
+      }
     },
     appearance: {
       theme: 'light',
@@ -27,14 +58,14 @@ export default function CreateWidget() {
       useGradient: true
     },
     messages: {
-      welcomeMessage: 'Hej! 😊 Jeg er kundeservice agent for Elva Solutions. Du kan spørge mig om hvad som helst.',
+      welcomeMessage: 'Hej! 😊 Jeg er din AI assistent. Hvordan kan jeg hjælpe dig i dag?',
       inputPlaceholder: 'Skriv en besked her',
       typingText: 'AI tænker...',
       suggestedResponses: [
-        'Hvad er fordelene ved at bruge Elva Solutions?',
-        'Hvad koster det at få en AI-Agent?',
-        'Kan jeg prøve det gratis?',
-        'Hvordan kan jeg få en AI til min virksomhed?'
+        'Hvordan kan du hjælpe mig?',
+        'Hvad er dine muligheder?',
+        'Kan du give mig mere information?',
+        'Hvad anbefaler du?'
       ],
       popupMessage: 'Hej! 👋 Har du brug for hjælp?',
       popupDelay: 5000,
@@ -42,25 +73,64 @@ export default function CreateWidget() {
       closeButtonText: 'Close'
     },
     branding: {
-      title: 'Elva AI kundeservice Agent',
-      assistantName: 'Elva Assistant',
+      title: 'AI Kundeservice Agent',
+      assistantName: 'AI Assistant',
       avatarUrl: '',
       logoUrl: '',
-      companyName: 'Elva Solutions',
+      companyName: 'Dit Firma',
       customLogo: false,
-      showBranding: true
+      imageSettings: {
+        avatar: {
+          enabled: true,
+          url: '',
+          alt: 'Assistant Avatar',
+          size: 40,
+          borderRadius: '50%'
+        },
+        logo: {
+          enabled: false,
+          url: '',
+          alt: 'Company Logo',
+          size: 120,
+          borderRadius: 8
+        }
+      }
     },
-    advanced: {
-      showCloseButton: true,
-      showConversationHistory: true,
-      showNewChatButton: true,
-      enableAnalytics: true,
-      trackEvents: ['message_sent', 'conversation_started', 'widget_opened'],
-      conversationRetention: 30,
-      maxConversations: 100,
-      language: 'da',
-      timezone: 'Europe/Copenhagen'
+    behavior: {
+      autoOpen: false,
+      autoOpenDelay: 3000,
+      showTypingIndicator: true,
+      showTimestamp: true,
+      enableSound: false,
+      soundUrl: '',
+      persistentChat: true,
+      sessionTimeout: 30,
+      maxMessages: 100,
+      rateLimit: {
+        enabled: false,
+        maxRequests: 10,
+        timeWindow: 60
+      }
     },
+    integrations: {
+      webhooks: {
+        enabled: false,
+        url: '',
+        events: ['message_received', 'conversation_started', 'conversation_ended']
+      },
+      analytics: {
+        enabled: true,
+        trackEvents: true,
+        customEvents: []
+      },
+      crm: {
+        enabled: false,
+        provider: 'none',
+        apiKey: '',
+        syncContacts: false
+      }
+    },
+    timezone: 'Europe/Copenhagen',
     analytics: {
       totalConversations: 0,
       totalMessages: 0,
@@ -71,17 +141,25 @@ export default function CreateWidget() {
     }
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const handleInputChange = (section, key, value) => {
-    if (section === 'name' || section === 'description') {
+    if (section === 'name' || section === 'description' || section === 'isDemoMode') {
       // Handle top-level fields
       setFormData(prev => ({
         ...prev,
         [section]: value
       }));
+    } else if (section === 'demoSettings') {
+      // Handle demo settings (nested object)
+      setFormData(prev => ({
+        ...prev,
+        demoSettings: {
+          ...prev.demoSettings,
+          [key]: value
+        }
+      }));
     } else {
-      // Handle nested fields
+      // Handle other nested fields
       setFormData(prev => ({
         ...prev,
         [section]: {
@@ -95,10 +173,12 @@ export default function CreateWidget() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
-      const response = await fetch('/api/admin/widgets', {
+      // Use demo API if in demo mode, otherwise use regular widget API
+      const apiEndpoint = formData.isDemoMode ? '/api/admin/demo-widgets' : '/api/admin/widgets';
+      
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,249 +191,426 @@ export default function CreateWidget() {
       }
 
       const newWidget = await response.json();
-      router.push(`/admin/widgets/${newWidget._id}`);
+      
+      if (formData.isDemoMode) {
+        toast({
+          title: "Demo Widget Created",
+          description: "Your demo widget has been created successfully!",
+        });
+        router.push(`/admin/demo-widgets`);
+      } else {
+        toast({
+          title: "Widget Created",
+          description: "Your new widget has been created successfully!",
+        });
+        router.push(`/admin/widgets/${newWidget._id}`);
+      }
     } catch (error) {
       console.error('Error creating widget:', error);
-      setError('Failed to create widget. Please try again.');
+      toast({
+        variant: "destructive",
+        title: "Creation Failed",
+        description: "Failed to create widget. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AdminLayout>
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Create New Widget</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Set up a new AI chat widget with your preferred settings
-          </p>
+    <ModernLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.back()}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Create New Widget</h1>
+              <p className="text-muted-foreground">
+                Set up a new AI chat widget with your preferred settings
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Plus className="h-3 w-3" />
+              New Widget
+            </Badge>
+          </div>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Widget Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', '', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="My Customer Service Widget"
-                />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Basic Information
+              </CardTitle>
+              <CardDescription>
+                Configure the basic settings for your widget
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">
+                    Widget Name *
+                  </Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', '', e.target.value)}
+                    placeholder="My Customer Service Widget"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="companyName">
+                    Company Name
+                  </Label>
+                  <Input
+                    id="companyName"
+                    type="text"
+                    value={formData.branding.companyName}
+                    onChange={(e) => handleInputChange('branding', 'companyName', e.target.value)}
+                    placeholder="Your Company"
+                  />
+                </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Company Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.branding.companyName}
-                  onChange={(e) => handleInputChange('branding', 'companyName', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="Your Company"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="description">
                   Description
-                </label>
-                <textarea
+                </Label>
+                <Textarea
+                  id="description"
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', '', e.target.value)}
                   rows={3}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                   placeholder="Describe what this widget will be used for..."
                 />
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          {/* Demo Mode Toggle */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Demo Mode
+              </CardTitle>
+              <CardDescription>
+                Create a demo widget for client demonstrations and sales purposes
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="demoMode"
+                  checked={formData.isDemoMode}
+                  onCheckedChange={(checked) => handleInputChange('isDemoMode', '', checked)}
+                />
+                <Label htmlFor="demoMode">Create as Demo Widget</Label>
+              </div>
+              {formData.isDemoMode && (
+                <div className="space-y-4 p-4 bg-muted rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="clientWebsiteUrl">
+                      Client Website URL *
+                    </Label>
+                    <Input
+                      id="clientWebsiteUrl"
+                      type="url"
+                      value={formData.demoSettings.clientWebsiteUrl}
+                      onChange={(e) => handleInputChange('demoSettings', 'clientWebsiteUrl', e.target.value)}
+                      placeholder="https://client-website.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="clientInfo">
+                      Client Information
+                    </Label>
+                    <Input
+                      id="clientInfo"
+                      type="text"
+                      value={formData.demoSettings.clientInfo}
+                      onChange={(e) => handleInputChange('demoSettings', 'clientInfo', e.target.value)}
+                      placeholder="Client name or company"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="maxInteractions">
+                        Max Interactions
+                      </Label>
+                      <Input
+                        id="maxInteractions"
+                        type="number"
+                        value={formData.demoSettings.usageLimits.maxInteractions}
+                        onChange={(e) => handleInputChange('demoSettings', 'usageLimits', {
+                          ...formData.demoSettings.usageLimits,
+                          maxInteractions: parseInt(e.target.value)
+                        })}
+                        min="1"
+                        max="1000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="maxViews">
+                        Max Views
+                      </Label>
+                      <Input
+                        id="maxViews"
+                        type="number"
+                        value={formData.demoSettings.usageLimits.maxViews}
+                        onChange={(e) => handleInputChange('demoSettings', 'usageLimits', {
+                          ...formData.demoSettings.usageLimits,
+                          maxViews: parseInt(e.target.value)
+                        })}
+                        min="1"
+                        max="10000"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="expiresAt">
+                      Expiration Date (Optional)
+                    </Label>
+                    <Input
+                      id="expiresAt"
+                      type="datetime-local"
+                      value={formData.demoSettings.usageLimits.expiresAt ? new Date(formData.demoSettings.usageLimits.expiresAt).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => handleInputChange('demoSettings', 'usageLimits', {
+                        ...formData.demoSettings.usageLimits,
+                        expiresAt: e.target.value ? new Date(e.target.value).toISOString() : null
+                      })}
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* OpenAI Configuration */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">OpenAI Configuration</h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-1">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                OpenAI Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure the AI model and prompt settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="promptId">
                   Prompt ID *
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="promptId"
                   type="text"
                   required
                   value={formData.openai.promptId}
                   onChange={(e) => handleInputChange('openai', 'promptId', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="pmpt_..."
+                  placeholder="prompt-1234567890"
                 />
-                <p className="mt-2 text-sm text-gray-500">
-                  Enter the Prompt ID from your OpenAI platform. This identifies which AI assistant configuration to use.
+                <p className="text-sm text-muted-foreground">
+                  Model og version konfigureres på OpenAI platformen
                 </p>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-blue-900 mb-2">ℹ️ Model & Version Information</h3>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-medium text-blue-700 mb-1">
-                      Model (Managed by OpenAI Platform)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.openai.model}
-                      readOnly
-                      className="block w-full rounded-md border-blue-200 bg-blue-50 text-blue-700 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-blue-700 mb-1">
-                      Version (Auto-updated)
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.openai.version}
-                      readOnly
-                      className="block w-full rounded-md border-blue-200 bg-blue-50 text-blue-700 sm:text-sm"
-                    />
-                  </div>
-                </div>
-                <p className="mt-2 text-xs text-blue-600">
-                  Model and version are automatically managed by the OpenAI platform based on your prompt configuration.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Settings */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Settings</h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Theme Color
-                </label>
-                <input
-                  type="color"
-                  value={formData.appearance.themeColor}
-                  onChange={(e) => handleInputChange('appearance', 'themeColor', e.target.value)}
-                  className="mt-1 block w-full h-10 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Placement
-                </label>
-                <select
-                  value={formData.appearance.placement}
-                  onChange={(e) => handleInputChange('appearance', 'placement', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                >
-                  <option value="bottom-right">Bottom Right</option>
-                  <option value="bottom-left">Bottom Left</option>
-                  <option value="top-right">Top Right</option>
-                  <option value="top-left">Top Left</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Widget Title
-                </label>
-                <input
-                  type="text"
-                  value={formData.branding.title}
-                  onChange={(e) => handleInputChange('branding', 'title', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="AI Assistant"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
+          {/* Messages Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Messages & Behavior
+              </CardTitle>
+              <CardDescription>
+                Configure welcome messages and chat behavior
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="welcomeMessage">
                   Welcome Message
-                </label>
-                <input
-                  type="text"
+                </Label>
+                <Textarea
+                  id="welcomeMessage"
                   value={formData.messages.welcomeMessage}
                   onChange={(e) => handleInputChange('messages', 'welcomeMessage', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                  placeholder="Hello! How can I help you?"
+                  rows={3}
+                  placeholder="Hello! How can I help you today?"
                 />
               </div>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="inputPlaceholder">
+                    Input Placeholder
+                  </Label>
+                  <Input
+                    id="inputPlaceholder"
+                    type="text"
+                    value={formData.messages.inputPlaceholder}
+                    onChange={(e) => handleInputChange('messages', 'inputPlaceholder', e.target.value)}
+                    placeholder="Type your message here..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="typingText">
+                    Typing Indicator Text
+                  </Label>
+                  <Input
+                    id="typingText"
+                    type="text"
+                    value={formData.messages.typingText}
+                    onChange={(e) => handleInputChange('messages', 'typingText', e.target.value)}
+                    placeholder="AI is thinking..."
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end space-x-3">
-            <button
+          {/* Appearance Configuration */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5" />
+                Appearance
+              </CardTitle>
+              <CardDescription>
+                Customize the visual appearance of your widget
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="themeColor">
+                    Primary Color
+                  </Label>
+                  <Input
+                    id="themeColor"
+                    type="color"
+                    value={formData.appearance.themeColor}
+                    onChange={(e) => handleInputChange('appearance', 'themeColor', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="secondaryColor">
+                    Secondary Color
+                  </Label>
+                  <Input
+                    id="secondaryColor"
+                    type="color"
+                    value={formData.appearance.secondaryColor}
+                    onChange={(e) => handleInputChange('appearance', 'secondaryColor', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="placement">
+                    Placement
+                  </Label>
+                  <Select
+                    value={formData.appearance.placement}
+                    onValueChange={(value) => handleInputChange('appearance', 'placement', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select placement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                      <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                      <SelectItem value="top-right">Top Right</SelectItem>
+                      <SelectItem value="top-left">Top Left</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="width">
+                    Width (px)
+                  </Label>
+                  <Input
+                    id="width"
+                    type="number"
+                    value={formData.appearance.width}
+                    onChange={(e) => handleInputChange('appearance', 'width', parseInt(e.target.value))}
+                    placeholder="450"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="height">
+                    Height (px)
+                  </Label>
+                  <Input
+                    id="height"
+                    type="number"
+                    value={formData.appearance.height}
+                    onChange={(e) => handleInputChange('appearance', 'height', parseInt(e.target.value))}
+                    placeholder="600"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="useGradient"
+                  checked={formData.appearance.useGradient}
+                  onCheckedChange={(checked) => handleInputChange('appearance', 'useGradient', checked)}
+                />
+                <Label htmlFor="useGradient">Use gradient background</Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-4 pt-6">
+            <Button
               type="button"
-              onClick={() => router.push('/admin')}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={loading}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                loading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className="min-w-[120px]"
             >
-              {loading ? 'Creating...' : 'Create Widget'}
-            </button>
+              {loading ? (
+                <>
+                  <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Create Widget
+                </>
+              )}
+            </Button>
           </div>
         </form>
-        
-        {/* Embed Code Preview */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-medium text-blue-900 mb-4">🚀 Widget Integration Preview</h3>
-          <p className="text-sm text-blue-700 mb-4">
-            Once you create the widget, you'll be able to copy the embed code and add it to your website.
-          </p>
-          
-          <div className="bg-white border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-2">Embed Code Preview:</h4>
-            <div className="bg-gray-900 text-green-400 p-3 rounded-lg font-mono text-sm">
-              <pre>{`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/WIDGET_ID"></script>`}</pre>
-            </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Replace WIDGET_ID with your actual widget ID after creation.
-            </p>
-          </div>
-          
-          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
-            <h4 className="font-medium text-green-900 mb-2">✅ After Creation:</h4>
-            <ol className="text-sm text-green-800 space-y-1 list-decimal list-inside">
-              <li>Go to the widget editor</li>
-              <li>Click on the "Embed Code" tab</li>
-              <li>Copy the generated embed code</li>
-              <li>Add it to your website before the closing &lt;/body&gt; tag</li>
-            </ol>
-          </div>
-        </div>
       </div>
-    </AdminLayout>
+    </ModernLayout>
   );
 }
 
 export async function getServerSideProps() {
   return {
     props: {},
-  }
+  };
 }

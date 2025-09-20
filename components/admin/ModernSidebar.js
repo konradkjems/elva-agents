@@ -9,7 +9,8 @@ import {
   MessageCircle,
   BarChart3,
   Settings,
-  X
+  X,
+  Globe
 } from 'lucide-react';
 
 const navigation = [
@@ -25,6 +26,13 @@ const navigation = [
     icon: MessageCircle,
     description: 'Manage chat widgets',
     badge: 'New'
+  },
+  { 
+    name: 'Demo Widgets', 
+    href: '/admin/demo-widgets', 
+    icon: Globe,
+    description: 'Client demonstrations',
+    badge: 'Demo'
   },
   { 
     name: 'Analytics', 
@@ -50,11 +58,13 @@ export default function ModernSidebar({ open, setOpen }) {
       <div className="flex h-16 shrink-0 items-center border-b px-6">
         <div className="flex items-center space-x-3">
           <div className="flex h-10 w-10 items-center justify-center">
-            <img 
-              src="/images/Elva Logo Icon 2.svg" 
-              alt="Elva Solutions" 
-              className="h-10 w-10"
-            />
+            <a href="https://elva-solutions.com" target="_blank" rel="noopener noreferrer">
+              <img 
+                src="/images/Elva Logo Icon 2.svg" 
+                alt="Elva Solutions" 
+                className="h-10 w-10"
+              />
+            </a>
           </div>
           <div>
             <h1 className="text-lg font-semibold text-foreground">Elva-Agents</h1>
