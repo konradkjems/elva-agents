@@ -20,7 +20,8 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Settings
 } from 'lucide-react';
 
 export default function DemoWidgetsPage() {
@@ -37,7 +38,7 @@ export default function DemoWidgetsPage() {
 
   const fetchDemos = async () => {
     try {
-      const response = await fetch('/api/admin/demo-widgets');
+      const response = await fetch('/api/admin/demos');
       if (response.ok) {
         const data = await response.json();
         setDemos(data);
@@ -45,7 +46,7 @@ export default function DemoWidgetsPage() {
         // Fetch usage stats for each demo
         const statsPromises = data.map(async (demo) => {
           try {
-            const usageResponse = await fetch(`/api/admin/demo-widgets/${demo._id}/usage`);
+            const usageResponse = await fetch(`/api/admin/demos/${demo._id}/usage`);
             if (usageResponse.ok) {
               const usageData = await usageResponse.json();
               return { demoId: demo._id, usage: usageData };
@@ -79,7 +80,7 @@ export default function DemoWidgetsPage() {
 
   const resetUsage = async (demoId) => {
     try {
-      const response = await fetch(`/api/admin/demo-widgets/${demoId}/usage`, {
+      const response = await fetch(`/api/admin/demos/${demoId}/usage`, {
         method: 'PUT'
       });
       
@@ -139,7 +140,7 @@ export default function DemoWidgetsPage() {
     }
 
     try {
-      const response = await fetch(`/api/admin/demo-widgets/${demoId}`, {
+      const response = await fetch(`/api/admin/demos/${demoId}`, {
         method: 'DELETE'
       });
       
@@ -240,12 +241,21 @@ export default function DemoWidgetsPage() {
               <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Demo Widgets</h3>
               <p className="text-gray-600 mb-4">
-                Create your first demo widget to showcase your AI chat capabilities to potential clients.
+                Create demos from your existing widgets to showcase your AI chat capabilities to potential clients.
               </p>
-              <Button onClick={() => setShowCreateForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Demo Widget
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={() => setShowCreateForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Demo Widget
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.href = '/admin/widgets?tab=management'}
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Manage Widgets
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -283,6 +293,12 @@ export default function DemoWidgetsPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Source Widget Info */}
+                    <div className="text-sm">
+                      <p className="text-gray-600 mb-1">Source Widget:</p>
+                      <p className="text-gray-900 font-medium">{demo.sourceWidgetName}</p>
+                    </div>
 
                     {/* Client Website */}
                     {demo.demoSettings?.clientWebsiteUrl && (
@@ -402,13 +418,13 @@ export default function DemoWidgetsPage() {
                     Demo Creation
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    Use the main widget creation form to create demo widgets.
+                    Go to Widget Management to create demos from your existing widgets.
                   </p>
                   <Button onClick={() => {
                     setShowCreateForm(false);
-                    window.location.href = '/admin/widgets/create';
+                    window.location.href = '/admin/widgets?tab=management';
                   }}>
-                    Go to Widget Creator
+                    Go to Widget Management
                   </Button>
                 </div>
               </CardContent>

@@ -30,7 +30,17 @@ export default async function handler(req, res) {
         queryId = new ObjectId(widgetId);
       }
       
+      // First try to find in widgets collection
       widget = await db.collection('widgets').findOne({ _id: queryId });
+      
+      // If not found in widgets, try demos collection
+      if (!widget) {
+        widget = await db.collection('demos').findOne({ _id: widgetId });
+        console.log('📝 Widget not found in widgets collection, checking demos collection...');
+        if (widget) {
+          console.log('📝 Found widget in demos collection:', widget.name);
+        }
+      }
     } catch (dbError) {
       console.log('Database error, using fallback widget data:', dbError.message);
       // Fallback to mock data if database fails

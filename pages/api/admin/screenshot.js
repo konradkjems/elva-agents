@@ -100,9 +100,9 @@ export default async function handler(req, res) {
       const client = await clientPromise;
       const db = client.db('chatwidgets');
 
-      // Update demo widget with screenshot info
-      await db.collection('widgets').updateOne(
-        { _id: demoId, isDemoMode: true },
+      // Update demo with screenshot info (try new demos collection first, then fallback to widgets)
+      let updateResult = await db.collection('demos').updateOne(
+        { _id: demoId },
         { 
           $set: { 
             'demoSettings.screenshotUrl': screenshotData.screenshotUrl,
@@ -112,6 +112,21 @@ export default async function handler(req, res) {
           }
         }
       );
+
+      // If not found in demos collection, try widgets collection (for backward compatibility)
+      if (updateResult.matchedCount === 0) {
+        await db.collection('widgets').updateOne(
+          { _id: demoId, isDemoMode: true },
+          { 
+            $set: { 
+              'demoSettings.screenshotUrl': screenshotData.screenshotUrl,
+              'demoSettings.screenshotPublicId': screenshotData.screenshotPublicId,
+              'demoSettings.screenshotCapturedAt': screenshotData.capturedAt,
+              updatedAt: new Date()
+            }
+          }
+        );
+      }
       
       await browser.close();
       

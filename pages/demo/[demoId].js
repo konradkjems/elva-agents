@@ -22,6 +22,8 @@ export default function DemoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [usage, setUsage] = useState(null);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
 
   useEffect(() => {
     if (demoId) {
@@ -32,7 +34,7 @@ export default function DemoPage() {
 
   const fetchDemo = async () => {
     try {
-      const response = await fetch(`/api/admin/demo-widgets/${demoId}`);
+      const response = await fetch(`/api/admin/demos/${demoId}`);
       if (!response.ok) {
         throw new Error('Demo not found');
       }
@@ -47,10 +49,12 @@ export default function DemoPage() {
 
   const trackView = async () => {
     try {
-      await fetch(`/api/admin/demo-widgets/${demoId}/usage`, {
+      await fetch(`/api/admin/demos/${demoId}/usage`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'view' })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'view' }),
       });
     } catch (error) {
       console.error('Failed to track view:', error);
@@ -59,44 +63,38 @@ export default function DemoPage() {
 
   const trackInteraction = async () => {
     try {
-      const response = await fetch(`/api/admin/demo-widgets/${demoId}/usage`, {
+      await fetch(`/api/admin/demos/${demoId}/usage`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'interaction' })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'interaction' }),
       });
-      
-      if (response.ok) {
-        const result = await response.json();
-        setUsage(result.currentUsage);
-      }
     } catch (error) {
       console.error('Failed to track interaction:', error);
     }
   };
 
   const loadWidgetScript = () => {
-    // Check if script is already loaded
-    const existingScript = document.querySelector(`script[src*="/api/widget-embed/${demoId}"]`);
-    if (existingScript) {
-      return;
-    }
-
-    // Create and append script tag
+    // Remove any existing widget scripts
+    const existingScripts = document.querySelectorAll('script[src*="widget-embed"]');
+    existingScripts.forEach(script => script.remove());
+    
+    // Create and load the widget script
     const script = document.createElement('script');
     script.src = `/api/widget-embed/${demoId}`;
-    script.defer = true;
     script.async = true;
     
-    // Track interaction when widget is clicked
+    // Track interactions when widget is used
     script.onload = () => {
-      // Add click listener to widget container when it appears
+      // Wait for widget to initialize and then track interactions
       const checkForWidget = setInterval(() => {
-        const widgetContainer = document.getElementById('elva-chat-widget-container');
-        if (widgetContainer) {
+        const widget = document.querySelector('[data-widget="chat-widget"]');
+        if (widget) {
           clearInterval(checkForWidget);
           
-          // Add click listener to track interactions
-          widgetContainer.addEventListener('click', trackInteraction);
+          // Track when chat opens
+          widget.addEventListener('click', trackInteraction);
           
           // Also track when chat opens
           const chatBtn = document.querySelector('[data-widget="chat-button"]');
@@ -118,6 +116,26 @@ export default function DemoPage() {
       loadWidgetScript();
     }
   }, [demo, loading]);
+
+  // Timeout mechanism to detect iframe loading failures
+  useEffect(() => {
+    if (demo && demo.demoSettings?.clientWebsiteUrl && !iframeLoaded && !iframeError) {
+      console.log('📝 Setting up iframe timeout mechanism...');
+      
+      // Set a timeout to detect if iframe fails to load within 10 seconds
+      const timeoutId = setTimeout(() => {
+        if (!iframeLoaded && !iframeError) {
+          console.log('📝 Iframe timeout reached, triggering fallback to screenshot');
+          setIframeError(true);
+        }
+      }, 10000); // 10 second timeout
+
+      // Clear timeout if iframe loads or errors before timeout
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [demo, iframeLoaded, iframeError]);
 
   if (loading) {
     return (
@@ -216,45 +234,126 @@ export default function DemoPage() {
         <meta name="description" content={`Demo of ${demo.name} AI chat widget`} />
       </Head>
       
-      {/* Full Screen Demo - Just the website with widget */}
+      {/* Full Screen Demo - Website iframe with widget overlay */}
       <div className="relative w-full h-screen overflow-hidden">
-        {demo.demoSettings?.screenshotUrl ? (
-          <img 
-            src={demo.demoSettings.screenshotUrl} 
-            alt="Client website screenshot"
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              // Fallback if screenshot fails to load
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
+        {/* Iframe for the client website */}
+        {demo.demoSettings?.clientWebsiteUrl && !iframeError ? (
+          <iframe
+            src={demo.demoSettings.clientWebsiteUrl}
+            className="w-full h-full border-0"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+            onLoad={() => {
+              console.log('📝 Iframe loaded successfully');
+              setIframeLoaded(true);
+            }}
+            onError={() => {
+              console.log('📝 Iframe error event triggered');
+              setIframeError(true);
+            }}
+            style={{
+              background: 'white',
+              display: iframeLoaded ? 'block' : 'none'
             }}
           />
         ) : null}
-        
-        {/* Loading/Fallback state */}
-        <div className={`flex items-center justify-center w-full h-full bg-gray-100 ${demo.demoSettings?.screenshotUrl ? 'hidden' : 'flex'}`}>
-          <div className="text-center">
-            <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto mb-4 flex items-center justify-center">
-              <ExternalLink className="h-8 w-8 text-gray-400" />
+
+        {/* Loading state while iframe loads */}
+        {demo.demoSettings?.clientWebsiteUrl && !iframeLoaded && !iframeError && (
+          <div className="flex items-center justify-center w-full h-full bg-gray-100">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-gray-600 mb-2">Loading website...</p>
+              <p className="text-gray-500 text-sm">
+                {demo.demoSettings?.clientWebsiteUrl}
+              </p>
+              <p className="text-gray-400 text-xs mt-2">
+                If this takes too long, we'll show a screenshot instead
+              </p>
             </div>
-            <p className="text-gray-500 mb-2">
-              {demo.demoSettings?.screenshotCapturedAt ? 'Screenshot processing...' : 'Capturing website preview...'}
-            </p>
-            {demo.demoSettings?.clientWebsiteUrl && (
-              <a 
-                href={demo.demoSettings.clientWebsiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                View original website →
-              </a>
-            )}
           </div>
-        </div>
+        )}
+
+        {/* Fallback to screenshot if iframe fails */}
+        {(iframeError || !demo.demoSettings?.clientWebsiteUrl) && demo.demoSettings?.screenshotUrl ? (
+          <div className="relative w-full h-full">
+            <img 
+              src={demo.demoSettings.screenshotUrl} 
+              alt="Client website screenshot"
+              className="w-full h-full object-cover"
+            />
+            {/* Screenshot fallback indicator */}
+            <div className="absolute top-4 left-4 bg-yellow-100 border border-yellow-300 text-yellow-800 px-3 py-2 rounded-lg text-sm">
+              <AlertTriangle className="h-4 w-4 inline mr-2" />
+              Website preview (screenshot)
+            </div>
+          </div>
+        ) : null}
+
+        {/* Final fallback if no iframe and no screenshot */}
+        {(iframeError || !demo.demoSettings?.clientWebsiteUrl) && !demo.demoSettings?.screenshotUrl && (
+          <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100">
+            <div className="text-center max-w-md mx-4">
+              <div className="w-20 h-20 bg-blue-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <ExternalLink className="h-10 w-10 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                Interactive Demo
+              </h3>
+              <p className="text-gray-600 mb-4">
+                This website cannot be embedded due to security restrictions, but you can still test the chat widget functionality.
+              </p>
+              <div className="space-y-3">
+                {demo.demoSettings?.clientWebsiteUrl && (
+                  <a 
+                    href={demo.demoSettings.clientWebsiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Website in New Tab
+                  </a>
+                )}
+                <div className="text-sm text-gray-500">
+                  <p>💬 The chat widget is active on this page</p>
+                  <p>🔗 You can test it while browsing the original website</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
-        {/* Subtle demo indicator - only show briefly */}
-        <div className="absolute top-4 right-4 z-10">
+        {/* Demo info panel - shows on iframe load */}
+        {iframeLoaded && (
+          <div className="absolute top-4 left-4 right-4 z-10">
+            <div className="bg-black bg-opacity-75 text-white p-4 rounded-lg max-w-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">{demo.name}</h3>
+                  <p className="text-sm text-gray-300 mb-2">
+                    {demo.description || `Demo of ${demo.sourceWidgetName}`}
+                  </p>
+                  <div className="flex items-center gap-4 text-xs text-gray-300">
+                    <span>💬 Chat widget active</span>
+                    <span>🔗 Interactive demo</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    const panel = document.querySelector('.demo-info-panel');
+                    if (panel) panel.style.display = 'none';
+                  }}
+                  className="text-gray-400 hover:text-white ml-2"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Subtle demo indicator - always visible */}
+        <div className="absolute bottom-4 right-4 z-10">
           <div className="bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
             Demo Mode
           </div>
@@ -264,12 +363,4 @@ export default function DemoPage() {
       {/* Widget will be loaded dynamically via useEffect */}
     </>
   );
-}
-
-export async function getServerSideProps({ params }) {
-  return {
-    props: {
-      demoId: params.demoId
-    }
-  };
 }
