@@ -1,8 +1,18 @@
 import { Fragment } from 'react';
 import { useRouter } from 'next/router';
+import { useSession, signOut } from 'next-auth/react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import {
   Home,
@@ -10,7 +20,9 @@ import {
   BarChart3,
   Settings,
   X,
-  Globe
+  Globe,
+  User,
+  LogOut
 } from 'lucide-react';
 
 const navigation = [
@@ -51,6 +63,17 @@ const navigation = [
 
 export default function ModernSidebar({ open, setOpen }) {
   const router = useRouter();
+  const { data: session } = useSession();
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -111,9 +134,48 @@ export default function ModernSidebar({ open, setOpen }) {
             );
           })}
         </div>
-
       </nav>
 
+      {/* User Profile Section */}
+      <div className="border-t p-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-start h-auto p-3 hover:bg-secondary"
+            >
+              <Avatar className="h-9 w-9 mr-3">
+                <AvatarImage src={session?.user?.image} alt={session?.user?.name} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
+                  {getInitials(session?.user?.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-medium truncate">
+                  {session?.user?.name || 'User'}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {session?.user?.email}
+                </p>
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => router.push('/admin/profile')}>
+              <User className="mr-2 h-4 w-4" />
+              Profile Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => signOut({ callbackUrl: '/admin/login' })}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 
