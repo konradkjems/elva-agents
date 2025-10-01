@@ -1,6 +1,8 @@
 import clientPromise from '../../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { withAdmin } from '../../../../lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]';
 
 // Mock data for testing (fallback when MongoDB is unavailable)
 const mockWidgets = [
@@ -232,13 +234,21 @@ const mockWidgets = [
 
 async function handler(req, res) {
   try {
+    // Get session for organization context
+    const session = await getServerSession(req, res, authOptions);
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const currentOrgId = session.user?.currentOrganizationId;
+    const isPlatformAdmin = session.user?.platformRole === 'platform_admin';
     const { id } = req.query;
 
     if (req.method === 'GET') {
-      // Try to get widget from MongoDB first
+      // Get widget from MongoDB
       try {
         const client = await clientPromise;
-        const db = client.db('chatwidgets');
+        const db = client.db('elva-agents'); // Use new database
         
         // Convert string ID to ObjectId if it's a valid ObjectId string
         let queryId = id;
@@ -249,6 +259,11 @@ async function handler(req, res) {
         const widget = await db.collection('widgets').findOne({ _id: queryId });
         
         if (widget) {
+          // Verify widget belongs to user's organization (unless platform admin)
+          if (!isPlatformAdmin && widget.organizationId?.toString() !== currentOrgId) {
+            return res.status(403).json({ error: 'Access denied' });
+          }
+          
           return res.status(200).json(widget);
         }
       } catch (dbError) {
@@ -264,10 +279,10 @@ async function handler(req, res) {
       
       res.status(200).json(widget);
     } else if (req.method === 'PUT') {
-      // Try to update widget in MongoDB first
+      // Update widget in MongoDB
       try {
         const client = await clientPromise;
-        const db = client.db('chatwidgets');
+        const db = client.db('elva-agents'); // Use new database
         
         // Convert string ID to ObjectId if it's a valid ObjectId string
         let queryId = id;
@@ -275,8 +290,16 @@ async function handler(req, res) {
           queryId = new ObjectId(id);
         }
         
+        // First, verify widget belongs to user's organization
+        const widget = await db.collection('widgets').findOne({ _id: queryId });
+        if (widget && !isPlatformAdmin && widget.organizationId?.toString() !== currentOrgId) {
+          return res.status(403).json({ error: 'Access denied' });
+        }
+        
         const updateData = {
           ...req.body,
+          lastEditedBy: new ObjectId(session.user.id),
+          lastEditedAt: new Date(),
           updatedAt: new Date()
         };
         
@@ -323,15 +346,21 @@ async function handler(req, res) {
       mockWidgets[widgetIndex] = { ...mockWidgets[widgetIndex], ...updateData };
       res.status(200).json(mockWidgets[widgetIndex]);
     } else if (req.method === 'DELETE') {
-      // Try to delete widget from MongoDB first
+      // Delete widget from MongoDB
       try {
         const client = await clientPromise;
-        const db = client.db('chatwidgets');
+        const db = client.db('elva-agents'); // Use new database
         
         // Convert string ID to ObjectId if it's a valid ObjectId string
         let queryId = id;
         if (ObjectId.isValid(id)) {
           queryId = new ObjectId(id);
+        }
+        
+        // First, verify widget belongs to user's organization
+        const widget = await db.collection('widgets').findOne({ _id: queryId });
+        if (widget && !isPlatformAdmin && widget.organizationId?.toString() !== currentOrgId) {
+          return res.status(403).json({ error: 'Access denied' });
         }
         
         const result = await db.collection('widgets').deleteOne({ _id: queryId });

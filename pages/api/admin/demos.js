@@ -1,12 +1,27 @@
 import clientPromise from '../../../lib/mongodb';
 import { withAdmin } from '../../../lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { ObjectId } from 'mongodb';
 
-// Temporarily bypass auth for testing
 export default async function handler(req, res) {
   console.log('📝 Demos API called:', req.method, req.url);
-  console.log('📝 User:', req.user);
+  
+  // Authentication - Check for platform admin
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // IMPORTANT: Only platform admins can access demos
+  if (session.user?.platformRole !== 'platform_admin') {
+    return res.status(403).json({ 
+      error: 'Access denied. Demos are only available to platform administrators.' 
+    });
+  }
+
   const client = await clientPromise;
-  const db = client.db('chatwidgets');
+  const db = client.db('elva-agents'); // Use new database
 
   // Get the base URL dynamically from request headers
   const protocol = req.headers['x-forwarded-proto'] || 'https';
@@ -16,6 +31,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
+      // Platform-level: Get all demos (no organizationId filter)
       const demos = await db.collection('demos').find({}).sort({ createdAt: -1 }).toArray();
       return res.status(200).json(demos);
     } catch (error) {
@@ -85,13 +101,17 @@ export default async function handler(req, res) {
       // Generate unique demo ID
       const demoId = `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Prepare demo data
+      // Prepare demo data (Platform-level, no organizationId)
       const demoData = {
         _id: demoId,
         name,
         description: description || `Demo of ${sourceWidget.name}`,
         sourceWidgetId: widgetId,
         sourceWidgetName: sourceWidget.name,
+        
+        // Platform admin who created it
+        createdBy: new ObjectId(session.user.id),
+        targetClient: clientInfo?.companyName || clientInfo || 'Unknown Client',
         
         // Copy widget configuration
         openai: sourceWidget.openai,

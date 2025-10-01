@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import ModernSidebar from './ModernSidebar';
+import OrganizationSwitcher from './OrganizationSwitcher';
+import CreateOrganizationModal from './CreateOrganizationModal';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -59,6 +61,7 @@ export default function ModernLayout({ children }) {
     conversations: []
   });
   const [searching, setSearching] = useState(false);
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
   const { toast } = useToast();
@@ -358,6 +361,9 @@ export default function ModernLayout({ children }) {
             
             <div className="flex items-center gap-x-4 lg:gap-x-6">
 
+              {/* Organization Switcher */}
+              <OrganizationSwitcher onCreateClick={() => setCreateOrgOpen(true)} />
+
               {/* Dark mode toggle */}
               <Button
                 variant="ghost"
@@ -420,6 +426,37 @@ export default function ModernLayout({ children }) {
           </div>
         </main>
       </div>
+
+      {/* Create Organization Modal */}
+      <CreateOrganizationModal
+        open={createOrgOpen}
+        onOpenChange={setCreateOrgOpen}
+        onSuccess={async (org) => {
+          toast({
+            title: "Organization created!",
+            description: `${org.name} has been created successfully.`,
+          });
+          
+          // Switch to the new organization
+          try {
+            const response = await fetch(`/api/organizations/${org._id}/switch`, {
+              method: 'POST',
+            });
+            
+            if (response.ok) {
+              // Reload the page to refresh with new organization context
+              router.reload();
+            } else {
+              // Still reload to show the new org in the list
+              router.reload();
+            }
+          } catch (error) {
+            console.error('Error switching to new organization:', error);
+            // Reload anyway to refresh the org list
+            router.reload();
+          }
+        }}
+      />
     </div>
   );
 }

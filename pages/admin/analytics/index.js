@@ -99,34 +99,22 @@ export default function ModernAnalytics() {
       });
     }
     
-    // If no widgetMetrics or it's not an array, distribute total data evenly
-    const totalConversations = analyticsData?.metrics?.totalConversations || 0;
-    const totalMessages = analyticsData?.metrics?.totalMessages || 0;
-    const conversationsPerWidget = totalConversations / widgets.length;
-    const messagesPerWidget = totalMessages / widgets.length;
-    
+    // Only show actual data - no estimated/distributed values
     return widgets.map(widget => ({
       widget: widget.name,
-      conversations: widgetConversations[widget._id] || Math.floor(conversationsPerWidget),
-      messages: widgetMessages[widget._id] || Math.floor(messagesPerWidget)
+      conversations: widgetConversations[widget._id] || 0,
+      messages: widgetMessages[widget._id] || 0
     }));
   };
 
   const prepareConversationLengthDistribution = (analyticsData) => {
-    if (!analyticsData?.metrics) return [];
+    // Only show if we have actual conversation length distribution data
+    if (!analyticsData?.metrics?.conversationLengthDistribution) {
+      return [];
+    }
     
-    const totalConversations = analyticsData.metrics.totalConversations || 0;
-    const avgLength = analyticsData.metrics.avgConversationLength || 3.5;
-    
-    // Calculate distribution based on average conversation length
-    // Shorter conversations are more common, longer ones are rarer
-    return [
-      { length: "1-2 msgs", count: Math.floor(totalConversations * 0.3) },
-      { length: "3-5 msgs", count: Math.floor(totalConversations * 0.4) },
-      { length: "6-10 msgs", count: Math.floor(totalConversations * 0.2) },
-      { length: "11-20 msgs", count: Math.floor(totalConversations * 0.08) },
-      { length: "20+ msgs", count: Math.floor(totalConversations * 0.02) }
-    ];
+    // Return the actual distribution from the backend
+    return analyticsData.metrics.conversationLengthDistribution;
   };
 
   const fetchAnalyticsData = useCallback(async () => {
@@ -745,36 +733,44 @@ export default function ModernAnalytics() {
                    <p className="text-sm text-muted-foreground">Distribution of conversation lengths</p>
                  </CardHeader>
                  <CardContent>
-                   <ChartContainer
-                     config={{
-                       count: {
-                         label: "Conversations",
-                         color: "hsl(var(--primary))",
-                       },
-                     }}
-                     className="h-[300px]"
-                   >
-                     <BarChart data={prepareConversationLengthDistribution(analyticsData)}>
-                       <CartesianGrid strokeDasharray="3 3" />
-                       <XAxis 
-                         dataKey="length" 
-                         tick={{ fontSize: 12 }}
-                         tickLine={false}
-                         axisLine={false}
-                       />
-                       <YAxis 
-                         tick={{ fontSize: 12 }}
-                         tickLine={false}
-                         axisLine={false}
-                       />
-                       <ChartTooltip content={<ChartTooltipContent />} />
-                       <Bar 
-                         dataKey="count" 
-                         fill="var(--color-count)"
-                         radius={[4, 4, 0, 0]}
-                       />
-                     </BarChart>
-                   </ChartContainer>
+                   {prepareConversationLengthDistribution(analyticsData).length > 0 ? (
+                     <ChartContainer
+                       config={{
+                         count: {
+                           label: "Conversations",
+                           color: "hsl(var(--primary))",
+                         },
+                       }}
+                       className="h-[300px]"
+                     >
+                       <BarChart data={prepareConversationLengthDistribution(analyticsData)}>
+                         <CartesianGrid strokeDasharray="3 3" />
+                         <XAxis 
+                           dataKey="length" 
+                           tick={{ fontSize: 12 }}
+                           tickLine={false}
+                           axisLine={false}
+                         />
+                         <YAxis 
+                           tick={{ fontSize: 12 }}
+                           tickLine={false}
+                           axisLine={false}
+                         />
+                         <ChartTooltip content={<ChartTooltipContent />} />
+                         <Bar 
+                           dataKey="count" 
+                           fill="var(--color-count)"
+                           radius={[4, 4, 0, 0]}
+                         />
+                       </BarChart>
+                     </ChartContainer>
+                   ) : (
+                     <div className="text-center py-8 text-muted-foreground">
+                       <Activity className="mx-auto h-8 w-8 mb-2" />
+                       <p className="text-sm">No conversation length data available</p>
+                       <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
+                     </div>
+                   )}
                  </CardContent>
                </Card>
              </div>

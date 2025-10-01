@@ -1,4 +1,7 @@
 import clientPromise from '../../../lib/mongodb.js';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -7,18 +10,59 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get session for organization context
+    const session = await getServerSession(req, res, authOptions);
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const currentOrgId = session.user?.currentOrganizationId;
+    const isPlatformAdmin = session.user?.platformRole === 'platform_admin';
+
     const client = await clientPromise;
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents'); // Use new database
     const analytics = db.collection('analytics');
     const widgets = db.collection('widgets');
+    const organizations = db.collection('organizations');
+    const teamMembers = db.collection('team_members');
+    const invitations = db.collection('invitations');
 
-    // Get all widgets
-    const allWidgets = await widgets.find({}).toArray();
+    // Build query to filter by organization
+    const widgetQuery = {
+      isDemoMode: { $ne: true } // Exclude demo widgets
+    };
+    
+    // Filter by organization unless platform admin viewing all
+    if (currentOrgId && !isPlatformAdmin) {
+      widgetQuery.organizationId = new ObjectId(currentOrgId);
+    } else if (currentOrgId && isPlatformAdmin) {
+      // Platform admin: filter by current org if one is selected
+      widgetQuery.organizationId = new ObjectId(currentOrgId);
+    }
+
+    // Get widgets for current organization
+    const allWidgets = await widgets.find(widgetQuery).toArray();
     console.log('📊 Found widgets:', allWidgets.map(w => ({ id: w._id, name: w.name, status: w.status })));
     
-    // Get analytics data for all widgets
-    const analyticsData = await analytics.find({}).sort({ date: -1 }).toArray();
-    console.log('📊 Found analytics data:', analyticsData.map(a => ({ agentId: a.agentId, date: a.date, conversations: a.metrics?.conversations })));
+    // Get analytics data ONLY for widgets in current organization
+    let analyticsData = [];
+    if (allWidgets.length > 0) {
+      // Build array of widget IDs (as strings and ObjectIds)
+      const widgetIds = allWidgets.map(w => w._id.toString());
+      const widgetIdsAsObjects = allWidgets.map(w => w._id);
+      
+      // Query analytics for these specific widgets
+      analyticsData = await analytics.find({
+        $or: [
+          { agentId: { $in: widgetIds } },
+          { agentId: { $in: widgetIdsAsObjects } }
+        ]
+      }).sort({ date: -1 }).toArray();
+      
+      console.log('📊 Found analytics data for org widgets:', analyticsData.map(a => ({ agentId: a.agentId, date: a.date, conversations: a.metrics?.conversations })));
+    } else {
+      console.log('📊 No widgets found for organization, analytics will be empty');
+    }
     
     // Calculate aggregated metrics
     const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
@@ -57,7 +101,6 @@ export default async function handler(req, res) {
         stats: {
           totalConversations: widgetTotalConversations,
           totalMessages: widgetTotalMessages,
-          uniqueUsers: Math.ceil(widgetTotalConversations * 0.8), // Estimate
           responseTime: Math.round(widgetAvgResponseTime),
           lastActivity: widgetAnalytics.length > 0 ? widgetAnalytics[0].date : widget.createdAt
         },
@@ -70,13 +113,35 @@ export default async function handler(req, res) {
       };
     });
 
+    // Get organization stats if an org is selected
+    let orgStats = null;
+    if (currentOrgId) {
+      const org = await organizations.findOne({ _id: new ObjectId(currentOrgId) });
+      const members = await teamMembers.countDocuments({ 
+        organizationId: new ObjectId(currentOrgId), 
+        status: 'active' 
+      });
+      const pendingInvitations = await invitations.countDocuments({ 
+        organizationId: new ObjectId(currentOrgId), 
+        status: 'pending' 
+      });
+      
+      orgStats = {
+        members,
+        widgets: allWidgets.length,
+        conversations: totalConversations,
+        pendingInvitations
+      };
+    }
+
     const response = {
       overview: {
         totalWidgets: allWidgets.length,
         activeWidgets: activeWidgets.length,
         totalConversations,
         avgResponseTime: Math.round(avgResponseTime),
-        avgSatisfaction: avgSatisfaction ? Math.round(avgSatisfaction * 10) / 10 : null
+        avgSatisfaction: avgSatisfaction ? Math.round(avgSatisfaction * 10) / 10 : null,
+        organizationStats: orgStats
       },
       widgets: widgetsWithAnalytics
     };

@@ -1,13 +1,29 @@
 import clientPromise from '../../../lib/mongodb';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
+  // Authentication - Check for platform admin
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // IMPORTANT: Only platform admins can access demos
+  if (session.user?.platformRole !== 'platform_admin') {
+    return res.status(403).json({ 
+      error: 'Access denied. Demos are only available to platform administrators.' 
+    });
+  }
+
   try {
     const client = await clientPromise;
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents'); // Use new database
 
     // Get the base URL dynamically from request headers
     const protocol = req.headers['x-forwarded-proto'] || 'https';
@@ -15,7 +31,7 @@ export default async function handler(req, res) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
 
     if (req.method === 'GET') {
-      // Get all demo widgets
+      // Platform-level: Get all demo widgets (no organizationId filter)
       const demos = await db.collection('widgets').find({ 
         isDemoMode: true 
       }).sort({ createdAt: -1 }).toArray();
@@ -77,7 +93,7 @@ export default async function handler(req, res) {
       // Generate unique demo ID
       const demoId = `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Prepare widget data
+      // Prepare widget data (Platform-level, no organizationId)
       const widgetData = {
         _id: demoId,
         name,
@@ -91,6 +107,12 @@ export default async function handler(req, res) {
         integrations,
         timezone,
         analytics,
+        
+        // Platform admin who created it
+        createdBy: new ObjectId(session.user.id),
+        lastEditedBy: new ObjectId(session.user.id),
+        lastEditedAt: new Date(),
+        
         status: isDemoMode ? 'demo' : 'active',
         isActive: !isDemoMode, // Demo widgets start as inactive
         createdAt: new Date(),

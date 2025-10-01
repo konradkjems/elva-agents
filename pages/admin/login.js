@@ -74,11 +74,11 @@ export default function Login() {
         <div className="flex flex-col items-center mb-8">
           <div className="relative mb-4">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-30 animate-pulse"></div>
-            <div className="relative bg-white rounded-2xl p-3 shadow-lg">
+            <div className="relative bg-white rounded-2xl p-1 shadow-lg">
               <img 
                 src="/images/Elva Logo Icon 2.svg" 
                 alt="Elva Solutions" 
-                className="h-12 w-12"
+                className="h-16 w-16"
               />
             </div>
           </div>

@@ -1,4 +1,7 @@
 import clientPromise from '../../../lib/mongodb.js';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -7,9 +10,19 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get session for organization context
+    const session = await getServerSession(req, res, authOptions);
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const currentOrgId = session.user?.currentOrganizationId;
+    const isPlatformAdmin = session.user?.platformRole === 'platform_admin';
+
     const client = await clientPromise;
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     const analytics = db.collection('analytics');
+    const widgets = db.collection('widgets');
 
     const { 
       widgetId, 
@@ -46,21 +59,79 @@ export default async function handler(req, res) {
       }
     }
 
-    // Build query for analytics collection
-    const query = {};
-    if (widgetId && widgetId !== 'all') {
-      query.agentId = widgetId;
+    // First, get widgets for current organization
+    const widgetQuery = {
+      isDemoMode: { $ne: true }
+    };
+    
+    // Filter by organization unless platform admin viewing all
+    if (currentOrgId && !isPlatformAdmin) {
+      widgetQuery.organizationId = new ObjectId(currentOrgId);
+    } else if (currentOrgId && isPlatformAdmin) {
+      widgetQuery.organizationId = new ObjectId(currentOrgId);
     }
+
+    const orgWidgets = await widgets.find(widgetQuery).toArray();
+    console.log('📊 Found widgets for organization:', orgWidgets.map(w => ({ id: w._id, name: w.name })));
+
+    // If no widgets, return empty analytics
+    if (orgWidgets.length === 0) {
+      console.log('📊 No widgets found for organization, returning empty analytics');
+      return res.status(200).json({
+        period,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        metrics: {
+          totalConversations: 0,
+          activeConversations: 0,
+          completedConversations: 0,
+          avgResponseTime: 0,
+          avgConversationLength: 0,
+          totalMessages: 0,
+          avgSatisfaction: null,
+          hourlyDistribution: Array(24).fill(0).map((_, hour) => ({ hour: `${hour}:00`, count: 0 })),
+          dailyTrends: []
+        },
+        widgetMetrics: null,
+        dataPoints: 0
+      });
+    }
+
+    // Build analytics query for widgets in current organization
+    const widgetIds = orgWidgets.map(w => w._id.toString());
+    const widgetIdsAsObjects = orgWidgets.map(w => w._id);
+
+    const analyticsQuery = {
+      $or: [
+        { agentId: { $in: widgetIds } },
+        { agentId: { $in: widgetIdsAsObjects } }
+      ]
+    };
+
+    // Filter by specific widget if requested
+    if (widgetId && widgetId !== 'all') {
+      // Verify widget belongs to organization
+      const widgetBelongsToOrg = orgWidgets.some(w => w._id.toString() === widgetId);
+      if (!widgetBelongsToOrg) {
+        return res.status(403).json({ error: 'Widget does not belong to your organization' });
+      }
+      analyticsQuery.$or = [
+        { agentId: widgetId },
+        { agentId: new ObjectId(widgetId) }
+      ];
+    }
+
+    // Add date filter
     if (startDate) {
       if (period === 'custom' && endDate) {
-        query.date = { $gte: startDate, $lte: endDate };
+        analyticsQuery.date = { $gte: startDate, $lte: endDate };
       } else {
-        query.date = { $gte: startDate };
+        analyticsQuery.date = { $gte: startDate };
       }
     }
 
     // Get analytics data for the period
-    const analyticsData = await analytics.find(query).sort({ date: -1 }).toArray();
+    const analyticsData = await analytics.find(analyticsQuery).sort({ date: -1 }).toArray();
     console.log('📊 Analytics query:', { widgetId, period, startDate, analyticsCount: analyticsData.length });
 
     // Calculate aggregated metrics

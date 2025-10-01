@@ -1,9 +1,25 @@
 import clientPromise from '../../../../lib/mongodb';
 import { withAdmin } from '../../../../lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
+  // Authentication - Check for platform admin
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // IMPORTANT: Only platform admins can access demos
+  if (session.user?.platformRole !== 'platform_admin') {
+    return res.status(403).json({ 
+      error: 'Access denied. Demos are only available to platform administrators.' 
+    });
+  }
+
   const client = await clientPromise;
-  const db = client.db('chatwidgets');
+  const db = client.db('elva-agents'); // Use new database
   const { demoId } = req.query;
 
   if (req.method === 'GET') {

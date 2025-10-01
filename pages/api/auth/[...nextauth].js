@@ -3,7 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import clientPromise from '../../../lib/mongodb'
 
-export default NextAuth({
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -25,7 +25,7 @@ export default NextAuth({
       async authorize(credentials) {
         try {
           const client = await clientPromise
-          const db = client.db('chatwidgets')
+          const db = client.db('elva-agents') // Updated to new database
           
           // Find user in database
           const user = await db.collection('users').findOne({
@@ -53,7 +53,9 @@ export default NextAuth({
             email: user.email,
             name: user.name,
             role: user.role,
-            permissions: user.permissions
+            permissions: user.permissions,
+            platformRole: user.platformRole,
+            currentOrganizationId: user.currentOrganizationId?.toString()
           }
         } catch (error) {
           console.error('Auth error:', error)
@@ -72,7 +74,8 @@ export default NextAuth({
       if (account.provider === 'google') {
         try {
           const client = await clientPromise
-          const db = client.db('chatwidgets')
+          const db = client.db('elva-agents') // Updated to new database
+          const { ObjectId } = require('mongodb')
           
           // Check if user exists
           let dbUser = await db.collection('users').findOne({
@@ -85,16 +88,78 @@ export default NextAuth({
               email: user.email,
               name: user.name,
               image: user.image,
-              role: 'admin', // Default role - adjust as needed
-              permissions: ['read', 'write', 'delete'], // Default permissions
+              role: 'admin', // Legacy field
+              permissions: ['read', 'write', 'delete'], // Legacy field
+              platformRole: 'user', // Regular user by default
               status: 'active',
               provider: 'google',
+              emailVerified: true,
+              preferences: {
+                theme: 'light',
+                language: 'en',
+                notifications: {
+                  email: true,
+                  newWidgetCreated: true,
+                  teamInvitation: true
+                }
+              },
               createdAt: new Date(),
               lastLogin: new Date()
             }
             
             const result = await db.collection('users').insertOne(newUser)
             dbUser = { ...newUser, _id: result.insertedId }
+
+            // Create personal organization for new user
+            const organization = {
+              name: `${user.name}'s Organization`,
+              slug: user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-org',
+              ownerId: dbUser._id,
+              plan: 'free',
+              limits: {
+                maxWidgets: 10,
+                maxTeamMembers: 5,
+                maxConversations: 10000,
+                maxDemos: 0
+              },
+              subscriptionStatus: 'trial',
+              settings: {
+                allowDemoCreation: false,
+                requireEmailVerification: false,
+                allowGoogleAuth: true
+              },
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+
+            const orgResult = await db.collection('organizations').insertOne(organization)
+
+            // Create team member entry (owner)
+            const teamMember = {
+              organizationId: orgResult.insertedId,
+              userId: dbUser._id,
+              role: 'owner',
+              permissions: {
+                widgets: { create: true, read: true, update: true, delete: true },
+                demos: { create: false, read: true, update: false, delete: false },
+                team: { invite: true, manage: true, remove: true },
+                settings: { view: true, edit: true }
+              },
+              status: 'active',
+              joinedAt: new Date(),
+              createdAt: new Date(),
+              updatedAt: new Date()
+            }
+
+            await db.collection('team_members').insertOne(teamMember)
+
+            // Set current organization
+            await db.collection('users').updateOne(
+              { _id: dbUser._id },
+              { $set: { currentOrganizationId: orgResult.insertedId } }
+            )
+
+            dbUser.currentOrganizationId = orgResult.insertedId
           } else {
             // Update last login
             await db.collection('users').updateOne(
@@ -103,9 +168,11 @@ export default NextAuth({
             )
           }
 
-          // Add role and permissions to user object for JWT
+          // Add fields to user object for JWT
           user.role = dbUser.role
           user.permissions = dbUser.permissions
+          user.platformRole = dbUser.platformRole
+          user.currentOrganizationId = dbUser.currentOrganizationId?.toString()
           user.id = dbUser._id.toString()
         } catch (error) {
           console.error('Google sign-in error:', error)
@@ -114,20 +181,47 @@ export default NextAuth({
       }
       return true
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
+      // On sign in or update, set user data
       if (user) {
         token.role = user.role
         token.permissions = user.permissions
+        token.platformRole = user.platformRole
+        token.currentOrganizationId = user.currentOrganizationId
         if (account?.provider === 'google') {
           token.provider = 'google'
         }
       }
+      
+      // Always refresh currentOrganizationId from database
+      // This ensures org switching works immediately
+      if (token.sub) {
+        try {
+          const client = await clientPromise
+          const db = client.db('elva-agents')
+          const { ObjectId } = require('mongodb')
+          
+          const dbUser = await db.collection('users').findOne({ 
+            _id: new ObjectId(token.sub) 
+          })
+          
+          if (dbUser) {
+            token.currentOrganizationId = dbUser.currentOrganizationId?.toString()
+            token.platformRole = dbUser.platformRole
+          }
+        } catch (error) {
+          console.error('Error refreshing user data in JWT:', error)
+        }
+      }
+      
       return token
     },
     async session({ session, token }) {
       session.user.id = token.sub
       session.user.role = token.role
       session.user.permissions = token.permissions
+      session.user.platformRole = token.platformRole
+      session.user.currentOrganizationId = token.currentOrganizationId
       session.user.provider = token.provider
       return session
     }
@@ -137,4 +231,6 @@ export default NextAuth({
     error: '/admin/login'
   },
   secret: process.env.NEXTAUTH_SECRET,
-})
+}
+
+export default NextAuth(authOptions)

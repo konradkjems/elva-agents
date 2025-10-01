@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import ModernLayout from '../../components/admin/ModernLayout';
 import ModernWidgetCard from '../../components/admin/ModernWidgetCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,9 @@ import {
   Plus,
   ArrowUpRight,
   Calendar,
-  Filter
+  Filter,
+  Building2,
+  Crown
 } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon }) => (
@@ -37,18 +40,24 @@ const StatCard = ({ title, value, icon: Icon }) => (
 
 export default function ModernAdminDashboard() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [widgets, setWidgets] = useState([]);
+  const [currentOrganization, setCurrentOrganization] = useState(null);
   const [analyticsOverview, setAnalyticsOverview] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [orgLoading, setOrgLoading] = useState(true);
   const [dateRange, setDateRange] = useState('30d');
   const [customDateRange, setCustomDateRange] = useState(null);
   const [isCustomRange, setIsCustomRange] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (session?.user?.currentOrganizationId) {
+      fetchCurrentOrganization();
+      fetchDashboardData();
+    }
+  }, [session]);
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -59,6 +68,20 @@ export default function ModernAdminDashboard() {
       fetchAnalyticsData();
     }
   }, [customDateRange, isCustomRange]);
+
+  const fetchCurrentOrganization = async () => {
+    try {
+      const response = await fetch(`/api/organizations/${session.user.currentOrganizationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentOrganization(data.organization);
+      }
+    } catch (error) {
+      console.error('Failed to fetch organization:', error);
+    } finally {
+      setOrgLoading(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -165,15 +188,45 @@ export default function ModernAdminDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+              {session?.user?.platformRole === 'platform_admin' && (
+                <Badge variant="outline" className="gap-1">
+                  <Crown className="h-3 w-3" />
+                  Platform Admin
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground">
               Welcome back! Here's what's happening with your AI chat widgets.
             </p>
-            <div className="mt-2">
-              <Badge variant="secondary" className="text-xs">
-                Showing data for: {getDateRangeLabel()}
-              </Badge>
-            </div>
+            
+            {/* Organization Context */}
+            {!orgLoading && currentOrganization && (
+              <div className="mt-3 flex items-center gap-2">
+                <Badge variant="secondary" className="gap-1.5">
+                  <Building2 className="h-3 w-3" />
+                  {currentOrganization.name}
+                  <span className="mx-1">•</span>
+                  <span className="capitalize">{currentOrganization.plan || 'free'}</span>
+                </Badge>
+                {currentOrganization.role && (
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {currentOrganization.role}
+                  </Badge>
+                )}
+                <Badge variant="secondary" className="text-xs">
+                  {getDateRangeLabel()}
+                </Badge>
+              </div>
+            )}
+            
+            {orgLoading && (
+              <div className="mt-3 flex items-center gap-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <Select value={dateRange} onValueChange={handleDateRangeChange}>
@@ -204,6 +257,38 @@ export default function ModernAdminDashboard() {
             </Button>
           </div>
         </div>
+
+        {/* Organization Stats */}
+        {currentOrganization && currentOrganization.stats && (
+          <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Organization Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Team Members</p>
+                  <p className="text-2xl font-bold">{currentOrganization.stats.members || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Total Widgets</p>
+                  <p className="text-2xl font-bold">{currentOrganization.stats.widgets || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Conversations</p>
+                  <p className="text-2xl font-bold">{currentOrganization.stats.conversations || 0}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Pending Invites</p>
+                  <p className="text-2xl font-bold">{currentOrganization.stats.pendingInvitations || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Overview */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

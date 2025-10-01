@@ -1,5 +1,8 @@
 import clientPromise from '../../../lib/mongodb';
 import { withAdmin } from '../../../lib/auth';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { ObjectId } from 'mongodb';
 
 // Mock data for testing (fallback)
 const mockWidgets = [
@@ -229,12 +232,35 @@ const mockWidgets = [
 
 async function handler(req, res) {
   try {
+    // Get session for organization context
+    const session = await getServerSession(req, res, authOptions);
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const currentOrgId = session.user?.currentOrganizationId;
+    const isPlatformAdmin = session.user?.platformRole === 'platform_admin';
+
     if (req.method === 'GET') {
-      // Get all widgets from MongoDB with analytics data
+      // Get widgets from MongoDB filtered by organization
       try {
         const client = await clientPromise;
-        const db = client.db('chatwidgets');
-        const widgets = await db.collection('widgets').find({}).toArray();
+        const db = client.db('elva-agents'); // Use new database
+        
+        // Build query to filter by organization
+        const query = {
+          isDemoMode: { $ne: true } // Exclude demo widgets
+        };
+        
+        // Filter by organization unless platform admin viewing all
+        if (currentOrgId && !isPlatformAdmin) {
+          query.organizationId = new ObjectId(currentOrgId);
+        } else if (currentOrgId && isPlatformAdmin) {
+          // Platform admin: filter by current org if one is selected
+          query.organizationId = new ObjectId(currentOrgId);
+        }
+        
+        const widgets = await db.collection('widgets').find(query).toArray();
         console.log('📊 Found widgets:', widgets.map(w => ({ id: w._id, name: w.name, slug: w.slug })));
         const analytics = db.collection('analytics');
         
@@ -332,10 +358,19 @@ async function handler(req, res) {
     } else if (req.method === 'POST') {
       // Create new widget in MongoDB
       try {
+        if (!currentOrgId) {
+          return res.status(400).json({ error: 'No organization selected' });
+        }
+
         const client = await clientPromise;
-        const db = client.db('chatwidgets');
+        const db = client.db('elva-agents'); // Use new database
+        
         const newWidget = {
           ...req.body,
+          organizationId: new ObjectId(currentOrgId), // Add organization
+          createdBy: new ObjectId(session.user.id), // Add creator
+          lastEditedBy: new ObjectId(session.user.id),
+          lastEditedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
           status: req.body.status || 'active'

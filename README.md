@@ -2,6 +2,21 @@
 
 AI-powered chat widget platform with conversation persistence, built with Next.js, OpenAI, and MongoDB.
 
+## 📚 Documentation
+
+**All documentation has been organized into the [`/docs`](./docs/) folder:**
+- 🚀 [Deployment Guides](./docs/deployment/) - Production deployment instructions
+- ⚙️ [Setup & Configuration](./docs/setup/) - MongoDB, OAuth, and initial setup
+- ✨ [Features](./docs/features/) - Feature documentation and guides
+- 🔧 [Development](./docs/development/) - Architecture and migration docs
+
+**Quick Links:**
+- [Complete Deployment Guide](./docs/deployment/COMPLETE_DEPLOYMENT_GUIDE.md)
+- [MongoDB Setup](./docs/setup/MONGODB_SETUP_GUIDE.md)
+- [Google OAuth Setup](./docs/setup/GOOGLE_OAUTH_SETUP.md)
+- [Phase 1 Setup (Multi-Tenancy)](./docs/features/PHASE_1_SETUP_GUIDE.md) - **NEW** ✅
+- [Project Summary](./docs/development/PROJECT-SUMMARY.md)
+
 ## ✨ Features
 
 - 🚀 **Easy Integration**: Add to any website with a single script tag
@@ -13,6 +28,12 @@ AI-powered chat widget platform with conversation persistence, built with Next.j
 - 🗄️ **MongoDB Storage**: Reliable conversation and widget data storage
 - 🌐 **CORS Enabled**: Works across different domains
 - 🔄 **Stateful Conversations**: Automatic conversation context via OpenAI
+- 🔐 **Authentication**: Email/password and Google OAuth login
+- 🎨 **Modern UI**: Built with shadcn/ui components
+- 🔍 **Global Search**: Command palette with Cmd+K shortcut
+- 👤 **User Profiles**: Complete profile management
+- 🏢 **Multi-Tenancy** (Phase 1 ✅): Organizations, team roles, data isolation
+- 👥 **Team Collaboration** (In Development): Invite members, role-based access
 
 ## 🚀 Quick Start
 
@@ -249,23 +270,6 @@ The project can be deployed to any platform that supports Next.js:
 - MongoDB injection protection
 - Automatic conversation cleanup (30 days TTL)
 
-## 🎯 Roadmap
-
-- [ ] Streaming responses with Server-Sent Events
-- [ ] Admin dashboard for widget management
-- [ ] Analytics and conversation insights
-- [ ] Multi-language support
-- [ ] File upload support
-- [ ] Webhook integrations
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
 ## 📄 License
 
 This project is licensed under the ISC License.
@@ -273,7 +277,6 @@ This project is licensed under the ISC License.
 ## 🆘 Support
 
 For questions or issues:
-- Check the [GitHub Issues](https://github.com/your-repo/issues)
 - Review the API documentation above
 - Test with the sample widgets provided
 
