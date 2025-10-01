@@ -9,19 +9,26 @@ export default async function handler(req, res) {
     const client = await clientPromise;
     const db = client.db('chatwidgets');
 
-    // Get the base URL from environment variables
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    // Get the base URL dynamically from request headers
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
     
-    // Find all demo widgets with localhost URLs
-    const demos = await db.collection('widgets').find({ 
+    // Find all demo widgets with localhost URLs in widgets collection
+    const demoWidgets = await db.collection('widgets').find({ 
       isDemoMode: true,
       'demoSettings.demoUrl': { $regex: /localhost/ }
     }).toArray();
 
-    console.log(`Found ${demos.length} demo widgets with localhost URLs`);
+    // Find all demos with localhost URLs in demos collection
+    const demos = await db.collection('demos').find({ 
+      'demoSettings.demoUrl': { $regex: /localhost/ }
+    }).toArray();
+
+    console.log(`Found ${demoWidgets.length} demo widgets and ${demos.length} demos with localhost URLs`);
 
     // Update each demo widget
-    const updatePromises = demos.map(demo => {
+    const widgetUpdatePromises = demoWidgets.map(demo => {
       const newDemoUrl = `${baseUrl}/demo/${demo._id}`;
       
       return db.collection('widgets').updateOne(
@@ -35,14 +42,32 @@ export default async function handler(req, res) {
       );
     });
 
-    await Promise.all(updatePromises);
+    // Update each demo
+    const demoUpdatePromises = demos.map(demo => {
+      const newDemoUrl = `${baseUrl}/demo/${demo._id}`;
+      
+      return db.collection('demos').updateOne(
+        { _id: demo._id },
+        { 
+          $set: { 
+            'demoSettings.demoUrl': newDemoUrl,
+            updatedAt: new Date()
+          }
+        }
+      );
+    });
 
-    console.log(`Updated ${demos.length} demo URLs to use base URL: ${baseUrl}`);
+    await Promise.all([...widgetUpdatePromises, ...demoUpdatePromises]);
+
+    const totalUpdated = demoWidgets.length + demos.length;
+    console.log(`Updated ${totalUpdated} demo URLs to use base URL: ${baseUrl}`);
 
     return res.status(200).json({
-      message: `Successfully updated ${demos.length} demo URLs`,
+      message: `Successfully updated ${totalUpdated} demo URLs`,
       baseUrl: baseUrl,
-      updatedCount: demos.length
+      widgetsUpdated: demoWidgets.length,
+      demosUpdated: demos.length,
+      totalUpdated: totalUpdated
     });
 
   } catch (error) {

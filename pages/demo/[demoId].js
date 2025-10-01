@@ -24,6 +24,7 @@ export default function DemoPage() {
   const [usage, setUsage] = useState(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState(false);
+  const [clientWebsiteUrl, setClientWebsiteUrl] = useState(null);
 
   useEffect(() => {
     if (demoId) {
@@ -40,6 +41,34 @@ export default function DemoPage() {
       }
       const demoData = await response.json();
       setDemo(demoData);
+      
+      // Handle client website URL - upgrade HTTP to HTTPS if needed
+      if (demoData.demoSettings?.clientWebsiteUrl) {
+        let url = demoData.demoSettings.clientWebsiteUrl;
+        
+        // If we're on HTTPS and the client URL is HTTP, try to upgrade it
+        if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
+          console.log('⚠️ Mixed content detected - client URL is HTTP but demo page is HTTPS');
+          console.log('🔄 Attempting to upgrade to HTTPS:', url);
+          
+          // Try HTTPS version first
+          const httpsUrl = url.replace('http://', 'https://');
+          
+          // Test if HTTPS version is accessible
+          try {
+            const testResponse = await fetch(httpsUrl, { method: 'HEAD', mode: 'no-cors' });
+            console.log('✅ HTTPS version appears accessible, using it');
+            setClientWebsiteUrl(httpsUrl);
+          } catch (testError) {
+            console.log('⚠️ HTTPS version test failed, will use screenshot fallback');
+            // Force screenshot fallback by marking iframe as errored
+            setIframeError(true);
+            setClientWebsiteUrl(null);
+          }
+        } else {
+          setClientWebsiteUrl(url);
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -119,23 +148,23 @@ export default function DemoPage() {
 
   // Timeout mechanism to detect iframe loading failures
   useEffect(() => {
-    if (demo && demo.demoSettings?.clientWebsiteUrl && !iframeLoaded && !iframeError) {
+    if (demo && clientWebsiteUrl && !iframeLoaded && !iframeError) {
       console.log('📝 Setting up iframe timeout mechanism...');
       
-      // Set a timeout to detect if iframe fails to load within 10 seconds
+      // Set a timeout to detect if iframe fails to load within 8 seconds
       const timeoutId = setTimeout(() => {
         if (!iframeLoaded && !iframeError) {
           console.log('📝 Iframe timeout reached, triggering fallback to screenshot');
           setIframeError(true);
         }
-      }, 10000); // 10 second timeout
+      }, 8000); // 8 second timeout
 
       // Clear timeout if iframe loads or errors before timeout
       return () => {
         clearTimeout(timeoutId);
       };
     }
-  }, [demo, iframeLoaded, iframeError]);
+  }, [demo, clientWebsiteUrl, iframeLoaded, iframeError]);
 
   if (loading) {
     return (
@@ -237,9 +266,9 @@ export default function DemoPage() {
       {/* Full Screen Demo - Website iframe with widget overlay */}
       <div className="relative w-full h-screen overflow-hidden">
         {/* Iframe for the client website */}
-        {demo.demoSettings?.clientWebsiteUrl && !iframeError ? (
+        {clientWebsiteUrl && !iframeError ? (
           <iframe
-            src={demo.demoSettings.clientWebsiteUrl}
+            src={clientWebsiteUrl}
             className="w-full h-full border-0"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
             onLoad={() => {
@@ -258,13 +287,13 @@ export default function DemoPage() {
         ) : null}
 
         {/* Loading state while iframe loads */}
-        {demo.demoSettings?.clientWebsiteUrl && !iframeLoaded && !iframeError && (
+        {clientWebsiteUrl && !iframeLoaded && !iframeError && (
           <div className="flex items-center justify-center w-full h-full bg-gray-100">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-gray-600 mb-2">Loading website...</p>
               <p className="text-gray-500 text-sm">
-                {demo.demoSettings?.clientWebsiteUrl}
+                {clientWebsiteUrl}
               </p>
               <p className="text-gray-400 text-xs mt-2">
                 If this takes too long, we'll show a screenshot instead
@@ -274,23 +303,24 @@ export default function DemoPage() {
         )}
 
         {/* Fallback to screenshot if iframe fails */}
-        {(iframeError || !demo.demoSettings?.clientWebsiteUrl) && demo.demoSettings?.screenshotUrl ? (
-          <div className="relative w-full h-full">
+        {(iframeError || !clientWebsiteUrl) && demo.demoSettings?.screenshotUrl ? (
+          <div className="relative w-full h-full bg-gray-50">
             <img 
               src={demo.demoSettings.screenshotUrl} 
               alt="Client website screenshot"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain"
+              style={{ objectFit: 'contain' }}
             />
             {/* Screenshot fallback indicator */}
-            <div className="absolute top-4 left-4 bg-yellow-100 border border-yellow-300 text-yellow-800 px-3 py-2 rounded-lg text-sm">
+            <div className="absolute top-4 left-4 bg-yellow-100 border border-yellow-300 text-yellow-800 px-3 py-2 rounded-lg text-sm shadow-lg">
               <AlertTriangle className="h-4 w-4 inline mr-2" />
-              Website preview (screenshot)
+              Website preview (screenshot) - {demo.demoSettings.clientWebsiteUrl?.startsWith('http://') ? 'HTTP site on HTTPS page' : 'site cannot be embedded'}
             </div>
           </div>
         ) : null}
 
         {/* Final fallback if no iframe and no screenshot */}
-        {(iframeError || !demo.demoSettings?.clientWebsiteUrl) && !demo.demoSettings?.screenshotUrl && (
+        {(iframeError || !clientWebsiteUrl) && !demo.demoSettings?.screenshotUrl && (
           <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100">
             <div className="text-center max-w-md mx-4">
               <div className="w-20 h-20 bg-blue-100 rounded-full mx-auto mb-6 flex items-center justify-center">
@@ -300,7 +330,7 @@ export default function DemoPage() {
                 Interactive Demo
               </h3>
               <p className="text-gray-600 mb-4">
-                This website cannot be embedded due to security restrictions, but you can still test the chat widget functionality.
+                This website cannot be embedded {demo.demoSettings?.clientWebsiteUrl?.startsWith('http://') ? '(HTTP site on HTTPS page)' : 'due to security restrictions'}, but you can still test the chat widget functionality.
               </p>
               <div className="space-y-3">
                 {demo.demoSettings?.clientWebsiteUrl && (

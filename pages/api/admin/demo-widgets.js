@@ -9,6 +9,11 @@ export default async function handler(req, res) {
     const client = await clientPromise;
     const db = client.db('chatwidgets');
 
+    // Get the base URL dynamically from request headers
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+
     if (req.method === 'GET') {
       // Get all demo widgets
       const demos = await db.collection('widgets').find({ 
@@ -16,7 +21,6 @@ export default async function handler(req, res) {
       }).sort({ createdAt: -1 }).toArray();
 
       // Update demo URLs for existing demos if they contain localhost
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
       
       for (const demo of demos) {
         if (demo.demoSettings?.demoUrl && demo.demoSettings.demoUrl.includes('localhost')) {
@@ -96,7 +100,7 @@ export default async function handler(req, res) {
           demoSettings: {
             ...demoSettings,
             demoId,
-            demoUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/demo/${demoId}`,
+            demoUrl: `${baseUrl}/demo/${demoId}`,
             usageLimits: {
               ...demoSettings.usageLimits,
               currentUsage: {
@@ -115,7 +119,7 @@ export default async function handler(req, res) {
         // If it's a demo widget, capture screenshot asynchronously
         if (isDemoMode && demoSettings?.clientWebsiteUrl) {
           // Don't await screenshot capture to avoid blocking the response
-          fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/screenshot`, {
+          fetch(`${baseUrl}/api/admin/screenshot`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

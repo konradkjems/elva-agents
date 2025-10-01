@@ -8,6 +8,12 @@ export default async function handler(req, res) {
   const client = await clientPromise;
   const db = client.db('chatwidgets');
 
+  // Get the base URL dynamically from request headers
+  const protocol = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
+  console.log('📝 Base URL:', baseUrl);
+
   if (req.method === 'GET') {
     try {
       const demos = await db.collection('demos').find({}).sort({ createdAt: -1 }).toArray();
@@ -102,7 +108,7 @@ export default async function handler(req, res) {
           clientWebsiteUrl: clientWebsiteUrl || '',
           clientInfo: clientInfo || '',
           demoId,
-          demoUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/demo/${demoId}`,
+          demoUrl: `${baseUrl}/demo/${demoId}`,
           usageLimits: {
             maxInteractions: usageLimits?.maxInteractions || 50,
             maxViews: usageLimits?.maxViews || 100,
@@ -128,7 +134,7 @@ export default async function handler(req, res) {
         // Capture screenshot asynchronously if client website URL is provided
         if (clientWebsiteUrl) {
           // Trigger screenshot capture in background
-          fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/screenshot`, {
+          fetch(`${baseUrl}/api/admin/screenshot`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
