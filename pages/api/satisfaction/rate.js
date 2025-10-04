@@ -39,13 +39,12 @@ export default async function handler(req, res) {
       { _id: new ObjectId(conversationId) },
       { 
         $set: { 
-          'satisfaction.rating': rating,
-          'satisfaction.feedback': feedback || '',
-          'satisfaction.submittedAt': new Date(),
-          'satisfaction.context': 'user_triggered'
-        },
-        $unset: {
-          'satisfaction.autoTriggered': 1
+          satisfaction: {
+            rating: rating,
+            feedback: feedback || '',
+            submittedAt: new Date(),
+            context: 'user_triggered'
+          }
         }
       }
     );
@@ -71,7 +70,17 @@ export default async function handler(req, res) {
     
   } catch (error) {
     console.error('Rating submission error:', error);
-    res.status(500).json({ error: 'Failed to submit rating' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      conversationId: req.body.conversationId,
+      widgetId: req.body.widgetId,
+      rating: req.body.rating
+    });
+    res.status(500).json({ 
+      error: 'Failed to submit rating',
+      details: error.message 
+    });
   }
 }
 
