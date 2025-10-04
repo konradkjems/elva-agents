@@ -306,6 +306,11 @@ async function handler(req, res) {
         // Remove _id from update data as it's immutable
         delete updateData._id;
         
+        // Preserve organizationId as ObjectId if it exists
+        if (updateData.organizationId && typeof updateData.organizationId === 'string') {
+          updateData.organizationId = new ObjectId(updateData.organizationId);
+        }
+        
         // Use updateOne instead of findOneAndUpdate for better compatibility
         const updateResult = await db.collection('widgets').updateOne(
           { _id: queryId },

@@ -138,6 +138,21 @@ export default function CreateWidget() {
       satisfactionScore: 0,
       lastActivity: new Date(),
       monthlyStats: {}
+    },
+    satisfaction: {
+      enabled: false,
+      triggerAfter: 3,
+      inactivityDelay: 30000,
+      promptText: 'How would you rate this conversation so far?',
+      allowFeedback: true,
+      feedbackPlaceholder: 'Optional feedback...'
+    },
+    manualReview: {
+      enabled: false,
+      buttonText: 'Request Manual Review',
+      formTitle: 'Request Manual Review',
+      formDescription: 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.',
+      successMessage: 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'
     }
   });
   const [loading, setLoading] = useState(false);

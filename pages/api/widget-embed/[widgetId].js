@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     let widget;
     try {
       const client = await clientPromise;
-      const db = client.db('chatwidgets');
+      const db = client.db('elva-agents');
       
       // Convert string ID to ObjectId if it's a valid ObjectId string
       let queryId = widgetId;
@@ -159,6 +159,28 @@ export default async function handler(req, res) {
       useGradient: widget.appearance?.useGradient || false,
       secondaryColor: widget.appearance?.secondaryColor || null,
       onlineIndicatorColor: widget.appearance?.onlineIndicatorColor || '#3FD128'
+    },
+    satisfaction: {
+      enabled: widget.satisfaction?.enabled !== false,
+      triggerAfter: widget.satisfaction?.triggerAfter || 3,
+      inactivityDelay: widget.satisfaction?.inactivityDelay || 30000, // 30 seconds
+      promptText: widget.satisfaction?.promptText || 'How would you rate this conversation so far?',
+      allowFeedback: widget.satisfaction?.allowFeedback === true,
+      feedbackPlaceholder: widget.satisfaction?.feedbackPlaceholder || 'Optional feedback...',
+      emojis: {
+        1: '😡',
+        2: '😞',
+        3: '😐',
+        4: '😊',
+        5: '🤩'
+      }
+    },
+    manualReview: {
+      enabled: widget.manualReview?.enabled !== false,
+      buttonText: widget.manualReview?.buttonText || 'Request Manual Review',
+      formTitle: widget.manualReview?.formTitle || 'Request Manual Review',
+      formDescription: widget.manualReview?.formDescription || 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.',
+      successMessage: widget.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'
     }
   })};
 
@@ -341,7 +363,8 @@ export default async function handler(req, res) {
       logoUrl: WIDGET_CONFIG.branding?.logoUrl,
       customWidgetLogo: WIDGET_CONFIG.branding?.customWidgetLogo,
       companyLogo: WIDGET_CONFIG.branding?.companyLogo,
-      branding: WIDGET_CONFIG.branding
+      branding: WIDGET_CONFIG.branding,
+      satisfaction: WIDGET_CONFIG.satisfaction
     });
     
     // If forceIcon is true, always show the chat bubble (for open state)
@@ -623,25 +646,107 @@ export default async function handler(req, res) {
   inputWrapper.style.cssText = \`
     padding: 10px;
     display: flex;
-    gap: 12px;
+    gap: 8px;
+    align-items: center;
+  \`;
+
+  // Create input container with integrated buttons
+  const inputContainerInner = document.createElement("div");
+  inputContainerInner.style.cssText = \`
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: \${themeColors.inputBg};
+    border: 2px solid \${themeColors.borderColor};
+    border-radius: 28px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  \`;
+
+  // Manual review button (right side)
+  const manualReviewButton = document.createElement("button");
+  manualReviewButton.className = 'manual-review-button';
+  manualReviewButton.innerHTML = \`
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+      <polyline points="22,6 12,13 2,6"></polyline>
+    </svg>
+  \`;
+  manualReviewButton.style.cssText = \`
+    width: 44px;
+    height: 50px;
+    background: transparent;
+    color: \${themeColors.textColor};
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    opacity: 0.5;
+    border-radius: 12px;
+    margin-right: 4px;
+  \`;
+  manualReviewButton.addEventListener('mouseenter', () => {
+    manualReviewButton.style.opacity = '1';
+    manualReviewButton.style.backgroundColor = \`\${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}15\`;
+    manualReviewButton.style.transform = 'scale(1.1)';
+  });
+  manualReviewButton.addEventListener('mouseleave', () => {
+    manualReviewButton.style.opacity = '0.5';
+    manualReviewButton.style.backgroundColor = 'transparent';
+    manualReviewButton.style.transform = 'scale(1)';
+  });
+
+  // Create input wrapper for label animation
+  const inputFieldWrapper = document.createElement("div");
+  inputFieldWrapper.style.cssText = \`
+    flex: 1;
+    position: relative;
+    display: flex;
     align-items: center;
   \`;
 
   const input = document.createElement("input");
   input.type = "text";
   input.className = "widget-input";
-  input.placeholder = WIDGET_CONFIG.messages.inputPlaceholder || "Type your message...";
+  input.id = "widget-input-field";
   input.style.cssText = \`
-    flex: 1;
-    padding: 12px 16px;
-    border: 1px solid \${themeColors.borderColor};
-    border-radius: 24px;
+    width: 100%;
+    height: 50px;
+    padding: 0 16px;
+    border: none;
+    font-size: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     outline: none;
-    font-size: 14px;
-    background: \${themeColors.inputBg};
+    background: transparent;
     color: \${themeColors.textColor};
     transition: all 0.2s ease;
+    box-sizing: border-box;
   \`;
+
+  const inputLabel = document.createElement("label");
+  inputLabel.htmlFor = "widget-input-field";
+  inputLabel.textContent = WIDGET_CONFIG.messages.inputPlaceholder || "Type your message...";
+  inputLabel.style.cssText = \`
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: \${themeColors.textColor};
+    opacity: 0.6;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  \`;
+
+  inputFieldWrapper.appendChild(input);
+  inputFieldWrapper.appendChild(inputLabel);
+
+
 
   const sendButton = document.createElement("button");
   sendButton.innerHTML = \`
@@ -665,29 +770,35 @@ export default async function handler(req, res) {
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
   \`;
 
-  // Add hover effects
-  input.onmouseover = () => {
-    if (WIDGET_CONFIG.theme.themeMode === 'dark') {
-      input.style.borderColor = '#6b7280'; // gray-500 for dark mode
+  // Add focus effects for input container and label animation
+  const updateLabelPosition = () => {
+    if (input.value || document.activeElement === input) {
+      inputLabel.style.top = '4px';
+      inputLabel.style.fontSize = '11px';
+      inputLabel.style.transform = 'translateY(0)';
+      inputLabel.style.opacity = '0.8';
     } else {
-      input.style.borderColor = '#9ca3af'; // gray-400 for light mode
-      input.style.background = '#f9fafb'; // gray-50 for light mode hover
+      inputLabel.style.top = '50%';
+      inputLabel.style.fontSize = '16px';
+      inputLabel.style.transform = 'translateY(-50%)';
+      inputLabel.style.opacity = '0.6';
     }
   };
-  
-  input.onmouseout = () => {
-    input.style.borderColor = themeColors.borderColor;
-    input.style.background = themeColors.inputBg;
-  };
-  
+
   input.onfocus = () => {
-    input.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
-    input.style.background = themeColors.inputBg;
+    inputContainerInner.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
+    inputContainerInner.style.boxShadow = \`0 0 0 3px \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}20, 0 4px 12px rgba(0, 0, 0, 0.12)\`;
+    updateLabelPosition();
   };
   
   input.onblur = () => {
-    input.style.borderColor = themeColors.borderColor;
-    input.style.background = themeColors.inputBg;
+    inputContainerInner.style.borderColor = themeColors.borderColor;
+    inputContainerInner.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+    updateLabelPosition();
+  };
+
+  input.oninput = () => {
+    updateLabelPosition();
   };
 
   sendButton.onmouseover = () => {
@@ -700,7 +811,11 @@ export default async function handler(req, res) {
     sendButton.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)';
   };
 
-  inputWrapper.appendChild(input);
+  // Assemble input container inner
+  inputContainerInner.appendChild(inputFieldWrapper);
+  inputContainerInner.appendChild(manualReviewButton);
+  
+  inputWrapper.appendChild(inputContainerInner);
   inputWrapper.appendChild(sendButton);
   inputContainer.appendChild(inputWrapper);
   // Create powered by text
@@ -1022,6 +1137,20 @@ export default async function handler(req, res) {
     
     // Clear input
     input.value = '';
+    
+    // Reset satisfaction rating state for new conversation
+    console.log('🔄 Resetting satisfaction rating state for new conversation');
+    satisfactionRatingShown = false;
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = null;
+      console.log('⏰ Cleared inactivity timer for new conversation');
+    }
+    if (inputDebounceTimer) {
+      clearTimeout(inputDebounceTimer);
+      inputDebounceTimer = null;
+      console.log('⏰ Cleared input debounce timer for new conversation');
+    }
     
     // Show welcome message
     setTimeout(() => {
@@ -1793,12 +1922,13 @@ export default async function handler(req, res) {
       messageBubble.style.cssText = \`
         background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
         color: white;
-        padding: 12px 4px 12px 16px;
+        padding: 12px 16px;
         border-radius: 18px 18px 4px 18px;
         font-size: 14px;
         max-width: 80%;
         box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
         word-wrap: break-word;
+        text-align: left;
       \`;
       messageBubble.innerHTML = formatMessage(content);
       messageContentDiv.appendChild(messageBubble);
@@ -2052,6 +2182,396 @@ export default async function handler(req, res) {
     setTimeout(typeNextCharacter, 100);
   }
 
+  // Satisfaction rating functionality
+  let satisfactionRatingShown = false;
+  let inactivityTimer = null;
+  let lastActivityTime = Date.now();
+  
+  function checkAndShowSatisfactionRating() {
+    console.log('🔍 checkAndShowSatisfactionRating called, satisfactionRatingShown:', satisfactionRatingShown);
+    
+    // Don't show if already shown for this conversation
+    if (satisfactionRatingShown) {
+      console.log('🚫 Satisfaction rating already shown for this conversation');
+      return;
+    }
+    
+    // Check if satisfaction rating is enabled in widget config
+    const satisfactionConfig = WIDGET_CONFIG.satisfaction || {};
+    console.log('📊 Satisfaction Config Debug:', satisfactionConfig);
+    
+    if (!satisfactionConfig.enabled) {
+      console.log('❌ Satisfaction rating is disabled');
+      return;
+    }
+    
+    // Check message count threshold
+    const messageCount = currentConversationMessages.length;
+    const triggerAfter = satisfactionConfig.triggerAfter || 3;
+    
+    console.log('📈 Message Count Check:', {
+      messageCount,
+      triggerAfter,
+      shouldTrigger: messageCount >= triggerAfter
+    });
+    
+    if (messageCount >= triggerAfter) {
+      startInactivityTimer();
+    }
+  }
+  
+  function startInactivityTimer() {
+    // Don't start timer if rating already shown
+    if (satisfactionRatingShown) {
+      console.log('🚫 Satisfaction rating already shown, skipping timer');
+      return;
+    }
+    
+    // Clear any existing timer before starting new one
+    if (inactivityTimer) {
+      console.log('⏰ Clearing existing timer before starting new one');
+      clearTimeout(inactivityTimer);
+    }
+    
+    const satisfactionConfig = WIDGET_CONFIG.satisfaction || {};
+    const inactivityDelay = satisfactionConfig.inactivityDelay || 30000; // 30 seconds default
+    
+    console.log('⏱️ Starting inactivity timer:', {
+      inactivityDelay,
+      delayInSeconds: inactivityDelay / 1000
+    });
+    
+    inactivityTimer = setTimeout(() => {
+      console.log('🔔 Inactivity timer triggered - showing satisfaction rating');
+      console.log('🔍 Timer ID:', inactivityTimer);
+      console.log('🔍 satisfactionRatingShown before showing:', satisfactionRatingShown);
+      showSatisfactionRating();
+      // Set the flag after showing the rating to prevent multiple ratings
+      satisfactionRatingShown = true;
+      console.log('✅ Set satisfactionRatingShown = true after showing rating');
+      inactivityTimer = null; // Clear timer reference after completion
+    }, inactivityDelay);
+    
+    console.log('⏰ Timer scheduled with ID:', inactivityTimer);
+  }
+  
+  // Debounce timer for input events
+  let inputDebounceTimer = null;
+  
+  function resetInactivityTimer() {
+    lastActivityTime = Date.now();
+    
+    // Clear any existing debounce timer
+    if (inputDebounceTimer) {
+      clearTimeout(inputDebounceTimer);
+    }
+    
+    // Debounce the timer reset to avoid constant restarts
+    inputDebounceTimer = setTimeout(() => {
+      if (inactivityTimer) {
+        console.log('🔄 Resetting inactivity timer due to user activity');
+        clearTimeout(inactivityTimer);
+        startInactivityTimer();
+      }
+    }, 1000); // Wait 1 second after last input before resetting timer
+  }
+  
+  function showSatisfactionRating() {
+    console.log('🎯 showSatisfactionRating called');
+    
+    const satisfactionConfig = WIDGET_CONFIG.satisfaction || {};
+    
+    console.log('⭐ Showing satisfaction rating with config:', {
+      promptText: satisfactionConfig.promptText,
+      allowFeedback: satisfactionConfig.allowFeedback,
+      feedbackPlaceholder: satisfactionConfig.feedbackPlaceholder
+    });
+    
+    // Create the rating as an AI message
+    const messageDiv = document.createElement("div");
+    const isUser = false; // This is an AI message
+    
+    // Store the original raw content for history saving
+    messageDiv.setAttribute('data-original-content', 'satisfaction_rating');
+    messageDiv.setAttribute('data-role', 'assistant');
+    
+    // Also store in our conversation messages array
+    currentConversationMessages.push({
+      role: 'assistant',
+      content: 'satisfaction_rating',
+      timestamp: new Date()
+    });
+    
+    messageDiv.style.cssText = \`
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: flex-start;
+      animation: slideIn 0.3s ease-out;
+    \`;
+    
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      max-width: 85%;
+    \`;
+    
+    // AI Avatar
+    const assistantAvatar = document.createElement("div");
+    assistantAvatar.style.cssText = \`
+      width: 32px;
+      height: 32px;
+      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    \`;
+    assistantAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+      \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+      \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
+    
+    const assistantContainer = document.createElement("div");
+    assistantContainer.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+    \`;
+    
+    // AI Name Label
+    const assistantNameLabel = document.createElement("div");
+    assistantNameLabel.style.cssText = \`
+      font-size: 12px;
+      color: \${themeColors.textColor};
+      margin-bottom: 8px;
+      font-weight: 500;
+      opacity: 0.7;
+    \`;
+    assistantNameLabel.textContent = WIDGET_CONFIG.branding.title || 'AI Assistant';
+    
+    // Rating Message Bubble
+    const ratingBubble = document.createElement("div");
+    ratingBubble.className = 'satisfaction-rating-bubble';
+    ratingBubble.style.cssText = \`
+      background: \${themeColors.messageBg};
+      color: \${themeColors.textColor};
+      padding: 16px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      max-width: 320px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid \${themeColors.borderColor};
+    \`;
+    
+    const promptText = satisfactionConfig.promptText || 'How would you rate this conversation so far?';
+    const allowFeedback = satisfactionConfig.allowFeedback === true;
+    const feedbackPlaceholder = satisfactionConfig.feedbackPlaceholder || 'Optional feedback...';
+    
+    ratingBubble.innerHTML = \`
+      <div style="margin-bottom: 16px; color: \${themeColors.textColor}; font-size: 14px; line-height: 1.4;">
+        \${promptText}
+      </div>
+      <div class="rating-emojis" style="display: flex; gap: 12px; justify-content: center; margin-bottom: \${allowFeedback ? '16px' : '0'};">
+        \${[1,2,3,4,5].map(rating => \`
+          <button class="rating-btn" data-rating="\${rating}" style="
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          " onmouseover="this.style.transform='scale(1.15)'; this.style.backgroundColor='rgba(0,0,0,0.05)'" onmouseout="this.style.transform='scale(1)'; this.style.backgroundColor='transparent'">\${getEmojiForRating(rating)}</button>
+        \`).join('')}
+      </div>
+      \${allowFeedback ? \`
+        <textarea class="feedback-input" placeholder="\${feedbackPlaceholder}" 
+          style="width: 100%; padding: 12px; border: 1px solid \${themeColors.borderColor}; border-radius: 8px; resize: vertical; min-height: 60px; font-size: 14px; font-family: inherit; background: white; outline: none; transition: border-color 0.2s ease;" 
+          onfocus="this.style.borderColor='\${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}'" 
+          onblur="this.style.borderColor='\${themeColors.borderColor}'"></textarea>
+      \` : ''}
+    \`;
+    
+    // Add event listeners
+    ratingBubble.querySelectorAll('.rating-btn').forEach(btn => {
+      btn.addEventListener('click', () => submitRating(parseInt(btn.dataset.rating)));
+    });
+    
+    // Assemble the message
+    assistantContainer.appendChild(assistantNameLabel);
+    assistantContainer.appendChild(ratingBubble);
+    messageContentDiv.appendChild(assistantAvatar);
+    messageContentDiv.appendChild(assistantContainer);
+    messageDiv.appendChild(messageContentDiv);
+    
+    messages.appendChild(messageDiv);
+    messages.scrollTop = messages.scrollHeight;
+    
+    console.log('✅ Satisfaction rating message added to DOM');
+  }
+  
+  function getEmojiForRating(rating) {
+    const emojis = {
+      1: '😡',
+      2: '😞', 
+      3: '😐',
+      4: '😊',
+      5: '🤩'
+    };
+    return emojis[rating] || '😐';
+  }
+  
+  async function submitRating(rating) {
+    try {
+      const feedbackInput = document.querySelector('.feedback-input');
+      const feedback = feedbackInput ? feedbackInput.value.trim() : '';
+      
+      const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/satisfaction/rate\`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: currentConversationId,
+          widgetId: WIDGET_CONFIG.widgetId,
+          rating: rating,
+          feedback: feedback
+        })
+      });
+      
+      if (response.ok) {
+        showThankYouMessage();
+        // Keep satisfactionRatingShown = true to prevent multiple ratings in same conversation
+        console.log('✅ Rating submitted successfully, keeping satisfactionRatingShown = true');
+      } else {
+        console.error('Failed to submit rating');
+        showErrorMessage('Failed to submit rating. Please try again.');
+      }
+      
+    } catch (error) {
+      console.error('Rating submission error:', error);
+      showErrorMessage('Failed to submit rating. Please try again.');
+    }
+  }
+  
+  function showThankYouMessage() {
+    // Remove the rating bubble
+    const ratingBubble = document.querySelector('.satisfaction-rating-bubble');
+    if (ratingBubble) {
+      ratingBubble.remove();
+    }
+    
+    // Show thank you message as AI message
+    const messageDiv = document.createElement("div");
+    messageDiv.style.cssText = \`
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: flex-start;
+      animation: slideIn 0.3s ease-out;
+    \`;
+    
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      max-width: 85%;
+    \`;
+    
+    // AI Avatar
+    const assistantAvatar = document.createElement("div");
+    assistantAvatar.style.cssText = \`
+      width: 32px;
+      height: 32px;
+      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    \`;
+    assistantAvatar.innerHTML = '<span style="color: white; font-size: 12px; font-weight: 600;">E</span>';
+    
+    const assistantContainer = document.createElement("div");
+    assistantContainer.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+    \`;
+    
+    // AI Name Label
+    const assistantNameLabel = document.createElement("div");
+    assistantNameLabel.style.cssText = \`
+      font-size: 12px;
+      color: \${themeColors.textColor};
+      margin-bottom: 8px;
+      font-weight: 500;
+      opacity: 0.7;
+    \`;
+    assistantNameLabel.textContent = WIDGET_CONFIG.branding.title || 'AI Assistant';
+    
+    // Thank you message bubble
+    const thankYouBubble = document.createElement("div");
+    thankYouBubble.style.cssText = \`
+      background: #f0f9ff;
+      color: #0369a1;
+      padding: 12px 16px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      max-width: 320px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid #bae6fd;
+      text-align: center;
+    \`;
+    thankYouBubble.innerHTML = 'Thank you for your feedback! 🙏';
+    
+    // Assemble the message
+    assistantContainer.appendChild(assistantNameLabel);
+    assistantContainer.appendChild(thankYouBubble);
+    messageContentDiv.appendChild(assistantAvatar);
+    messageContentDiv.appendChild(assistantContainer);
+    messageDiv.appendChild(messageContentDiv);
+    
+    messages.appendChild(messageDiv);
+    messages.scrollTop = messages.scrollHeight;
+    
+    // Remove thank you message after 3 seconds
+    setTimeout(() => {
+      if (messageDiv.parentNode) {
+        messageDiv.remove();
+      }
+    }, 3000);
+  }
+  
+  function showErrorMessage(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = \`
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin: 12px 0;
+      text-align: center;
+      color: #dc2626;
+      font-size: 14px;
+      animation: slideIn 0.3s ease-out;
+    \`;
+    errorDiv.innerHTML = message;
+    
+    messages.appendChild(errorDiv);
+    messages.scrollTop = messages.scrollHeight;
+    
+    // Remove error message after 5 seconds
+    setTimeout(() => {
+      if (errorDiv.parentNode) {
+        errorDiv.remove();
+      }
+    }, 5000);
+  }
+
   // Handle message sending
   let isSending = false;
   async function sendMessage() {
@@ -2098,7 +2618,9 @@ export default async function handler(req, res) {
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     \`;
-    typingAvatar.innerHTML = '<span style="color: white; font-size: 12px; font-weight: 600;">E</span>';
+    typingAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+      \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+      \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
     
     const typingContent = document.createElement("div");
     typingContent.style.cssText = \`
@@ -2203,6 +2725,9 @@ export default async function handler(req, res) {
 
         // Add message with typewriter effect
         addMessageWithTypewriter('assistant', data.reply);
+        
+        // Check if we should show satisfaction rating
+        checkAndShowSatisfactionRating();
         
         // Save conversation to history
         // Use the stored raw messages to preserve formatting for history
@@ -2323,6 +2848,18 @@ export default async function handler(req, res) {
     sendMessage();
   };
 
+  // Reset inactivity timer on user activity
+  input.addEventListener('input', resetInactivityTimer);
+  input.addEventListener('focus', resetInactivityTimer);
+  messages.addEventListener('scroll', resetInactivityTimer);
+  
+  // Reset timer when user sends a message
+  const originalSendMessage = sendMessage;
+  sendMessage = function() {
+    resetInactivityTimer();
+    return originalSendMessage.apply(this, arguments);
+  };
+
   // Add CSS animations
   const style = document.createElement('style');
   style.textContent = \`
@@ -2437,10 +2974,9 @@ export default async function handler(req, res) {
       line-height: 1.2 !important;
     }
     
-    /* Theme-aware input placeholder */
-    .widget-input::placeholder {
-      color: \${themeColors.textColor} !important;
-      opacity: 0.6 !important;
+    /* Theme-aware input */
+    .widget-input {
+      font-size: 16px !important;
     }
     
     /* Mobile-optimized animations */
@@ -2916,6 +3452,407 @@ export default async function handler(req, res) {
     if (typeof updateOnlineIndicatorVisibility === 'function') {
       updateOnlineIndicatorVisibility();
     }
+  }, 100);
+
+  // Manual Review Functions
+  function setupManualReviewButton() {
+    const manualReviewConfig = WIDGET_CONFIG.manualReview || {};
+    
+    if (!manualReviewConfig.enabled) {
+      // Hide manual review button if disabled
+      manualReviewButton.style.display = 'none';
+      return;
+    }
+
+    // Show manual review button and add click handler
+    manualReviewButton.style.display = 'flex';
+    manualReviewButton.addEventListener('click', showManualReviewForm);
+  }
+
+  function showManualReviewForm() {
+    console.log('📧 showManualReviewForm called');
+    
+    const manualReviewConfig = WIDGET_CONFIG.manualReview || {};
+    
+    // Create the form as an AI message
+    const messageDiv = document.createElement("div");
+    const isUser = false; // This is an AI message
+    
+    // Store the original raw content for history saving
+    messageDiv.setAttribute('data-original-content', 'manual_review_form');
+    messageDiv.setAttribute('data-role', 'assistant');
+    
+    // Also store in our conversation messages array
+    currentConversationMessages.push({
+      role: 'assistant',
+      content: 'manual_review_form',
+      timestamp: new Date()
+    });
+    
+    messageDiv.style.cssText = \`
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: flex-start;
+      animation: slideIn 0.3s ease-out;
+    \`;
+    
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+    \`;
+    
+    // AI Avatar
+    const assistantAvatar = document.createElement("div");
+    assistantAvatar.style.cssText = \`
+      width: 32px;
+      height: 32px;
+      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    \`;
+    assistantAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+      \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+      \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
+    
+    const assistantContainer = document.createElement("div");
+    assistantContainer.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    \`;
+    
+    // AI Name Label
+    const assistantNameLabel = document.createElement("div");
+    assistantNameLabel.style.cssText = \`
+      font-size: 12px;
+      color: \${themeColors.textColor};
+      margin-bottom: 8px;
+      font-weight: 500;
+      opacity: 0.7;
+    \`;
+    assistantNameLabel.textContent = WIDGET_CONFIG.branding.title || 'AI Assistant';
+    
+    // Form Bubble
+    const formBubble = document.createElement("div");
+    formBubble.className = 'manual-review-form-bubble';
+    formBubble.style.cssText = \`
+      background: \${themeColors.messageBg};
+      color: \${themeColors.textColor};
+      padding: 20px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      width: 320px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid \${themeColors.borderColor};
+    \`;
+    
+    // Form
+    const form = document.createElement('form');
+    form.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+    \`;
+    
+    // Name field
+    const nameLabel = document.createElement('label');
+    nameLabel.style.cssText = \`
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+      display: block;
+    \`;
+    nameLabel.textContent = 'Dit navn (valgfri)';
+    
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.required = false;
+    nameInput.placeholder = 'Skriv dit navn her';
+    nameInput.style.cssText = \`
+      height: 50px;
+      padding: 0 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.3s ease;
+      background: #ffffff;
+      width: 100%;
+      box-sizing: border-box;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    \`;
+    nameInput.addEventListener('focus', () => {
+      nameInput.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
+      nameInput.style.boxShadow = \`0 0 0 3px \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}20\`;
+      nameInput.style.transform = 'translateY(-1px)';
+    });
+    nameInput.addEventListener('blur', () => {
+      nameInput.style.borderColor = '#e5e7eb';
+      nameInput.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+      nameInput.style.transform = 'translateY(0)';
+    });
+    
+    // Email field
+    const emailLabel = document.createElement('label');
+    emailLabel.style.cssText = \`
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+      display: block;
+    \`;
+    emailLabel.textContent = 'Din email';
+    
+    const emailInput = document.createElement('input');
+    emailInput.type = 'email';
+    emailInput.required = true;
+    emailInput.placeholder = 'Skriv din email her';
+    emailInput.style.cssText = nameInput.style.cssText;
+    emailInput.addEventListener('focus', () => {
+      emailInput.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
+      emailInput.style.boxShadow = \`0 0 0 3px \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}20\`;
+      emailInput.style.transform = 'translateY(-1px)';
+    });
+    emailInput.addEventListener('blur', () => {
+      emailInput.style.borderColor = '#e5e7eb';
+      emailInput.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+      emailInput.style.transform = 'translateY(0)';
+    });
+    
+    
+    // Message field
+    const messageLabel = document.createElement('label');
+    messageLabel.style.cssText = \`
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 8px;
+      display: block;
+    \`;
+    messageLabel.textContent = 'Efterlad en besked (valgfri)';
+    
+    const messageTextarea = document.createElement('textarea');
+    messageTextarea.required = false;
+    messageTextarea.rows = 4;
+    messageTextarea.placeholder = 'Skriv din besked her';
+    messageTextarea.style.cssText = \`
+      padding: 14px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      resize: vertical;
+      min-height: 100px;
+      background: #ffffff;
+      width: 100%;
+      box-sizing: border-box;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    \`;
+    messageTextarea.addEventListener('focus', () => {
+      messageTextarea.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
+      messageTextarea.style.boxShadow = \`0 0 0 3px \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}20\`;
+      messageTextarea.style.transform = 'translateY(-1px)';
+    });
+    messageTextarea.addEventListener('blur', () => {
+      messageTextarea.style.borderColor = '#e5e7eb';
+      messageTextarea.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+      messageTextarea.style.transform = 'translateY(0)';
+    });
+    
+    // Buttons container
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.cssText = \`
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      width: 100%;
+    \`;
+    
+    // Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.type = 'button';
+    cancelButton.style.cssText = \`
+      flex: 1;
+      padding: 14px 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      background: white;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    \`;
+    cancelButton.textContent = 'Annuller';
+    cancelButton.addEventListener('mouseenter', () => {
+      cancelButton.style.backgroundColor = '#f9fafb';
+      cancelButton.style.borderColor = '#d1d5db';
+      cancelButton.style.transform = 'translateY(-1px)';
+      cancelButton.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+    });
+    cancelButton.addEventListener('mouseleave', () => {
+      cancelButton.style.backgroundColor = 'white';
+      cancelButton.style.borderColor = '#e5e7eb';
+      cancelButton.style.transform = 'translateY(0)';
+      cancelButton.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+    });
+    cancelButton.addEventListener('click', () => {
+      messageDiv.remove();
+    });
+    
+    // Submit button
+    const submitButton = document.createElement('button');
+    submitButton.type = 'submit';
+    submitButton.style.cssText = \`
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    \`;
+    submitButton.innerHTML = \`
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+      </svg>
+      Send
+    \`;
+    submitButton.addEventListener('mouseenter', () => {
+      submitButton.style.transform = 'translateY(-2px)';
+      submitButton.style.boxShadow = '0 6px 20px rgba(79, 70, 229, 0.4)';
+    });
+    submitButton.addEventListener('mouseleave', () => {
+      submitButton.style.transform = 'translateY(0)';
+      submitButton.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)';
+    });
+    
+    // Form submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitButtonText = submitButton.textContent;
+      submitButton.textContent = 'Submitting...';
+      submitButton.disabled = true;
+      
+      try {
+        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/manual-review/submit\`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            widgetId: WIDGET_CONFIG.widgetId,
+            conversationId: currentConversationId,
+            contactInfo: {
+              name: nameInput.value.trim(),
+              email: emailInput.value.trim()
+            },
+            message: messageTextarea.value.trim()
+          })
+        });
+        
+        if (response.ok) {
+          // Show success message
+          formContainer.innerHTML = \`
+            <div style="text-align: center; padding: 20px;">
+              <div style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Request Submitted</h3>
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">\${manualReviewConfig.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'}</p>
+              <button onclick="document.body.removeChild(this.closest('.manual-review-overlay'))" style="padding: 12px 24px; border: none; border-radius: 8px; background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}; color: white; font-size: 14px; font-weight: 500; cursor: pointer;">Close</button>
+            </div>
+          \`;
+          formContainer.className = 'manual-review-overlay';
+        } else {
+          throw new Error('Failed to submit request');
+        }
+      } catch (error) {
+        console.error('Error submitting manual review:', error);
+        submitButton.textContent = submitButtonText;
+        submitButton.disabled = false;
+        
+        // Show error message
+        const errorMsg = document.createElement('div');
+        errorMsg.style.cssText = \`
+          padding: 12px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          color: #dc2626;
+          font-size: 14px;
+          margin-top: 16px;
+        \`;
+        errorMsg.textContent = 'Failed to submit request. Please try again.';
+        form.appendChild(errorMsg);
+        
+        setTimeout(() => {
+          if (errorMsg.parentNode) {
+            errorMsg.parentNode.removeChild(errorMsg);
+          }
+        }, 5000);
+      }
+    });
+    
+    // Assemble form
+    form.appendChild(nameLabel);
+    form.appendChild(nameInput);
+    form.appendChild(emailLabel);
+    form.appendChild(emailInput);
+    form.appendChild(messageLabel);
+    form.appendChild(messageTextarea);
+    
+    buttonsContainer.appendChild(cancelButton);
+    buttonsContainer.appendChild(submitButton);
+    form.appendChild(buttonsContainer);
+    
+    // Assemble the message
+    formBubble.appendChild(form);
+    assistantContainer.appendChild(assistantNameLabel);
+    assistantContainer.appendChild(formBubble);
+    messageContentDiv.appendChild(assistantAvatar);
+    messageContentDiv.appendChild(assistantContainer);
+    messageDiv.appendChild(messageContentDiv);
+    
+    messages.appendChild(messageDiv);
+    messages.scrollTop = messages.scrollHeight;
+    
+    // Close on cancel button click
+    cancelButton.addEventListener('click', () => {
+      messageDiv.remove();
+    });
+    
+    // Focus first input
+    nameInput.focus();
+  }
+
+  // Setup manual review button after initialization
+  setTimeout(() => {
+    setupManualReviewButton();
   }, 100);
 
 })();

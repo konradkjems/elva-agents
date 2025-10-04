@@ -13,10 +13,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // IMPORTANT: Only platform admins can access demos
-  if (session.user?.platformRole !== 'platform_admin') {
+  // Allow access to all authenticated users for search functionality
+  // Platform admin restrictions only apply to POST/PUT/DELETE operations
+  if (req.method !== 'GET' && session.user?.platformRole !== 'platform_admin') {
     return res.status(403).json({ 
-      error: 'Access denied. Demos are only available to platform administrators.' 
+      error: 'Access denied. Demo management is only available to platform administrators.' 
     });
   }
 
@@ -31,8 +32,10 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      // Platform-level: Get all demos (no organizationId filter)
+      // For search functionality, return all demos
+      // In the future, this could be filtered by organization if needed
       const demos = await db.collection('demos').find({}).sort({ createdAt: -1 }).toArray();
+      console.log('📝 Returning demos for search:', demos.length);
       return res.status(200).json(demos);
     } catch (error) {
       console.error('Error fetching demos:', error);

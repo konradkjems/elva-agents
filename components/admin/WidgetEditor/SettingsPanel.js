@@ -12,7 +12,9 @@ import {
   ExclamationTriangleIcon,
   DocumentDuplicateIcon,
   ArrowsPointingOutIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  StarIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import ColorPicker from './ColorPicker';
 import FileUpload from './FileUpload';
@@ -91,8 +93,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
     { id: 0, name: 'Appearance', icon: PaintBrushIcon, color: 'blue' },
     { id: 1, name: 'Messages', icon: ChatBubbleLeftRightIcon, color: 'green' },
     { id: 2, name: 'Branding', icon: BuildingOfficeIcon, color: 'purple' },
-    { id: 3, name: 'Advanced', icon: Cog6ToothIcon, color: 'orange' },
-    { id: 4, name: 'Embed Code', icon: CodeBracketIcon, color: 'indigo' }
+    { id: 3, name: 'Satisfaction', icon: StarIcon, color: 'yellow' },
+    { id: 4, name: 'Manual Review', icon: ClipboardDocumentListIcon, color: 'red' },
+    { id: 5, name: 'Advanced', icon: Cog6ToothIcon, color: 'orange' },
+    { id: 6, name: 'Embed Code', icon: CodeBracketIcon, color: 'indigo' }
   ];
 
   return (
@@ -849,6 +853,322 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         </Switch>
                       </div>
                     </Switch.Group>
+                  </div>
+                </div>
+              </div>
+            </Tab.Panel>
+            
+            <Tab.Panel>
+              {/* Satisfaction Rating Settings */}
+              <div className="space-y-8">
+                {/* Satisfaction Rating Configuration */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <StarIcon className="w-5 h-5 mr-2 text-yellow-600" />
+                    Satisfaction Rating
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Enable Satisfaction Rating */}
+                    <div>
+                      <Switch.Group>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <Switch.Label className="text-sm font-medium text-gray-700">
+                              Enable Satisfaction Rating
+                            </Switch.Label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Allow users to rate their conversation experience
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.satisfaction?.enabled !== false}
+                            onChange={(checked) => handleFieldChange('satisfaction', 'enabled', checked)}
+                            className={`${
+                              settings.satisfaction?.enabled !== false ? 'bg-yellow-600' : 'bg-gray-200'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2`}
+                          >
+                            <span
+                              className={`${
+                                settings.satisfaction?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            />
+                          </Switch>
+                        </div>
+                      </Switch.Group>
+                    </div>
+
+                    {/* Trigger Settings */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Trigger After Messages
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={settings.satisfaction?.triggerAfter || 3}
+                          onChange={(e) => handleFieldChange('satisfaction', 'triggerAfter', parseInt(e.target.value))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                          placeholder="3"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Minimum messages before rating can appear
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Inactivity Delay (seconds)
+                        </label>
+                        <input
+                          type="number"
+                          min="5"
+                          max="300"
+                          value={settings.satisfaction?.inactivityDelay ? settings.satisfaction.inactivityDelay / 1000 : 30}
+                          onChange={(e) => handleFieldChange('satisfaction', 'inactivityDelay', parseInt(e.target.value) * 1000)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                          placeholder="30"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Seconds of inactivity before showing rating
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Prompt Text */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Rating Prompt Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.satisfaction?.promptText || 'How would you rate this conversation so far?'}
+                        onChange={(e) => handleFieldChange('satisfaction', 'promptText', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                        placeholder="How would you rate this conversation so far?"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        The question shown to users when asking for a rating
+                      </p>
+                    </div>
+
+                    {/* Feedback Settings */}
+                    <div className="space-y-4">
+                      <Switch.Group>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <Switch.Label className="text-sm font-medium text-gray-700">
+                              Allow Feedback
+                            </Switch.Label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Show optional text area for additional feedback
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.satisfaction?.allowFeedback !== false}
+                            onChange={(checked) => handleFieldChange('satisfaction', 'allowFeedback', checked)}
+                            className={`${
+                              settings.satisfaction?.allowFeedback !== false ? 'bg-yellow-600' : 'bg-gray-200'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2`}
+                          >
+                            <span
+                              className={`${
+                                settings.satisfaction?.allowFeedback !== false ? 'translate-x-6' : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            />
+                          </Switch>
+                        </div>
+                      </Switch.Group>
+
+                      {settings.satisfaction?.allowFeedback !== false && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Feedback Placeholder
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.satisfaction?.feedbackPlaceholder || 'Optional feedback...'}
+                            onChange={(e) => handleFieldChange('satisfaction', 'feedbackPlaceholder', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                            placeholder="Optional feedback..."
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Placeholder text for the feedback text area
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rating Scale Preview */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Rating Scale
+                      </label>
+                      <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-lg">
+                        <span className="text-sm text-gray-600">Poor</span>
+                        <div className="flex gap-2">
+                          <span className="text-2xl">😡</span>
+                          <span className="text-2xl">😞</span>
+                          <span className="text-2xl">😐</span>
+                          <span className="text-2xl">😊</span>
+                          <span className="text-2xl">🤩</span>
+                        </div>
+                        <span className="text-sm text-gray-600">Excellent</span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        5-point emoji rating scale (not configurable)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Information Panel */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div>
+                      <h5 className="text-sm font-medium text-blue-900 mb-2">
+                        How Satisfaction Rating Works
+                      </h5>
+                      <ul className="text-xs text-blue-800 space-y-1">
+                        <li>• Rating appears as an AI message after the specified inactivity period</li>
+                        <li>• Users can rate with emojis and optionally provide text feedback</li>
+                        <li>• Ratings are automatically aggregated for analytics</li>
+                        <li>• Data helps improve conversation quality and user experience</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Tab.Panel>
+            
+            <Tab.Panel>
+              {/* Manual Review Settings */}
+              <div className="space-y-8">
+                {/* Manual Review Configuration */}
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <ClipboardDocumentListIcon className="w-5 h-5 mr-2 text-red-600" />
+                    Manual Review System
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Enable Manual Review */}
+                    <div>
+                      <Switch.Group>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <Switch.Label className="text-sm font-medium text-gray-700">
+                              Enable Manual Review
+                            </Switch.Label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Allow users to request manual review of their conversation
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.manualReview?.enabled !== false}
+                            onChange={(checked) => handleFieldChange('manualReview', 'enabled', checked)}
+                            className={`${
+                              settings.manualReview?.enabled !== false ? 'bg-red-600' : 'bg-gray-200'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2`}
+                          >
+                            <span
+                              className={`${
+                                settings.manualReview?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            />
+                          </Switch>
+                        </div>
+                      </Switch.Group>
+                    </div>
+
+                    {/* Manual Review Settings */}
+                    {settings.manualReview?.enabled !== false && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Button Text
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.manualReview?.buttonText || 'Request Manual Review'}
+                            onChange={(e) => handleFieldChange('manualReview', 'buttonText', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            placeholder="Request Manual Review"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Text displayed on the manual review button
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Form Title
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.manualReview?.formTitle || 'Request Manual Review'}
+                            onChange={(e) => handleFieldChange('manualReview', 'formTitle', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            placeholder="Request Manual Review"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Title displayed at the top of the contact form
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Form Description
+                          </label>
+                          <textarea
+                            value={settings.manualReview?.formDescription || 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.'}
+                            onChange={(e) => handleFieldChange('manualReview', 'formDescription', e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            placeholder="Please provide your contact information and describe what you need help with..."
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Description shown above the contact form
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Success Message
+                          </label>
+                          <textarea
+                            value={settings.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'}
+                            onChange={(e) => handleFieldChange('manualReview', 'successMessage', e.target.value)}
+                            rows={2}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            placeholder="Thank you for your request! Our team will review..."
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Message shown after successful submission
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Information Panel */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-blue-800">
+                          <p className="font-medium mb-1">How Manual Review Works</p>
+                          <ul className="space-y-1 text-xs">
+                            <li>• Users can request manual review from any conversation</li>
+                            <li>• Contact form collects name, email, and phone number</li>
+                            <li>• Full conversation history is sent to your team</li>
+                            <li>• Requests appear in the admin dashboard for review</li>
+                            <li>• You can track status: pending, in review, completed</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

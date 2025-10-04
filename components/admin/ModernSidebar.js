@@ -22,7 +22,8 @@ import {
   X,
   Globe,
   User,
-  LogOut
+  LogOut,
+  ClipboardList
 } from 'lucide-react';
 
 const navigation = [
@@ -51,6 +52,12 @@ const navigation = [
     href: '/admin/analytics', 
     icon: BarChart3,
     description: 'Performance insights'
+  },
+  { 
+    name: 'Manual Reviews', 
+    href: '/admin/manual-reviews', 
+    icon: ClipboardList,
+    description: 'Review user requests'
   },
   { 
     name: 'Settings', 

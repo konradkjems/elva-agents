@@ -393,4 +393,4 @@ async function handler(req, res) {
   }
 }
 
-export default withAdmin(handler);
+export default handler;

@@ -17,6 +17,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Command,
@@ -108,20 +110,38 @@ export default function ModernLayout({ children }) {
   useEffect(() => {
     if (!searchQuery || searchQuery.length < 2) {
       setSearchResults({ pages: [], widgets: [], demos: [], conversations: [] });
+      setSearching(false);
       return;
     }
 
+    // Clear previous results immediately when search query changes
+    setSearchResults({ pages: [], widgets: [], demos: [], conversations: [] });
+
     const searchData = async () => {
       setSearching(true);
+      console.log('🔍 Starting search for:', searchQuery);
       try {
         // Search across different data sources
         const [widgetsRes, demosRes] = await Promise.all([
-          fetch('/api/admin/widgets').catch(() => ({ ok: false })),
-          fetch('/api/admin/demos').catch(() => ({ ok: false }))
+          fetch('/api/admin/widgets').catch((error) => {
+            console.error('❌ Widgets API error:', error);
+            return { ok: false };
+          }),
+          fetch('/api/admin/demos').catch((error) => {
+            console.error('❌ Demos API error:', error);
+            return { ok: false };
+          })
         ]);
+
+        console.log('🔍 API responses:', {
+          widgets: { ok: widgetsRes.ok, status: widgetsRes.status },
+          demos: { ok: demosRes.ok, status: demosRes.status }
+        });
 
         const widgets = widgetsRes.ok ? await widgetsRes.json() : [];
         const demos = demosRes.ok ? await demosRes.json() : [];
+        
+        console.log('🔍 Data received:', { widgets: widgets.length, demos: demos.length });
 
         // Define searchable pages
         const pages = [
@@ -151,12 +171,29 @@ export default function ModernLayout({ children }) {
           demo.description?.toLowerCase().includes(query)
         ).slice(0, 5);
 
-        setSearchResults({
+        const searchResults = {
           pages: filteredPages,
           widgets: filteredWidgets,
           demos: filteredDemos,
           conversations: []
+        };
+
+        console.log('🔍 Final search results:', {
+          query,
+          pages: filteredPages.length,
+          widgets: filteredWidgets.length,
+          demos: filteredDemos.length,
+          totalResults: filteredPages.length + filteredWidgets.length + filteredDemos.length
         });
+
+        // Force a re-render by using a functional update
+        setSearchResults(prevResults => ({
+          ...prevResults,
+          pages: filteredPages,
+          widgets: filteredWidgets,
+          demos: filteredDemos,
+          conversations: []
+        }));
       } catch (error) {
         console.error('Search error:', error);
       } finally {
@@ -167,6 +204,17 @@ export default function ModernLayout({ children }) {
     const debounce = setTimeout(searchData, 300);
     return () => clearTimeout(debounce);
   }, [searchQuery]);
+
+  // Debug: Log when searchResults change
+  useEffect(() => {
+    console.log('🔍 Search results state changed:', searchResults);
+    console.log('🔍 Search results breakdown:', {
+      pages: searchResults.pages?.length || 0,
+      widgets: searchResults.widgets?.length || 0,
+      demos: searchResults.demos?.length || 0,
+      conversations: searchResults.conversations?.length || 0
+    });
+  }, [searchResults]);
 
   const handleSelect = (href) => {
     setSearchOpen(false);
@@ -210,123 +258,226 @@ export default function ModernLayout({ children }) {
   return (
     <div className="min-h-screen bg-background">
       {/* Command Palette Search Dialog */}
-      <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <CommandInput 
-          placeholder="Type to search..." 
-          value={searchQuery}
-          onValueChange={setSearchQuery}
-        />
-        <CommandList>
-          {searching ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <>
-              {searchQuery.length < 2 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  <Search className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                  <p>Start typing to search across widgets, demos, and pages...</p>
-                  <p className="text-xs mt-2">Try searching for widget names, descriptions, or page names</p>
-                </div>
-              ) : (
-                <>
-                  <CommandEmpty>
-                    <div className="py-6 text-center text-sm">
-                      <FileText className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                      <p>No results found for "{searchQuery}"</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Try different keywords
-                      </p>
-                    </div>
-                  </CommandEmpty>
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogContent className="max-w-2xl p-0">
+          <DialogTitle className="sr-only">Search</DialogTitle>
+          <DialogDescription className="sr-only">
+            Search across widgets, demos, and pages in the admin panel
+          </DialogDescription>
+          <Command className="rounded-lg border shadow-md">
+            <CommandInput 
+              placeholder="Type to search..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList key={`search-${searchQuery}-${searchResults.pages.length}-${searchResults.widgets.length}-${searchResults.demos.length}`}>
+           {/* Debug: Always show search results info */}
+           {searchQuery.length >= 2 && (
+             <>
+               {/* WORKING: Search results with proper styling */}
+               {(searchResults.pages.length > 0 || searchResults.widgets.length > 0 || searchResults.demos.length > 0) && (
+                 <div className="p-2">
+                   {searchResults.pages.length > 0 && (
+                     <div className="mb-3">
+                       <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Pages</div>
+                       {searchResults.pages.map((page, index) => (
+                         <div 
+                           key={page.href || index} 
+                           className="flex items-center justify-between p-2 rounded-md hover:bg-accent cursor-pointer"
+                           onClick={() => handleSelect(page.href)}
+                         >
+                           <div className="flex items-center gap-2">
+                             <page.icon className="h-4 w-4 text-muted-foreground" />
+                             <div>
+                               <div className="font-medium text-sm">{page.name}</div>
+                               <div className="text-xs text-muted-foreground">{page.description}</div>
+                             </div>
+                           </div>
+                           <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                   
+                   {searchResults.widgets.length > 0 && (
+                     <div className="mb-3">
+                       <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Widgets</div>
+                       {searchResults.widgets.map((widget, index) => (
+                         <div 
+                           key={widget._id || index} 
+                           className="flex items-center justify-between p-2 rounded-md hover:bg-accent cursor-pointer"
+                           onClick={() => handleSelect(`/admin/widgets/${widget._id}`)}
+                         >
+                           <div className="flex items-center gap-2">
+                             <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                             <div>
+                               <div className="font-medium text-sm">{widget.name}</div>
+                               {widget.description && (
+                                 <div className="text-xs text-muted-foreground">{widget.description}</div>
+                               )}
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Badge variant={widget.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                               {widget.status}
+                             </Badge>
+                             <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                   
+                   {searchResults.demos.length > 0 && (
+                     <div>
+                       <div className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Demo Widgets</div>
+                       {searchResults.demos.map((demo, index) => (
+                         <div 
+                           key={demo._id || index} 
+                           className="flex items-center justify-between p-2 rounded-md hover:bg-accent cursor-pointer"
+                           onClick={() => handleSelect(`/demo/${demo._id}`)}
+                         >
+                           <div className="flex items-center gap-2">
+                             <Globe className="h-4 w-4 text-muted-foreground" />
+                             <div>
+                               <div className="font-medium text-sm">{demo.name}</div>
+                               {demo.description && (
+                                 <div className="text-xs text-muted-foreground">{demo.description}</div>
+                               )}
+                             </div>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Badge variant="outline" className="text-xs">Demo</Badge>
+                             <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+               )}
+             </>
+           )}
+           {searching ? (
+             <div className="flex items-center justify-center py-6">
+               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+             </div>
+           ) : (
+             <>
+               {searchQuery.length < 2 ? (
+                 <div className="py-6 text-center text-sm text-muted-foreground">
+                   <Search className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                   <p>Start typing to search across widgets, demos, and pages...</p>
+                   <p className="text-xs mt-2">Try searching for widget names, descriptions, or page names</p>
+                 </div>
+               ) : (
+                 <>
+                   {/* Always show results if we have them */}
+                   {(searchResults.pages.length > 0 || searchResults.widgets.length > 0 || searchResults.demos.length > 0) ? (
+                     <>
+                       {searchResults.pages.length > 0 && (
+                         <CommandGroup heading="Pages">
+                           {console.log('🔍 Rendering pages:', searchResults.pages)}
+                           {searchResults.pages.map((page) => (
+                             <CommandItem
+                               key={page.href}
+                               onSelect={() => handleSelect(page.href)}
+                               className="cursor-pointer"
+                             >
+                               <page.icon className="mr-2 h-4 w-4" />
+                               <div className="flex-1">
+                                 <div className="font-medium">{page.name}</div>
+                                 <div className="text-xs text-muted-foreground">{page.description}</div>
+                               </div>
+                               <ArrowRight className="h-4 w-4 opacity-50" />
+                             </CommandItem>
+                           ))}
+                         </CommandGroup>
+                       )}
 
-                  {searchResults.pages.length > 0 && (
-                    <CommandGroup heading="Pages">
-                      {searchResults.pages.map((page) => (
-                        <CommandItem
-                          key={page.href}
-                          onSelect={() => handleSelect(page.href)}
-                          className="cursor-pointer"
-                        >
-                          <page.icon className="mr-2 h-4 w-4" />
-                          <div className="flex-1">
-                            <div className="font-medium">{page.name}</div>
-                            <div className="text-xs text-muted-foreground">{page.description}</div>
-                          </div>
-                          <ArrowRight className="h-4 w-4 opacity-50" />
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
+                       {searchResults.widgets.length > 0 && (
+                         <>
+                           {searchResults.pages.length > 0 && <CommandSeparator />}
+                           <CommandGroup heading="Widgets">
+                             {console.log('🔍 Rendering widgets:', searchResults.widgets)}
+                             {searchResults.widgets.map((widget) => (
+                               <CommandItem
+                                 key={widget._id}
+                                 onSelect={() => handleSelect(`/admin/widgets/${widget._id}`)}
+                                 className="cursor-pointer"
+                               >
+                                 <MessageCircle className="mr-2 h-4 w-4" />
+                                 <div className="flex-1">
+                                   <div className="flex items-center gap-2">
+                                     <span className="font-medium">{widget.name}</span>
+                                     <Badge variant={widget.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                                       {widget.status}
+                                     </Badge>
+                                   </div>
+                                   {widget.description && (
+                                     <div className="text-xs text-muted-foreground line-clamp-1">
+                                       {widget.description}
+                                     </div>
+                                   )}
+                                 </div>
+                                 <ArrowRight className="h-4 w-4 opacity-50" />
+                               </CommandItem>
+                             ))}
+                           </CommandGroup>
+                         </>
+                       )}
 
-                  {searchResults.widgets.length > 0 && (
-                    <>
-                      {searchResults.pages.length > 0 && <CommandSeparator />}
-                      <CommandGroup heading="Widgets">
-                        {searchResults.widgets.map((widget) => (
-                          <CommandItem
-                            key={widget._id}
-                            onSelect={() => handleSelect(`/admin/widgets/${widget._id}`)}
-                            className="cursor-pointer"
-                          >
-                            <MessageCircle className="mr-2 h-4 w-4" />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{widget.name}</span>
-                                <Badge variant={widget.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                                  {widget.status}
-                                </Badge>
-                              </div>
-                              {widget.description && (
-                                <div className="text-xs text-muted-foreground line-clamp-1">
-                                  {widget.description}
-                                </div>
-                              )}
-                            </div>
-                            <ArrowRight className="h-4 w-4 opacity-50" />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </>
-                  )}
-
-                  {searchResults.demos.length > 0 && (
-                    <>
-                      {(searchResults.pages.length > 0 || searchResults.widgets.length > 0) && <CommandSeparator />}
-                      <CommandGroup heading="Demo Widgets">
-                        {searchResults.demos.map((demo) => (
-                          <CommandItem
-                            key={demo._id}
-                            onSelect={() => handleSelect(`/demo/${demo._id}`)}
-                            className="cursor-pointer"
-                          >
-                            <Globe className="mr-2 h-4 w-4" />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{demo.name}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  Demo
-                                </Badge>
-                              </div>
-                              {demo.description && (
-                                <div className="text-xs text-muted-foreground line-clamp-1">
-                                  {demo.description}
-                                </div>
-                              )}
-                            </div>
-                            <ArrowRight className="h-4 w-4 opacity-50" />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </CommandList>
-      </CommandDialog>
+                       {searchResults.demos.length > 0 && (
+                         <>
+                           {(searchResults.pages.length > 0 || searchResults.widgets.length > 0) && <CommandSeparator />}
+                           <CommandGroup heading="Demo Widgets">
+                             {console.log('🔍 Rendering demos:', searchResults.demos)}
+                             {searchResults.demos.map((demo) => (
+                               <CommandItem
+                                 key={demo._id}
+                                 onSelect={() => handleSelect(`/demo/${demo._id}`)}
+                                 className="cursor-pointer"
+                               >
+                                 <Globe className="mr-2 h-4 w-4" />
+                                 <div className="flex-1">
+                                   <div className="flex items-center gap-2">
+                                     <span className="font-medium">{demo.name}</span>
+                                     <Badge variant="outline" className="text-xs">
+                                       Demo
+                                     </Badge>
+                                   </div>
+                                   {demo.description && (
+                                     <div className="text-xs text-muted-foreground line-clamp-1">
+                                       {demo.description}
+                                     </div>
+                                   )}
+                                 </div>
+                                 <ArrowRight className="h-4 w-4 opacity-50" />
+                               </CommandItem>
+                             ))}
+                           </CommandGroup>
+                         </>
+                       )}
+                     </>
+                   ) : (
+                     <CommandEmpty>
+                       <div className="py-6 text-center text-sm">
+                         <FileText className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                         <p>No results found for "{searchQuery}"</p>
+                         <p className="text-xs text-muted-foreground mt-1">
+                           Try different keywords
+                         </p>
+                       </div>
+                     </CommandEmpty>
+                   )}
+                 </>
+               )}
+             </>
+           )}
+           </CommandList>
+         </Command>
+       </DialogContent>
+     </Dialog>
 
       <ModernSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
       
