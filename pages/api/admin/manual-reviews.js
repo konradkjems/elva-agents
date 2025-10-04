@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { connectToDatabase } from '../../../lib/mongodb';
+import clientPromise from '../../../lib/mongodb';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 
@@ -12,7 +12,8 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const { client, db } = await connectToDatabase();
+      const client = await clientPromise;
+      const db = client.db('elva-agents');
       
       // Get user's organization
       const user = await db.collection('users').findOne({ 
@@ -100,7 +101,8 @@ export default async function handler(req, res) {
         });
       }
 
-      const { client, db } = await connectToDatabase();
+      const client = await clientPromise;
+      const db = client.db('elva-agents');
       
       // Get user's organization
       const user = await db.collection('users').findOne({ 

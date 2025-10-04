@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { connectToDatabase } from '../../../lib/mongodb';
+import clientPromise from '../../../lib/mongodb';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -40,7 +40,8 @@ export default async function handler(req, res) {
       });
     }
 
-    const { client, db } = await connectToDatabase();
+    const client = await clientPromise;
+    const db = client.db('elva-agents');
 
     // Verify widget exists
     const widget = await db.collection('widgets').findOne({ 

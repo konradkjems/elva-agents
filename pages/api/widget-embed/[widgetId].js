@@ -2189,6 +2189,10 @@ export default async function handler(req, res) {
   
   function checkAndShowSatisfactionRating() {
     console.log('🔍 checkAndShowSatisfactionRating called, satisfactionRatingShown:', satisfactionRatingShown);
+    console.log('🔧 WIDGET_CONFIG.satisfaction:', WIDGET_CONFIG.satisfaction);
+    console.log('📊 Current conversation ID:', currentConversationId);
+    console.log('🌐 API URL:', WIDGET_CONFIG.apiUrl);
+    console.log('📝 Current conversation messages length:', currentConversationMessages.length);
     
     // Don't show if already shown for this conversation
     if (satisfactionRatingShown) {
@@ -2216,11 +2220,18 @@ export default async function handler(req, res) {
     });
     
     if (messageCount >= triggerAfter) {
+      console.log('✅ Message count threshold reached, starting inactivity timer');
       startInactivityTimer();
+    } else {
+      console.log('⏳ Message count not yet reached, waiting for more messages');
     }
   }
   
   function startInactivityTimer() {
+    console.log('⏰ startInactivityTimer called');
+    console.log('📊 satisfactionRatingShown:', satisfactionRatingShown);
+    console.log('🔧 WIDGET_CONFIG.satisfaction:', WIDGET_CONFIG.satisfaction);
+    
     // Don't start timer if rating already shown
     if (satisfactionRatingShown) {
       console.log('🚫 Satisfaction rating already shown, skipping timer');
@@ -2278,6 +2289,9 @@ export default async function handler(req, res) {
   
   function showSatisfactionRating() {
     console.log('🎯 showSatisfactionRating called');
+    console.log('🔧 WIDGET_CONFIG.satisfaction:', WIDGET_CONFIG.satisfaction);
+    console.log('📊 Current conversation ID:', currentConversationId);
+    console.log('🌐 API URL:', WIDGET_CONFIG.apiUrl);
     
     const satisfactionConfig = WIDGET_CONFIG.satisfaction || {};
     
@@ -2427,32 +2441,55 @@ export default async function handler(req, res) {
   }
   
   async function submitRating(rating) {
+    console.log('🚀 submitRating called with rating:', rating);
+    console.log('📊 Current conversation ID:', currentConversationId);
+    console.log('🔧 Widget ID:', WIDGET_CONFIG.widgetId);
+    console.log('🌐 API URL:', WIDGET_CONFIG.apiUrl);
+    
     try {
       const feedbackInput = document.querySelector('.feedback-input');
       const feedback = feedbackInput ? feedbackInput.value.trim() : '';
+      console.log('💬 Feedback:', feedback);
+      
+      const requestBody = {
+        conversationId: currentConversationId,
+        widgetId: WIDGET_CONFIG.widgetId,
+        rating: rating,
+        feedback: feedback
+      };
+      
+      console.log('📤 Request body:', requestBody);
+      console.log('🎯 Full API URL:', \`\${WIDGET_CONFIG.apiUrl}/api/satisfaction/rate\`);
       
       const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/satisfaction/rate\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          conversationId: currentConversationId,
-          widgetId: WIDGET_CONFIG.widgetId,
-          rating: rating,
-          feedback: feedback
-        })
+        body: JSON.stringify(requestBody)
       });
-      
+
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response status text:', response.statusText);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Rating submitted successfully:', data);
         showThankYouMessage();
         // Keep satisfactionRatingShown = true to prevent multiple ratings in same conversation
         console.log('✅ Rating submitted successfully, keeping satisfactionRatingShown = true');
       } else {
-        console.error('Failed to submit rating');
+        console.error('❌ Failed to submit rating:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
+        console.error('Full response:', response);
         showErrorMessage('Failed to submit rating. Please try again.');
       }
       
     } catch (error) {
-      console.error('Rating submission error:', error);
+      console.error('❌ Error submitting rating:', error);
+      console.error('Error stack:', error.stack);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
       showErrorMessage('Failed to submit rating. Please try again.');
     }
   }
