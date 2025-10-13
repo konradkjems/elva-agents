@@ -45,8 +45,8 @@ export default async function handler(req, res) {
         .limit(100)
         .toArray();
 
-      // Get widget information for each review
-      const reviewsWithWidgets = await Promise.all(
+      // Get widget and organization information for each review
+      const reviewsWithDetails = await Promise.all(
         reviews.map(async (review) => {
           const widget = await db.collection('widgets').findOne({
             _id: review.widgetId
@@ -56,12 +56,21 @@ export default async function handler(req, res) {
             _id: review.conversationId
           });
 
+          const organization = await db.collection('organizations').findOne({
+            _id: review.organizationId
+          });
+
           return {
             ...review,
             widget: widget ? {
               _id: widget._id,
               name: widget.name,
               description: widget.description
+            } : null,
+            organization: organization ? {
+              _id: organization._id,
+              name: organization.name,
+              slug: organization.slug
             } : null,
             conversation: conversation ? {
               _id: conversation._id,
@@ -76,7 +85,7 @@ export default async function handler(req, res) {
 
       res.status(200).json({
         success: true,
-        reviews: reviewsWithWidgets
+        reviews: reviewsWithDetails
       });
 
     } catch (error) {

@@ -353,6 +353,9 @@ export default function ManualReviews() {
                                   {review.conversation?.messageCount || 0} messages
                                 </span>
                                 <span>{formatDate(review.submittedAt)}</span>
+                                {review.organization && (
+                                  <span>Org: {review.organization.name}</span>
+                                )}
                                 {review.widget && (
                                   <span>Widget: {review.widget.name}</span>
                                 )}
@@ -456,6 +459,9 @@ export default function ManualReviews() {
                     </div>
                     <div className="text-xs text-muted-foreground mt-2">
                       <p>Startet: {formatDate(selectedReview.conversation?.createdAt)}</p>
+                      {selectedReview.organization && (
+                        <p>Organization: {selectedReview.organization.name}</p>
+                      )}
                       {selectedReview.widget && (
                         <p>Widget: {selectedReview.widget.name}</p>
                       )}
