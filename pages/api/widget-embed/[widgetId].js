@@ -3816,7 +3816,7 @@ export default async function handler(req, res) {
       padding: 14px 20px;
       border: none;
       border-radius: 12px;
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      background: linear-gradient(135deg, \${themeColors.buttonColor} 0%, \${themeColors.buttonColor}dd 100%);
       color: white;
       font-size: 14px;
       font-weight: 600;
@@ -3826,7 +3826,7 @@ export default async function handler(req, res) {
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+      box-shadow: 0 4px 12px \${themeColors.buttonColor}50;
     \`;
     submitButton.innerHTML = \`
       <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3836,11 +3836,11 @@ export default async function handler(req, res) {
     \`;
     submitButton.addEventListener('mouseenter', () => {
       submitButton.style.transform = 'translateY(-2px)';
-      submitButton.style.boxShadow = '0 6px 20px rgba(79, 70, 229, 0.4)';
+      submitButton.style.boxShadow = \`0 6px 20px \${themeColors.buttonColor}60\`;
     });
     submitButton.addEventListener('mouseleave', () => {
       submitButton.style.transform = 'translateY(0)';
-      submitButton.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.3)';
+      submitButton.style.boxShadow = \`0 4px 12px \${themeColors.buttonColor}50\`;
     });
     
     // Form submission
