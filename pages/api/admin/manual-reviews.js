@@ -66,7 +66,9 @@ export default async function handler(req, res) {
             conversation: conversation ? {
               _id: conversation._id,
               messageCount: conversation.messages?.length || 0,
-              createdAt: conversation.createdAt
+              messages: conversation.messages || [],
+              createdAt: conversation.createdAt,
+              updatedAt: conversation.updatedAt
             } : null
           };
         })

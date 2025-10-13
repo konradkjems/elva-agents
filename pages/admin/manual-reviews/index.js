@@ -15,8 +15,7 @@ import {
   EyeIcon,
   ChatBubbleLeftRightIcon,
   UserIcon,
-  EnvelopeIcon,
-  PhoneIcon
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 
 const statusColors = {
@@ -42,10 +41,25 @@ export default function ManualReviews() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [notes, setNotes] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [conversationKey, setConversationKey] = useState(0);
 
   useEffect(() => {
     fetchReviews();
   }, [statusFilter]);
+
+  // Reset notes when selecting a new review
+  useEffect(() => {
+    if (selectedReview) {
+      console.log('🔄 Selected review changed:', {
+        reviewId: selectedReview._id,
+        conversationId: selectedReview.conversation?._id,
+        messageCount: selectedReview.conversation?.messages?.length || 0,
+        messages: selectedReview.conversation?.messages
+      });
+      setNotes('');
+      setConversationKey(prev => prev + 1); // Force re-render
+    }
+  }, [selectedReview]);
 
   const fetchReviews = async () => {
     try {
@@ -61,6 +75,13 @@ export default function ManualReviews() {
       if (statusFilter !== 'all') {
         filteredReviews = filteredReviews.filter(review => review.status === statusFilter);
       }
+      
+      console.log('📊 Fetched reviews:', filteredReviews.map(r => ({
+        id: r._id,
+        conversationId: r.conversation?._id,
+        messageCount: r.conversation?.messages?.length || 0,
+        hasMessages: !!r.conversation?.messages
+      })));
       
       setReviews(filteredReviews);
     } catch (error) {
@@ -241,7 +262,7 @@ export default function ManualReviews() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <h3 className="font-medium text-sm">
-                                  {review.contactInfo.name}
+                                  {review.contactInfo.name || review.contactInfo.email}
                                 </h3>
                                 <Badge className={statusColors[review.status]}>
                                   <StatusIcon className="h-3 w-3 mr-1" />
@@ -249,9 +270,9 @@ export default function ManualReviews() {
                                 </Badge>
                               </div>
                               <p className="text-sm text-muted-foreground mb-2">
-                                {review.message.length > 100 
+                                {review.message && review.message.length > 100 
                                   ? `${review.message.substring(0, 100)}...`
-                                  : review.message
+                                  : review.message || 'Ingen besked'
                                 }
                               </p>
                               <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -278,44 +299,91 @@ export default function ManualReviews() {
           {/* Review Details */}
           <div>
             {selectedReview ? (
-              <Card>
+              <Card key={selectedReview._id}>
                 <CardHeader>
                   <CardTitle>Review Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Contact Information */}
                   <div>
-                    <h4 className="font-medium text-sm mb-2">Contact Information</h4>
+                    <h4 className="font-medium text-sm mb-2">Kontaktinformation</h4>
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2">
-                        <UserIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedReview.contactInfo.name}</span>
-                      </div>
+                      {selectedReview.contactInfo.name && (
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="h-4 w-4 text-muted-foreground" />
+                          <span>{selectedReview.contactInfo.name}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <EnvelopeIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedReview.contactInfo.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <PhoneIcon className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedReview.contactInfo.phone}</span>
+                        <a 
+                          href={`mailto:${selectedReview.contactInfo.email}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {selectedReview.contactInfo.email}
+                        </a>
                       </div>
                     </div>
                   </div>
 
                   {/* Message */}
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Message</h4>
-                    <p className="text-sm text-muted-foreground bg-gray-50 p-3 rounded">
-                      {selectedReview.message}
-                    </p>
-                  </div>
+                  {selectedReview.message && (
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Besked fra bruger</h4>
+                      <p className="text-sm text-muted-foreground bg-gray-50 p-3 rounded">
+                        {selectedReview.message}
+                      </p>
+                    </div>
+                  )}
 
-                  {/* Conversation Info */}
-                  <div>
-                    <h4 className="font-medium text-sm mb-2">Conversation</h4>
-                    <div className="text-sm text-muted-foreground">
-                      <p>Messages: {selectedReview.conversation?.messageCount || 0}</p>
-                      <p>Started: {formatDate(selectedReview.conversation?.createdAt)}</p>
+                  {/* Conversation Messages */}
+                  <div key={`${selectedReview._id}-${conversationKey}`}>
+                    <h4 className="font-medium text-sm mb-3">Samtale ({selectedReview.conversation?.messageCount || 0} beskeder)</h4>
+                    <div className="space-y-3 max-h-96 overflow-y-auto bg-gray-50 p-3 rounded-lg">
+                      {(() => {
+                        console.log('🎯 Rendering conversation messages for review:', selectedReview._id, {
+                          hasConversation: !!selectedReview.conversation,
+                          messageCount: selectedReview.conversation?.messages?.length || 0,
+                          messages: selectedReview.conversation?.messages
+                        });
+                        return null;
+                      })()}
+                      {selectedReview.conversation?.messages && selectedReview.conversation.messages.length > 0 ? (
+                        selectedReview.conversation.messages.map((msg, index) => (
+                          <div
+                            key={`${selectedReview._id}-${conversationKey}-${msg.id || index}`}
+                            className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                                msg.type === 'user'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white border border-gray-200 text-gray-900'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-xs opacity-75">
+                                  {msg.type === 'user' ? 'Bruger' : 'AI Assistant'}
+                                </span>
+                                <span className="text-xs opacity-60">
+                                  {new Date(msg.timestamp).toLocaleTimeString('da-DK', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Ingen beskeder i samtalen
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      <p>Startet: {formatDate(selectedReview.conversation?.createdAt)}</p>
                       {selectedReview.widget && (
                         <p>Widget: {selectedReview.widget.name}</p>
                       )}
