@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         status: 'active'
       }).toArray();
 
-      const organizationIds = memberships.map(m => m.organizationId);
+      const organizationIds = memberships.map(m => new ObjectId(m.organizationId));
 
       if (organizationIds.length === 0) {
         return res.status(403).json({ error: 'No organization access' });

@@ -76,7 +76,7 @@ export default async function handler(req, res) {
     const manualReview = {
       _id: new ObjectId(),
       widgetId: new ObjectId(widgetId),
-      organizationId: widget.organizationId,
+      organizationId: new ObjectId(widget.organizationId),
       conversationId: new ObjectId(conversationId),
       contactInfo: {
         name: name ? name.trim() : null,
