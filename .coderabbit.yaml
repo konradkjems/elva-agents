@@ -1,0 +1,43 @@
+# .coderabbit.yaml
+rules:
+  - name: "Security Review"
+    description: "Review for security vulnerabilities"
+    patterns:
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.ts"
+      - "**/*.tsx"
+    
+  - name: "API Security"
+    description: "Review API endpoints for security issues"
+    patterns:
+      - "pages/api/**/*.js"
+    
+  - name: "Database Security"
+    description: "Review database operations"
+    patterns:
+      - "**/mongodb.js"
+      - "**/db/**/*.js"
+
+ignore:
+  - "node_modules/**"
+  - ".next/**"
+  - "public/**"
+  - "scripts/debug-*.js"
+  - "scripts/migrate-*.js"
+
+review:
+  focus_areas:
+    - "security"
+    - "performance"
+    - "best_practices"
+    - "error_handling"
+  
+  custom_instructions: |
+    This is a Next.js application with MongoDB database.
+    Focus on:
+    - MongoDB injection vulnerabilities
+    - Authentication and authorization
+    - API endpoint security
+    - Environment variable handling
+    - Error handling and logging
