@@ -2765,6 +2765,15 @@ export default async function handler(req, res) {
           currentConversationId = data.conversationId;
           localStorage.setItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`, currentConversationId);
           console.log('💾 Saved conversation ID to localStorage');
+          
+          // Reset satisfaction rating state for new conversation
+          console.log('🔄 Resetting satisfaction rating state for new conversation');
+          satisfactionRatingShown = false;
+          if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = null;
+            console.log('⏰ Cleared inactivity timer for new conversation');
+          }
         } else {
           console.log('📝 Using existing conversation ID:', currentConversationId);
         }
