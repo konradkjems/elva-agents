@@ -1146,6 +1146,9 @@ export default async function handler(req, res) {
       inactivityTimer = null;
       console.log('⏰ Cleared inactivity timer for new conversation');
     }
+    
+    // Reset manual review form state for new conversation
+    manualReviewFormOpen = false;
     if (inputDebounceTimer) {
       clearTimeout(inputDebounceTimer);
       inputDebounceTimer = null;
@@ -2187,6 +2190,9 @@ export default async function handler(req, res) {
   let inactivityTimer = null;
   let lastActivityTime = Date.now();
   
+  // Manual review form state
+  let manualReviewFormOpen = false;
+  
   function checkAndShowSatisfactionRating() {
     console.log('🔍 checkAndShowSatisfactionRating called, satisfactionRatingShown:', satisfactionRatingShown);
     console.log('🔧 WIDGET_CONFIG.satisfaction:', WIDGET_CONFIG.satisfaction);
@@ -2774,6 +2780,9 @@ export default async function handler(req, res) {
             inactivityTimer = null;
             console.log('⏰ Cleared inactivity timer for new conversation');
           }
+          
+          // Reset manual review form state for new conversation
+          manualReviewFormOpen = false;
         } else {
           console.log('📝 Using existing conversation ID:', currentConversationId);
         }
@@ -3527,7 +3536,16 @@ export default async function handler(req, res) {
   function showManualReviewForm() {
     console.log('📧 showManualReviewForm called');
     
+    // Check if manual review form is already open
+    if (manualReviewFormOpen) {
+      console.log('🚫 Manual review form already open, ignoring click');
+      return;
+    }
+    
     const manualReviewConfig = WIDGET_CONFIG.manualReview || {};
+    
+    // Mark form as open
+    manualReviewFormOpen = true;
     
     // Create the form as an AI message
     const messageDiv = document.createElement("div");
@@ -3615,6 +3633,27 @@ export default async function handler(req, res) {
       flex-direction: column;
       gap: 16px;
       width: 100%;
+    \`;
+    
+    // Conversation attachment notice
+    const attachmentNotice = document.createElement('div');
+    attachmentNotice.style.cssText = \`
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #0369a1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    \`;
+    attachmentNotice.innerHTML = \`
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <span><strong>Samtalen vedhæftes:</strong> Din nuværende samtale med AI'en vil automatisk blive vedhæftet til denne anmodning.</span>
     \`;
     
     // Name field
@@ -3765,6 +3804,7 @@ export default async function handler(req, res) {
       cancelButton.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
     });
     cancelButton.addEventListener('click', () => {
+      manualReviewFormOpen = false;
       messageDiv.remove();
     });
     
@@ -3844,6 +3884,7 @@ export default async function handler(req, res) {
           
           // Auto-remove success message after 3 seconds
           setTimeout(() => {
+            manualReviewFormOpen = false;
             messageDiv.remove();
           }, 3000);
         } else {
@@ -3868,6 +3909,9 @@ export default async function handler(req, res) {
         errorMsg.textContent = 'Failed to submit request. Please try again.';
         form.appendChild(errorMsg);
         
+        // Reset form state on error
+        manualReviewFormOpen = false;
+        
         setTimeout(() => {
           if (errorMsg.parentNode) {
             errorMsg.parentNode.removeChild(errorMsg);
@@ -3877,6 +3921,7 @@ export default async function handler(req, res) {
     });
     
     // Assemble form
+    form.appendChild(attachmentNotice);
     form.appendChild(nameLabel);
     form.appendChild(nameInput);
     form.appendChild(emailLabel);
