@@ -105,6 +105,11 @@ export default async function handler(req, res) {
       _id: widget.organizationId
     });
 
+    // Get conversation messages for email
+    const conversation = await db.collection('conversations').findOne({
+      _id: new ObjectId(conversationId)
+    });
+
     // Send email notification to support
     try {
       const supportEmail = organization?.settings?.supportEmail || organization?.settings?.manualReviewEmail;
@@ -118,7 +123,8 @@ export default async function handler(req, res) {
           widgetName: widget.name,
           organizationName: organization?.name || 'Unknown Organization',
           conversationId: conversationId,
-          reviewId: result.insertedId.toString()
+          reviewId: result.insertedId.toString(),
+          conversationMessages: conversation?.messages || []
         });
         console.log('✅ Manual review email sent to:', supportEmail);
       } else {
