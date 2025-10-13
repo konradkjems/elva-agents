@@ -3821,19 +3821,22 @@ export default async function handler(req, res) {
         
         if (response.ok) {
           // Show success message
-          formContainer.innerHTML = \`
+          formBubble.innerHTML = \`
             <div style="text-align: center; padding: 20px;">
               <div style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
                 <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
               </div>
-              <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Request Submitted</h3>
-              <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">\${manualReviewConfig.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'}</p>
-              <button onclick="document.body.removeChild(this.closest('.manual-review-overlay'))" style="padding: 12px 24px; border: none; border-radius: 8px; background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}; color: white; font-size: 14px; font-weight: 500; cursor: pointer;">Close</button>
+              <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Anmodning sendt</h3>
+              <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">\${manualReviewConfig.successMessage || 'Tak for din anmodning! Vores team vil gennemgå din samtale og kontakte dig inden for 24 timer.'}</p>
             </div>
           \`;
-          formContainer.className = 'manual-review-overlay';
+          
+          // Auto-remove success message after 3 seconds
+          setTimeout(() => {
+            messageDiv.remove();
+          }, 3000);
         } else {
           throw new Error('Failed to submit request');
         }
