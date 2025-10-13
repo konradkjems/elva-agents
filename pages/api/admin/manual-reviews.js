@@ -30,7 +30,24 @@ export default async function handler(req, res) {
         status: 'active'
       }).toArray();
 
-      const organizationIds = memberships.map(m => new ObjectId(m.organizationId));
+      // Use current organization if available, otherwise use all memberships
+      let organizationIds;
+      if (session.user.currentOrganizationId) {
+        // Check if user has access to current organization
+        const hasAccess = memberships.some(m => 
+          m.organizationId.toString() === session.user.currentOrganizationId
+        );
+        
+        if (hasAccess) {
+          organizationIds = [new ObjectId(session.user.currentOrganizationId)];
+        } else {
+          // Fallback to all memberships if current org access denied
+          organizationIds = memberships.map(m => new ObjectId(m.organizationId));
+        }
+      } else {
+        // Fallback to all memberships if no current organization
+        organizationIds = memberships.map(m => new ObjectId(m.organizationId));
+      }
 
       if (organizationIds.length === 0) {
         return res.status(403).json({ error: 'No organization access' });
