@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     }
 
     const client = await clientPromise;
-    const db = client.db("chatwidgets");
+    const db = client.db("elva-agents");
     
     // Convert string ID to ObjectId if it's a valid ObjectId string
     let queryId = widgetId;

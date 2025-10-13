@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     }
 
     const client = await clientPromise;
-    const db = client.db("chatwidgets");
+    const db = client.db("elva-agents");
     
     // Get widget configuration to verify it exists and get theme
     const widget = await db.collection("widgets").findOne({ _id: widgetId });

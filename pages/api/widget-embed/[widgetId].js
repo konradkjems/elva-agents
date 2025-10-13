@@ -2728,6 +2728,7 @@ export default async function handler(req, res) {
       });
       console.log('🔧 WIDGET_CONFIG.apiUrl:', WIDGET_CONFIG.apiUrl);
       console.log('🌍 Environment NEXT_PUBLIC_API_URL: Not available in browser');
+      console.log('⚠️ WARNING: If widget is loaded from localhost but apiUrl is Vercel, conversations will be created on different servers!');
         
       // Create AbortController for timeout
       const controller = new AbortController();
@@ -2754,10 +2755,18 @@ export default async function handler(req, res) {
       if (res.ok) {
         const data = await res.json();
         
+        console.log('✅ Message sent successfully, response:', data);
+        console.log('📊 Response conversation ID:', data.conversationId);
+        console.log('📊 Current conversation ID before update:', currentConversationId);
+        
         // Update conversation ID if new conversation was created
         if (data.conversationId && data.conversationId !== currentConversationId) {
+          console.log('🆕 New conversation created, updating ID from', currentConversationId, 'to', data.conversationId);
           currentConversationId = data.conversationId;
           localStorage.setItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`, currentConversationId);
+          console.log('💾 Saved conversation ID to localStorage');
+        } else {
+          console.log('📝 Using existing conversation ID:', currentConversationId);
         }
 
         // Add message with typewriter effect
