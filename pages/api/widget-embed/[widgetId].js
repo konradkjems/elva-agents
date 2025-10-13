@@ -273,7 +273,8 @@ export default async function handler(req, res) {
         inputBg: '#1f2937', // same as chatBg
         messageBg: '#1A1C23', // gray-600
         textColor: '#f9fafb', // gray-50
-        borderColor: '#1A1C23' // gray-600
+        borderColor: '#1A1C23', // gray-600
+        buttonColor: WIDGET_CONFIG.theme.buttonColor || '#4f46e5'
       };
     } else if (themeMode === 'auto') {
       // Detect system preference
@@ -284,7 +285,8 @@ export default async function handler(req, res) {
           inputBg: '#1f2937', // same as chatBg
           messageBg: '#4b5563',
           textColor: '#f9fafb',
-          borderColor: '#4b5563'
+          borderColor: '#4b5563',
+          buttonColor: WIDGET_CONFIG.theme.buttonColor || '#4f46e5'
         };
       } else {
         return {
@@ -292,7 +294,8 @@ export default async function handler(req, res) {
           inputBg: '#ffffff', // same as chatBg
           messageBg: '#f3f4f6',
           textColor: '#374151',
-          borderColor: '#e5e7eb'
+          borderColor: '#e5e7eb',
+          buttonColor: WIDGET_CONFIG.theme.buttonColor || '#4f46e5'
         };
       }
     } else {
@@ -302,7 +305,8 @@ export default async function handler(req, res) {
         inputBg: '#ffffff', // same as chatBg
         messageBg: '#f3f4f6',
         textColor: '#374151',
-        borderColor: '#e5e7eb'
+        borderColor: '#e5e7eb',
+        buttonColor: WIDGET_CONFIG.theme.buttonColor || '#4f46e5'
       };
     }
   }
