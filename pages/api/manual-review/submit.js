@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb';
 import clientPromise from '../../../lib/mongodb';
+import { sendManualReviewEmail } from '../../../lib/email';
 
 export default async function handler(req, res) {
   // Handle CORS preflight requests
@@ -98,6 +99,35 @@ export default async function handler(req, res) {
       contactName: name,
       contactEmail: email
     });
+
+    // Get organization details for email
+    const organization = await db.collection('organizations').findOne({
+      _id: widget.organizationId
+    });
+
+    // Send email notification to support
+    try {
+      const supportEmail = organization?.settings?.supportEmail || organization?.settings?.manualReviewEmail;
+      
+      if (supportEmail) {
+        await sendManualReviewEmail({
+          supportEmail,
+          contactName: name,
+          contactEmail: email,
+          message: message,
+          widgetName: widget.name,
+          organizationName: organization?.name || 'Unknown Organization',
+          conversationId: conversationId,
+          reviewId: result.insertedId.toString()
+        });
+        console.log('✅ Manual review email sent to:', supportEmail);
+      } else {
+        console.log('⚠️ No support email configured for organization:', organization?.name);
+      }
+    } catch (emailError) {
+      console.error('⚠️ Failed to send manual review email:', emailError);
+      // Continue anyway - manual review is saved even if email fails
+    }
 
     res.status(201).json({
       success: true,

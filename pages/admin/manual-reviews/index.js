@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -42,9 +44,12 @@ export default function ManualReviews() {
   const [notes, setNotes] = useState('');
   const [updating, setUpdating] = useState(false);
   const [conversationKey, setConversationKey] = useState(0);
+  const [supportEmail, setSupportEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
 
   useEffect(() => {
     fetchReviews();
+    fetchSupportEmail();
   }, [statusFilter]);
 
   // Reset notes when selecting a new review
@@ -93,6 +98,51 @@ export default function ManualReviews() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSupportEmail = async () => {
+    try {
+      const response = await fetch('/api/admin/organization/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setSupportEmail(data.settings?.supportEmail || '');
+      }
+    } catch (error) {
+      console.error('Failed to fetch support email:', error);
+    }
+  };
+
+  const saveSupportEmail = async () => {
+    try {
+      setSavingEmail(true);
+      const response = await fetch('/api/admin/organization/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          supportEmail: supportEmail.trim()
+        })
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Support email saved",
+          description: "Manual review notifications will be sent to this email address.",
+        });
+      } else {
+        throw new Error('Failed to save support email');
+      }
+    } catch (error) {
+      console.error('Failed to save support email:', error);
+      toast({
+        variant: "destructive",
+        title: "Failed to save email",
+        description: "There was a problem saving the support email address.",
+      });
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -171,10 +221,32 @@ export default function ManualReviews() {
               Review and manage manual review requests from users
             </p>
           </div>
-          <Button onClick={fetchReviews} variant="outline">
-            <ClipboardDocumentListIcon className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="support-email" className="text-sm font-medium">
+                Support Email:
+              </Label>
+              <Input
+                id="support-email"
+                type="email"
+                placeholder="support@example.com"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                className="w-64"
+              />
+              <Button 
+                onClick={saveSupportEmail} 
+                disabled={savingEmail}
+                size="sm"
+              >
+                {savingEmail ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+            <Button onClick={fetchReviews} variant="outline">
+              <ClipboardDocumentListIcon className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Status Overview */}
