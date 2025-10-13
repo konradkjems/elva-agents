@@ -2,6 +2,20 @@ import { ObjectId } from 'mongodb';
 import clientPromise from '../../../lib/mongodb';
 
 export default async function handler(req, res) {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.status(200).end();
+    return;
+  }
+
+  // Set CORS headers for actual request
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -10,17 +24,17 @@ export default async function handler(req, res) {
     const { widgetId, conversationId, contactInfo, message } = req.body;
 
     // Validate required fields
-    if (!widgetId || !conversationId || !contactInfo || !message) {
+    if (!widgetId || !conversationId || !contactInfo) {
       return res.status(400).json({ 
-        error: 'Missing required fields: widgetId, conversationId, contactInfo, and message are required' 
+        error: 'Missing required fields: widgetId, conversationId, and contactInfo are required' 
       });
     }
 
     // Validate contact info structure
-    const { name, email, phone } = contactInfo;
-    if (!name || !email || !phone) {
+    const { name, email } = contactInfo;
+    if (!email) {
       return res.status(400).json({ 
-        error: 'Contact info must include name, email, and phone' 
+        error: 'Email is required' 
       });
     }
 
@@ -29,14 +43,6 @@ export default async function handler(req, res) {
     if (!emailRegex.test(email)) {
       return res.status(400).json({ 
         error: 'Invalid email format' 
-      });
-    }
-
-    // Validate phone format (basic validation)
-    const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-    if (!phoneRegex.test(phone)) {
-      return res.status(400).json({ 
-        error: 'Invalid phone format' 
       });
     }
 
@@ -72,11 +78,10 @@ export default async function handler(req, res) {
       organizationId: widget.organizationId,
       conversationId: new ObjectId(conversationId),
       contactInfo: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        phone: phone.trim()
+        name: name ? name.trim() : null,
+        email: email.toLowerCase().trim()
       },
-      message: message.trim(),
+      message: message ? message.trim() : null,
       status: 'pending', // pending, in_review, completed, rejected
       submittedAt: new Date(),
       createdAt: new Date(),
