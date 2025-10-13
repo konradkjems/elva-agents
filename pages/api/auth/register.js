@@ -6,6 +6,7 @@
 
 import clientPromise from '../../../lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { hashPassword } from '../../../lib/password';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -58,11 +59,14 @@ export default async function handler(req, res) {
       }
     }
 
+    // Hash password - GDPR COMPLIANCE FIX (Artikel 32)
+    const hashedPassword = await hashPassword(password);
+
     // Create the new user
     const newUser = {
       email: email.toLowerCase(),
       name: name.trim(),
-      password, // In production, this should be hashed!
+      password: hashedPassword, // ✅ Now hashed with bcrypt!
       role: 'admin', // Legacy field
       permissions: ['read', 'write', 'delete'], // Legacy field
       platformRole: 'user', // Regular user by default

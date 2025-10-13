@@ -1,5 +1,6 @@
 import clientPromise from '../../../lib/mongodb.js';
 import { ObjectId } from 'mongodb';
+import { getConsentManagerCode } from '../../../lib/consent-banner.js';
 
 export default async function handler(req, res) {
   // Handle CORS preflight requests
@@ -184,15 +185,29 @@ export default async function handler(req, res) {
     }
   })};
 
-  // Generate or retrieve user ID
-  let userId = localStorage.getItem(\`chatUserId_\${WIDGET_CONFIG.widgetId}\`);
-  if (!userId) {
-    userId = \`user_\${Math.random().toString(36).substr(2, 9)}_\${Date.now()}\`;
-    localStorage.setItem(\`chatUserId_\${WIDGET_CONFIG.widgetId}\`, userId);
+${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
+
+  // Generate or retrieve user ID - RESPECTS GDPR CONSENT
+  let userId = null;
+  
+  const consent = ElvaConsent.getConsent();
+  if (consent && consent.functional) {
+    // User has given consent for functional cookies
+    userId = localStorage.getItem(\`chatUserId_\${WIDGET_CONFIG.widgetId}\`);
+    if (!userId) {
+      userId = \`user_\${Math.random().toString(36).substr(2, 9)}_\${Date.now()}\`;
+      localStorage.setItem(\`chatUserId_\${WIDGET_CONFIG.widgetId}\`, userId);
+    }
+  } else {
+    // No consent - use session-only identifier (not persisted)
+    userId = \`session_\${Math.random().toString(36).substr(2, 9)}_\${Date.now()}\`;
   }
   
-  // Current conversation ID
-  let currentConversationId = localStorage.getItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`) || null;
+  // Current conversation ID - only from localStorage if consent given
+  let currentConversationId = null;
+  if (consent && consent.functional) {
+    currentConversationId = localStorage.getItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`) || null;
+  }
   
   // Store raw messages for history (before formatting)
   let currentConversationMessages = [];
@@ -2441,7 +2456,7 @@ export default async function handler(req, res) {
   
   function getEmojiForRating(rating) {
     const emojis = {
-      1: '😡',
+      1: '☹️',
       2: '😞', 
       3: '😐',
       4: '😊',
@@ -2744,9 +2759,15 @@ export default async function handler(req, res) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
       
+      // GDPR: Send consent status to backend
+      const analyticsConsent = ElvaConsent.hasConsent('analytics');
+      
       const res = await fetch(apiEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Elva-Consent-Analytics": analyticsConsent ? 'true' : 'false'
+        },
         body: JSON.stringify({ 
           widgetId: WIDGET_CONFIG.widgetId, 
           message: msg, 

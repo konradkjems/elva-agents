@@ -5,6 +5,16 @@
       "maxDuration": 30
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/process-deletions",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/apply-retention",
+      "schedule": "0 3 * * 0"
+    }
+  ],
   "headers": [
     {
       "source": "/api/widget-embed/(.*)",

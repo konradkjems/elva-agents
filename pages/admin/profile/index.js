@@ -12,6 +12,8 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import DataExport from '@/components/admin/DataExport';
+import AccountDeletion from '@/components/admin/AccountDeletion';
 import {
   User,
   Mail,
@@ -474,6 +476,21 @@ export default function ProfilePage() {
               </CardContent>
             </Tabs>
           </Card>
+        </div>
+
+        {/* GDPR Rights Section */}
+        <div id="gdpr" className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight mb-2">Dine GDPR Rettigheder</h2>
+            <p className="text-muted-foreground">
+              Som bruger har du særlige rettigheder under EU's Databeskyttelsesforordning (GDPR)
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            <DataExport />
+            <AccountDeletion />
+          </div>
         </div>
       </div>
     </ModernLayout>

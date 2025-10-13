@@ -19,7 +19,14 @@
     "deploy:netlify": "npm run build && netlify deploy --prod --dir=out",
     "create-admin": "node scripts/create-admin-user.js",
     "setup:production": "npm run create-admin && npm run build",
-    "deploy:production": "node scripts/deploy-production.js"
+    "deploy:production": "node scripts/deploy-production.js",
+    "gdpr:migrate-passwords": "node scripts/migrate-passwords-to-bcrypt.js",
+    "gdpr:anonymize-ips": "node scripts/anonymize-existing-ips.js",
+    "gdpr:process-deletions": "node scripts/process-account-deletions.js",
+    "gdpr:init-audit-log": "node scripts/init-audit-log.js",
+    "gdpr:apply-retention": "node scripts/apply-data-retention.js",
+    "backup:db": "node scripts/backup-database.js",
+    "restore:db": "node scripts/restore-database.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

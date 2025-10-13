@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import { ObjectId } from "mongodb";
 import clientPromise from "../../lib/mongodb";
+import { getCountryFromIP } from "../../lib/privacy";
+import { widgetLimiter, runMiddleware } from "../../lib/rate-limit";
 
 // Set environment variable to handle SSL certificate issues in development
 if (process.env.NODE_ENV === 'development') {
@@ -22,6 +24,16 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Apply rate limiting - GDPR security requirement
+  try {
+    await runMiddleware(req, res, widgetLimiter);
+  } catch (error) {
+    return res.status(429).json({ 
+      error: 'Too many requests, please slow down',
+      retryAfter: '60 seconds'
+    });
   }
 
   try {
@@ -60,6 +72,13 @@ export default async function handler(req, res) {
     }
     
     if (!conversation) {
+      // GDPR COMPLIANCE: Check if user has given analytics consent
+      const analyticsConsent = req.headers['x-elva-consent-analytics'] === 'true';
+      
+      // Only collect country data if consent given
+      const rawIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '';
+      const country = analyticsConsent ? await getCountryFromIP(rawIP) : null;
+      
       // Create new conversation with proper schema
       const newConversation = {
         widgetId,
@@ -73,16 +92,17 @@ export default async function handler(req, res) {
         tags: [],
         metadata: {
           userAgent: req.headers['user-agent'] || '',
-          ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress || '',
-          country: null,
-          referrer: null
+          // ✅ GDPR FIX: Only collect if consent given
+          country: country,
+          referrer: analyticsConsent ? (req.headers['referer'] || null) : null,
+          consentGiven: analyticsConsent
         },
         createdAt: new Date(),
         updatedAt: new Date()
       };
       const result = await db.collection("conversations").insertOne(newConversation);
       conversation = { ...newConversation, _id: result.insertedId };
-      console.log('✅ New conversation created:', conversation._id);
+      console.log('✅ New conversation created:', conversation._id, 'Consent:', analyticsConsent);
     }
 
     // Add user message to conversation

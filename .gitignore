@@ -95,3 +95,6 @@ temp/
 # Generated deployment files (contain secrets)
 vercel-env-vars.txt
 DEPLOYMENT_INSTRUCTIONS.md
+
+# Backups
+backups/

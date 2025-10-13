@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import clientPromise from '../../../lib/mongodb'
+import { verifyPassword, needsRehash, hashPassword } from '../../../lib/password'
 
 export const authOptions = {
   providers: [
@@ -37,9 +38,20 @@ export const authOptions = {
             return null
           }
 
-          // Simple password check (in production, use bcrypt)
-          if (user.password !== credentials.password) {
+          // Verify password with bcrypt - GDPR COMPLIANCE FIX (Artikel 32)
+          const isValidPassword = await verifyPassword(credentials.password, user.password)
+          
+          if (!isValidPassword) {
             return null
+          }
+
+          // Optional: Rehash if needed (salt rounds increased)
+          if (needsRehash(user.password)) {
+            const newHash = await hashPassword(credentials.password)
+            await db.collection('users').updateOne(
+              { _id: user._id },
+              { $set: { password: newHash } }
+            )
           }
 
           // Update last login
