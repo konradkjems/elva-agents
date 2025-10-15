@@ -1,6 +1,12 @@
 import clientPromise from "../../../lib/mongodb";
 
 export default async function handler(req, res) {
+  // Set CORS headers for all requests
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-elva-consent-analytics, x-elva-consent-functional');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();

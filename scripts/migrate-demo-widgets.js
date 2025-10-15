@@ -18,7 +18,7 @@ async function migrateDemoWidgets() {
     await client.connect();
     console.log('✅ Connected to MongoDB');
     
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     
     // Find all demo widgets in the widgets collection
     const demoWidgets = await db.collection('widgets').find({ 

@@ -38,7 +38,7 @@ async function testConnection() {
     console.log('✅ Successfully connected to MongoDB!');
     
     // Test database operations
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     
     // Check if widgets collection exists
     const collections = await db.listCollections().toArray();

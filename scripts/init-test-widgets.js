@@ -231,7 +231,7 @@ async function initTestWidgets() {
     await client.connect();
     console.log('Connected to MongoDB');
     
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     const collection = db.collection('widgets');
     
     // Clear existing widgets

@@ -6,7 +6,7 @@ async function createTestSatisfactionWidget() {
   
   try {
     await client.connect();
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     
     // Create a test widget with satisfaction rating enabled
     const testWidget = {

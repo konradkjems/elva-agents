@@ -6,7 +6,7 @@ async function updateWidgetsWithSatisfaction() {
   
   try {
     await client.connect();
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     
     // Update all widgets to include satisfaction settings
     const updateResult = await db.collection('widgets').updateMany(

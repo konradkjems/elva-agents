@@ -8,7 +8,7 @@ export default async function handler(req, res) {
 
   try {
     const client = await clientPromise;
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     const conversations = db.collection('conversations');
     const analytics = db.collection('analytics');
 

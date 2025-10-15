@@ -26,7 +26,8 @@
     "gdpr:init-audit-log": "node scripts/init-audit-log.js",
     "gdpr:apply-retention": "node scripts/apply-data-retention.js",
     "backup:db": "node scripts/backup-database.js",
-    "restore:db": "node scripts/restore-database.js"
+    "restore:db": "node scripts/restore-database.js",
+    "verify:analytics": "node scripts/verify-analytics-fix.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

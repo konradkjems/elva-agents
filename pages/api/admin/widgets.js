@@ -276,37 +276,16 @@ async function handler(req, res) {
         // Fetch analytics data for each widget
         const widgetsWithStats = await Promise.all(widgets.map(async (widget) => {
           try {
-            // Get analytics data for this widget - check multiple agentId formats
-            const widgetIdString = widget._id.toString();
+            // IMPORTANT: Analytics always stores agentId as string
+            // Convert widget._id to string for consistent lookup
+            const widgetIdString = typeof widget._id === 'object' ? widget._id.toString() : String(widget._id);
             
-            // Try different formats and fields that might be used in analytics
-            const queries = [
-              { agentId: widget._id },                    // ObjectId format
-              { agentId: widgetIdString },                // String format
-              { agentId: `cottonshoppen-widget-${widgetIdString}` }, // With prefix like in image
-              { agentId: widget.name },                   // Widget name
-              { agentId: widget.slug },                   // Widget slug if exists
-              { widgetId: widget._id },                   // Try widgetId field instead
-              { widgetId: widgetIdString },               // String widgetId
-              { widgetId: `cottonshoppen-widget-${widgetIdString}` }, // Prefixed widgetId
-              // Try to find by partial match if the format is consistent
-              { agentId: new RegExp(widgetIdString) },    // Regex match for ObjectId in agentId
-              { agentId: new RegExp('cottonshoppen-widget') } // Find any cottonshoppen widget
-            ].filter(q => Object.values(q)[0]); // Remove undefined values
+            // Simple query - analytics uses string agentId
+            const analyticsData = await analytics.find({ 
+              agentId: widgetIdString 
+            }).toArray();
             
-            let analyticsData = [];
-            let foundWithQuery = null;
-            
-            for (const query of queries) {
-              const data = await analytics.find(query).toArray();
-              if (data.length > 0) {
-                analyticsData = data;
-                foundWithQuery = query;
-                break;
-              }
-            }
-            
-            console.log(`📊 Widget ${widget.name} (${widget._id}): Found ${analyticsData.length} analytics records with query:`, foundWithQuery);
+            console.log(`📊 Widget ${widget.name} (${widgetIdString}): Found ${analyticsData.length} analytics records`);
             if (analyticsData.length > 0) {
               console.log(`📊 Sample analytics data:`, analyticsData[0]);
             }

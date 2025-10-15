@@ -5,7 +5,8 @@ export default async function handler(req, res) {
   // Set CORS headers for all requests
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-elva-consent-analytics, x-elva-consent-functional');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   
   // Handle CORS preflight requests

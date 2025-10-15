@@ -23,7 +23,7 @@ async function fixDemoUrls() {
     await client.connect();
     console.log('✅ Connected to MongoDB');
 
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
 
     // Get production URL from environment or prompt user
     let productionUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;

@@ -98,7 +98,7 @@ export default async function handler(req, res) {
 
       // Store screenshot info in database
       const client = await clientPromise;
-      const db = client.db('chatwidgets');
+      const db = client.db('elva-agents');
 
       // Update demo with screenshot info (try new demos collection first, then fallback to widgets)
       let updateResult = await db.collection('demos').updateOne(

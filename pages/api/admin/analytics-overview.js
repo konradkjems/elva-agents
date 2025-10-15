@@ -47,16 +47,15 @@ export default async function handler(req, res) {
     // Get analytics data ONLY for widgets in current organization
     let analyticsData = [];
     if (allWidgets.length > 0) {
-      // Build array of widget IDs (as strings and ObjectIds)
-      const widgetIds = allWidgets.map(w => w._id.toString());
-      const widgetIdsAsObjects = allWidgets.map(w => w._id);
+      // IMPORTANT: Analytics always stores agentId as string
+      // Convert all widget IDs to strings for consistent lookup
+      const widgetIds = allWidgets.map(w => {
+        return typeof w._id === 'object' ? w._id.toString() : String(w._id);
+      });
       
       // Query analytics for these specific widgets
       analyticsData = await analytics.find({
-        $or: [
-          { agentId: { $in: widgetIds } },
-          { agentId: { $in: widgetIdsAsObjects } }
-        ]
+        agentId: { $in: widgetIds }
       }).sort({ date: -1 }).toArray();
       
       console.log('📊 Found analytics data for org widgets:', analyticsData.map(a => ({ agentId: a.agentId, date: a.date, conversations: a.metrics?.conversations })));
@@ -80,13 +79,11 @@ export default async function handler(req, res) {
 
     // Get analytics for each widget
     const widgetsWithAnalytics = allWidgets.map(widget => {
-      // Try different agentId formats for matching
-      const widgetIdString = widget._id.toString();
+      // IMPORTANT: Convert widget ID to string for analytics lookup
+      const widgetIdString = typeof widget._id === 'object' ? widget._id.toString() : String(widget._id);
+      // Analytics always stores agentId as string, so only match by string
       const widgetAnalytics = analyticsData.filter(data => 
-        data.agentId === widget._id || 
-        data.agentId === widgetIdString ||
-        data.agentId === widget.name ||
-        data.agentId === widget.slug
+        data.agentId === widgetIdString
       );
       console.log(`📊 Widget ${widget.name} (${widget._id}): Found ${widgetAnalytics.length} analytics records`);
       

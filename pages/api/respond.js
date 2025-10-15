@@ -16,6 +16,12 @@ const openai = new OpenAI({
 });
 
 export default async function handler(req, res) {
+  // Set CORS headers for all requests
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-elva-consent-analytics, x-elva-consent-functional');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -189,6 +195,9 @@ async function updateAnalytics(db, widgetId, conversation) {
   const date = new Date(conversation.startTime);
   const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
   
+  // IMPORTANT: Always convert widgetId to string for consistency
+  const agentIdString = typeof widgetId === 'object' ? widgetId.toString() : String(widgetId);
+  
   // Calculate metrics for this conversation
   const messageCount = conversation.messageCount || conversation.messages?.length || 0;
   const responseTimes = conversation.messages?.filter(m => m.responseTime).map(m => m.responseTime) || [];
@@ -198,7 +207,7 @@ async function updateAnalytics(db, widgetId, conversation) {
   
   // Get or create analytics document for this day
   const existingDoc = await analytics.findOne({ 
-    agentId: widgetId, 
+    agentId: agentIdString, 
     date: new Date(dateKey) 
   });
   
@@ -223,7 +232,7 @@ async function updateAnalytics(db, widgetId, conversation) {
     hourly[date.getHours()] = 1;
     
     await analytics.insertOne({
-      agentId: widgetId,
+      agentId: agentIdString,
       date: new Date(dateKey),
       metrics: {
         conversations: 1,
@@ -241,5 +250,5 @@ async function updateAnalytics(db, widgetId, conversation) {
     });
   }
   
-  console.log('📊 Analytics updated for', widgetId, 'on', dateKey);
+  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey);
 }

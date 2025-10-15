@@ -7,7 +7,7 @@ export default async function handler(req, res) {
 
   try {
     const client = await clientPromise;
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
 
     // Get the base URL dynamically from request headers
     const protocol = req.headers['x-forwarded-proto'] || 'https';

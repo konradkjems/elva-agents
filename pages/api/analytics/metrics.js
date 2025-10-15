@@ -98,27 +98,25 @@ export default async function handler(req, res) {
     }
 
     // Build analytics query for widgets in current organization
-    const widgetIds = orgWidgets.map(w => w._id.toString());
-    const widgetIdsAsObjects = orgWidgets.map(w => w._id);
+    // IMPORTANT: Analytics always stores agentId as string, so convert all widget IDs to strings
+    const widgetIds = orgWidgets.map(w => {
+      return typeof w._id === 'object' ? w._id.toString() : String(w._id);
+    });
 
     const analyticsQuery = {
-      $or: [
-        { agentId: { $in: widgetIds } },
-        { agentId: { $in: widgetIdsAsObjects } }
-      ]
+      agentId: { $in: widgetIds }
     };
 
     // Filter by specific widget if requested
     if (widgetId && widgetId !== 'all') {
       // Verify widget belongs to organization
-      const widgetBelongsToOrg = orgWidgets.some(w => w._id.toString() === widgetId);
+      const widgetBelongsToOrg = orgWidgets.some(w => w._id.toString() === widgetId || w._id.toString() === widgetId.toString());
       if (!widgetBelongsToOrg) {
         return res.status(403).json({ error: 'Widget does not belong to your organization' });
       }
-      analyticsQuery.$or = [
-        { agentId: widgetId },
-        { agentId: new ObjectId(widgetId) }
-      ];
+      // Convert widgetId to string for consistent lookup
+      const widgetIdString = typeof widgetId === 'object' ? widgetId.toString() : String(widgetId);
+      analyticsQuery.agentId = widgetIdString;
     }
 
     // Add date filter
@@ -276,8 +274,11 @@ async function getWidgetMetrics(db, widgetId, startDate) {
     return null;
   }
 
+  // IMPORTANT: Convert widgetId to string for analytics lookup
+  const widgetIdString = typeof widgetId === 'object' ? widgetId.toString() : String(widgetId);
+  
   // Get analytics data for this widget
-  const query = { agentId: widgetId };
+  const query = { agentId: widgetIdString };
   if (startDate) {
     query.date = { $gte: startDate };
   }
@@ -286,7 +287,7 @@ async function getWidgetMetrics(db, widgetId, startDate) {
   const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
 
   return {
-    widgetId,
+    widgetId: widgetIdString,
     widgetName: widget.name,
     createdAt: widget.createdAt,
     lastUpdated: widget.updatedAt,

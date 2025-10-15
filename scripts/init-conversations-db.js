@@ -6,7 +6,7 @@ async function initConversationsDB() {
   
   try {
     await client.connect();
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     
     // Create conversations collection with indexes
     const conversationsCollection = db.collection('conversations');

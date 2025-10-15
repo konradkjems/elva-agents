@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   const client = await clientPromise;
-  const db = client.db('chatwidgets');
+  const db = client.db('elva-agents');
 
   try {
     const { currentPassword, newPassword } = req.body;

@@ -232,7 +232,7 @@ async function initializeDatabase() {
     });
     await client.connect();
     
-    const db = client.db("chatwidgets");
+    const db = client.db("elva-agents");
     
     // Create widgets collection and insert sample data
     console.log('📝 Migrating to Responses API configuration...');

@@ -4,7 +4,7 @@ import { withAdmin } from '../../../lib/auth';
 async function handler(req, res) {
   try {
     const client = await clientPromise;
-    const db = client.db('chatwidgets');
+    const db = client.db('elva-agents');
     const settings = db.collection('settings');
 
     switch (req.method) {
