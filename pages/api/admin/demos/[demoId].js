@@ -5,17 +5,14 @@ import { authOptions } from '../../auth/[...nextauth]';
 import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
-  // Authentication - Check for platform admin
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // IMPORTANT: Only platform admins can access demos
-  if (session.user?.platformRole !== 'platform_admin') {
-    return res.status(403).json({ 
-      error: 'Access denied. Demos are only available to platform administrators.' 
-    });
+  // Set CORS headers for public demo access
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
 
   const client = await clientPromise;
@@ -23,6 +20,8 @@ export default async function handler(req, res) {
   const { demoId } = req.query;
 
   if (req.method === 'GET') {
+    // GET is public - anyone can view demos (no authentication required)
+    // This allows sharing demo links with clients
     try {
       const demo = await db.collection('demos').findOne({ _id: demoId });
       if (!demo) {
@@ -32,6 +31,30 @@ export default async function handler(req, res) {
     } catch (error) {
       console.error('Error fetching demo:', error);
       return res.status(500).json({ message: 'Failed to fetch demo' });
+    }
+  }
+
+  // PUT and DELETE require authentication
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // IMPORTANT: Only platform admins can modify/delete demos
+  if (session.user?.platformRole !== 'platform_admin') {
+    return res.status(403).json({ 
+      error: 'Access denied. Demo management is only available to platform administrators.' 
+    });
+  }
+
+  // Verify the demo belongs to user's organization
+  const currentOrgId = session.user?.currentOrganizationId;
+  if (currentOrgId) {
+    const demo = await db.collection('demos').findOne({ _id: demoId });
+    if (demo && demo.organizationId && demo.organizationId.toString() !== currentOrgId) {
+      return res.status(403).json({ 
+        error: 'Access denied. This demo belongs to a different organization.' 
+      });
     }
   }
 

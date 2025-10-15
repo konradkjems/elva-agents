@@ -296,8 +296,11 @@ async function handler(req, res) {
             const totalResponseTimes = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
             const avgResponseTime = analyticsData.length > 0 ? Math.round(totalResponseTimes / analyticsData.length) : 0;
             
-            // Calculate unique users (approximate based on conversations)
-            const uniqueUsers = Math.ceil(totalConversations * 0.8); // Rough estimate
+            // Calculate unique users by taking the maximum uniqueUsers value across all analytics records
+            // (since uniqueUsers is cumulative in each analytics document)
+            const uniqueUsers = analyticsData.length > 0
+              ? Math.max(...analyticsData.map(data => data.metrics?.uniqueUsers || 0))
+              : 0;
             
             return {
               ...widget,

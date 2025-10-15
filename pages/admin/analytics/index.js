@@ -84,29 +84,6 @@ export default function ModernAnalytics() {
       }));
   };
 
-  const prepareWidgetPerformanceChart = (widgets, analyticsData) => {
-    if (!widgets || widgets.length === 0) return [];
-    
-    // Calculate conversations and messages per widget from analytics data
-    const widgetConversations = {};
-    const widgetMessages = {};
-    
-    // Check if widgetMetrics exists and is an array
-    if (analyticsData?.widgetMetrics && Array.isArray(analyticsData.widgetMetrics)) {
-      analyticsData.widgetMetrics.forEach(metric => {
-        widgetConversations[metric.widgetId] = metric.totalConversations || 0;
-        widgetMessages[metric.widgetId] = metric.totalMessages || 0;
-      });
-    }
-    
-    // Only show actual data - no estimated/distributed values
-    return widgets.map(widget => ({
-      widget: widget.name,
-      conversations: widgetConversations[widget._id] || 0,
-      messages: widgetMessages[widget._id] || 0
-    }));
-  };
-
   const prepareConversationLengthDistribution = (analyticsData) => {
     // Only show if we have actual conversation length distribution data
     if (!analyticsData?.metrics?.conversationLengthDistribution) {
@@ -538,60 +515,6 @@ export default function ModernAnalytics() {
                </Card>
              </div>
 
-             {/* Widget Performance Chart */}
-             {widgets.length > 0 && (
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Widget Performance Comparison</CardTitle>
-                   <p className="text-sm text-muted-foreground">Conversation and message distribution across widgets</p>
-                 </CardHeader>
-                 <CardContent>
-                   <ChartContainer
-                     config={{
-                       conversations: {
-                         label: "Conversations",
-                         color: "hsl(var(--primary))",
-                       },
-                       messages: {
-                         label: "Messages",
-                         color: "hsl(var(--secondary))",
-                       },
-                     }}
-                     className="h-[300px]"
-                   >
-                     <BarChart data={prepareWidgetPerformanceChart(widgets, analyticsData)}>
-                       <CartesianGrid strokeDasharray="3 3" />
-                       <XAxis 
-                         dataKey="widget" 
-                         tick={{ fontSize: 12 }}
-                         tickLine={false}
-                         axisLine={false}
-                         angle={-45}
-                         textAnchor="end"
-                         height={80}
-                       />
-                       <YAxis 
-                         tick={{ fontSize: 12 }}
-                         tickLine={false}
-                         axisLine={false}
-                       />
-                       <ChartTooltip content={<ChartTooltipContent />} />
-                       <ChartLegend content={<ChartLegendContent />} />
-                       <Bar 
-                         dataKey="conversations" 
-                         fill="var(--color-conversations)"
-                         radius={[4, 4, 0, 0]}
-                       />
-                       <Bar 
-                         dataKey="messages" 
-                         fill="var(--color-messages)"
-                         radius={[4, 4, 0, 0]}
-                       />
-                     </BarChart>
-                   </ChartContainer>
-                 </CardContent>
-               </Card>
-             )}
            </TabsContent>
 
            <TabsContent value="performance" className="space-y-4">
@@ -671,109 +594,53 @@ export default function ModernAnalytics() {
                </Card>
              </div>
 
-             {/* Performance Charts */}
-             <div className="grid gap-4 md:grid-cols-2">
-               {/* Response Time Trend Chart */}
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Response Time Trends</CardTitle>
-                   <p className="text-sm text-muted-foreground">Average response time over time</p>
-                 </CardHeader>
-                 <CardContent>
-                   {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 ? (
-                     <ChartContainer
-                       config={{
-                         responseTime: {
-                           label: "Response Time (s)",
-                           color: "hsl(var(--primary))",
-                         },
-                       }}
-                       className="h-[300px]"
-                     >
-                       <LineChart data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends).map(day => ({
-                         ...day,
-                         responseTime: analyticsData.metrics.avgResponseTime ? (analyticsData.metrics.avgResponseTime / 1000) : 0
-                       }))}>
-                         <CartesianGrid strokeDasharray="3 3" />
-                         <XAxis 
-                           dataKey="date" 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <YAxis 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <ChartTooltip content={<ChartTooltipContent />} />
-                         <Line
-                           type="monotone"
-                           dataKey="responseTime"
-                           stroke="var(--color-responseTime)"
-                           strokeWidth={2}
-                           dot={{ r: 4 }}
-                           activeDot={{ r: 6 }}
-                         />
-                       </LineChart>
-                     </ChartContainer>
-                   ) : (
-                     <div className="text-center py-8 text-muted-foreground">
-                       <Clock className="mx-auto h-8 w-8 mb-2" />
-                       <p className="text-sm">No response time data available</p>
-                     </div>
-                   )}
-                 </CardContent>
-               </Card>
-
-               {/* Conversation Length Distribution */}
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Conversation Length Distribution</CardTitle>
-                   <p className="text-sm text-muted-foreground">Distribution of conversation lengths</p>
-                 </CardHeader>
-                 <CardContent>
-                   {prepareConversationLengthDistribution(analyticsData).length > 0 ? (
-                     <ChartContainer
-                       config={{
-                         count: {
-                           label: "Conversations",
-                           color: "hsl(var(--primary))",
-                         },
-                       }}
-                       className="h-[300px]"
-                     >
-                       <BarChart data={prepareConversationLengthDistribution(analyticsData)}>
-                         <CartesianGrid strokeDasharray="3 3" />
-                         <XAxis 
-                           dataKey="length" 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <YAxis 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <ChartTooltip content={<ChartTooltipContent />} />
-                         <Bar 
-                           dataKey="count" 
-                           fill="var(--color-count)"
-                           radius={[4, 4, 0, 0]}
-                         />
-                       </BarChart>
-                     </ChartContainer>
-                   ) : (
-                     <div className="text-center py-8 text-muted-foreground">
-                       <Activity className="mx-auto h-8 w-8 mb-2" />
-                       <p className="text-sm">No conversation length data available</p>
-                       <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
-                     </div>
-                   )}
-                 </CardContent>
-               </Card>
-             </div>
+            {/* Conversation Length Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversation Length Distribution</CardTitle>
+                <p className="text-sm text-muted-foreground">Distribution of conversation lengths</p>
+              </CardHeader>
+              <CardContent>
+                {prepareConversationLengthDistribution(analyticsData).length > 0 ? (
+                  <ChartContainer
+                    config={{
+                      count: {
+                        label: "Conversations",
+                        color: "hsl(var(--primary))",
+                      },
+                    }}
+                    className="h-[300px]"
+                  >
+                    <BarChart data={prepareConversationLengthDistribution(analyticsData)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="length" 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar 
+                        dataKey="count" 
+                        fill="var(--color-count)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="mx-auto h-8 w-8 mb-2" />
+                    <p className="text-sm">No conversation length data available</p>
+                    <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
            </TabsContent>
 
           <TabsContent value="insights" className="space-y-4">

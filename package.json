@@ -27,7 +27,8 @@
     "gdpr:apply-retention": "node scripts/apply-data-retention.js",
     "backup:db": "node scripts/backup-database.js",
     "restore:db": "node scripts/restore-database.js",
-    "verify:analytics": "node scripts/verify-analytics-fix.js"
+    "verify:analytics": "node scripts/verify-analytics-fix.js",
+    "migrate:demos-org": "node scripts/add-organizationId-to-demos.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

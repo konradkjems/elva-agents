@@ -92,18 +92,26 @@ export default async function handler(req, res) {
       const widgetAvgResponseTime = widgetAnalytics.length > 0 
         ? widgetAnalytics.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0) / widgetAnalytics.length 
         : 0;
+      
+      // Calculate unique users by taking the maximum uniqueUsers value across all analytics records
+      // (since uniqueUsers is cumulative in each analytics document)
+      const widgetUniqueUsers = widgetAnalytics.length > 0
+        ? Math.max(...widgetAnalytics.map(data => data.metrics?.uniqueUsers || 0))
+        : 0;
 
       return {
         ...widget,
         stats: {
           totalConversations: widgetTotalConversations,
           totalMessages: widgetTotalMessages,
+          uniqueUsers: widgetUniqueUsers,
           responseTime: Math.round(widgetAvgResponseTime),
           lastActivity: widgetAnalytics.length > 0 ? widgetAnalytics[0].date : widget.createdAt
         },
         analytics: {
           totalConversations: widgetTotalConversations,
           totalMessages: widgetTotalMessages,
+          uniqueUsers: widgetUniqueUsers,
           averageResponseTime: Math.round(widgetAvgResponseTime),
           lastActivity: widgetAnalytics.length > 0 ? widgetAnalytics[0].date : widget.createdAt
         }

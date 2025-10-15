@@ -32,10 +32,24 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      // For search functionality, return all demos
-      // In the future, this could be filtered by organization if needed
-      const demos = await db.collection('demos').find({}).sort({ createdAt: -1 }).toArray();
-      console.log('📝 Returning demos for search:', demos.length);
+      // Get user's current organization
+      const currentOrgId = session.user?.currentOrganizationId;
+      const isPlatformAdmin = session.user?.platformRole === 'platform_admin';
+      
+      // Build query to filter by organization
+      let query = {};
+      
+      if (currentOrgId && !isPlatformAdmin) {
+        // Regular users: only see demos from their organization
+        query.organizationId = new ObjectId(currentOrgId);
+      } else if (currentOrgId && isPlatformAdmin) {
+        // Platform admin with selected org: see that org's demos
+        query.organizationId = new ObjectId(currentOrgId);
+      }
+      // Platform admin without org selected: see all demos (no filter)
+      
+      const demos = await db.collection('demos').find(query).sort({ createdAt: -1 }).toArray();
+      console.log('📝 Returning demos for organization:', currentOrgId, 'Count:', demos.length);
       return res.status(200).json(demos);
     } catch (error) {
       console.error('Error fetching demos:', error);
@@ -104,13 +118,26 @@ export default async function handler(req, res) {
       // Generate unique demo ID
       const demoId = `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Prepare demo data (Platform-level, no organizationId)
+      // Get organizationId from source widget or current user
+      const organizationId = sourceWidget.organizationId || 
+                            (session.user?.currentOrganizationId ? new ObjectId(session.user.currentOrganizationId) : null);
+      
+      if (!organizationId) {
+        return res.status(400).json({ 
+          message: 'Organization ID is required. Please select an organization or use a widget with an organization.' 
+        });
+      }
+      
+      // Prepare demo data with organization
       const demoData = {
         _id: demoId,
         name,
         description: description || `Demo of ${sourceWidget.name}`,
         sourceWidgetId: widgetId,
         sourceWidgetName: sourceWidget.name,
+        
+        // Organization-specific
+        organizationId: organizationId,
         
         // Platform admin who created it
         createdBy: new ObjectId(session.user.id),

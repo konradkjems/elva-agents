@@ -4,17 +4,14 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../auth/[...nextauth]';
 
 export default async function handler(req, res) {
-  // Authentication - Check for platform admin
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // IMPORTANT: Only platform admins can access demo usage data
-  if (session.user?.platformRole !== 'platform_admin') {
-    return res.status(403).json({ 
-      error: 'Access denied. Demo usage data is only available to platform administrators.' 
-    });
+  // Set CORS headers for public demo access
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
 
   const client = await clientPromise;
@@ -22,6 +19,7 @@ export default async function handler(req, res) {
   const { demoId } = req.query;
 
   if (req.method === 'GET') {
+    // GET is public - anyone can view usage data (no authentication required)
     try {
       const demo = await db.collection('demos').findOne({ _id: demoId });
       if (!demo) {
@@ -56,6 +54,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
+    // POST for tracking views/interactions (public access)
     try {
       const { type } = req.body; // 'view' or 'interaction'
       
@@ -95,6 +94,19 @@ export default async function handler(req, res) {
       console.error('Error tracking usage:', error);
       return res.status(500).json({ message: 'Failed to track usage' });
     }
+  }
+
+  // PUT requires authentication (reset counters)
+  const session = await getServerSession(req, res, authOptions);
+  if (!session) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // IMPORTANT: Only platform admins can reset usage counters
+  if (session.user?.platformRole !== 'platform_admin') {
+    return res.status(403).json({ 
+      error: 'Access denied. Usage management is only available to platform administrators.' 
+    });
   }
 
   if (req.method === 'PUT') {
