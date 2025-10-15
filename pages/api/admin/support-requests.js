@@ -102,7 +102,7 @@ export default async function handler(req, res) {
 
       res.status(200).json({
         success: true,
-        requests: requestsWithDetails
+        reviews: requestsWithDetails
       });
 
     } catch (error) {

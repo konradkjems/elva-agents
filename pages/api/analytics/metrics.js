@@ -141,12 +141,44 @@ export default async function handler(req, res) {
       widgetMetrics = await getWidgetMetrics(db, widgetId, startDate);
     }
 
+    // Get individual widget analytics for overview
+    const widgetsWithAnalytics = await Promise.all(orgWidgets.map(async (widget) => {
+      const widgetIdString = typeof widget._id === 'object' ? widget._id.toString() : String(widget._id);
+      const widgetAnalyticsQuery = { agentId: widgetIdString };
+      if (startDate) {
+        if (period === 'custom' && endDate) {
+          widgetAnalyticsQuery.date = { $gte: startDate, $lte: endDate };
+        } else {
+          widgetAnalyticsQuery.date = { $gte: startDate };
+        }
+      }
+      
+      const widgetAnalyticsData = await analytics.find(widgetAnalyticsQuery).toArray();
+      const totalConversations = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
+      const totalMessages = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
+      const totalResponseTime = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.responseTime || 0), 0);
+      const avgResponseTime = widgetAnalyticsData.length > 0 ? totalResponseTime / widgetAnalyticsData.length : 0;
+      const uniqueUsers = Math.max(...widgetAnalyticsData.map(data => data.metrics?.uniqueUsers || 0), 0);
+      
+      return {
+        _id: widget._id,
+        name: widget.name,
+        stats: {
+          conversations: totalConversations,
+          messages: totalMessages,
+          responseTime: avgResponseTime,
+          uniqueUsers: uniqueUsers
+        }
+      };
+    }));
+
     return res.status(200).json({
       period,
       startDate: startDate?.toISOString(),
       endDate: endDate?.toISOString(),
       metrics,
       widgetMetrics,
+      widgetsWithAnalytics,
       dataPoints: analyticsData.length
     });
 

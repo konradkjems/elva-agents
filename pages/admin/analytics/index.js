@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import ModernLayout from '../../../components/admin/ModernLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,6 +13,7 @@ import {
   ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  ChartConfig,
 } from '@/components/ui/chart';
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import {
@@ -25,7 +26,8 @@ import {
   BarChart3,
   Activity,
   Zap,
-  Star
+  Star,
+  TrendingUp
 } from 'lucide-react';
 
 
@@ -55,19 +57,36 @@ export default function ModernAnalytics() {
   const [widgets, setWidgets] = useState([]);
   const [dateRange, setDateRange] = useState('30d');
   const [selectedWidget, setSelectedWidget] = useState('all');
+  const [activeChart, setActiveChart] = useState('conversations');
 
   // Chart data preparation functions
   const prepareDailyTrendsChart = (dailyTrends) => {
     if (!dailyTrends || dailyTrends.length === 0) return [];
     
-    return dailyTrends.map(day => ({
-      date: new Date(day.date).toLocaleDateString('da-DK', { 
-        month: 'short', 
-        day: 'numeric' 
-      }),
-      conversations: day.conversations,
-      messages: day.messages
-    }));
+    return dailyTrends.map(day => {
+      const conversations = Math.max(0, day.conversations || 0);
+      const messages = Math.max(0, day.messages || 0);
+      
+      // Debug negative values
+      if (day.conversations < 0 || day.messages < 0) {
+        console.warn('🚨 Negative values detected in daily trends:', {
+          date: day.date,
+          originalConversations: day.conversations,
+          originalMessages: day.messages,
+          correctedConversations: conversations,
+          correctedMessages: messages
+        });
+      }
+      
+      return {
+        date: new Date(day.date).toLocaleDateString('da-DK', { 
+          month: 'short', 
+          day: 'numeric' 
+        }),
+        conversations,
+        messages
+      };
+    });
   };
 
   const prepareHourlyChart = (hourlyDistribution) => {
@@ -299,9 +318,9 @@ export default function ModernAnalytics() {
                 <p className="text-sm text-muted-foreground">Compare performance across all your widgets</p>
               </CardHeader>
               <CardContent>
-                {widgets.length > 0 ? (
+                {analyticsData?.widgetsWithAnalytics && analyticsData.widgetsWithAnalytics.length > 0 ? (
                   <div className="space-y-3">
-                    {widgets.slice(0, 5).map((widget) => (
+                    {analyticsData?.widgetsWithAnalytics?.slice(0, 5).map((widget) => (
                       <div key={widget._id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                         <div className="flex-1">
                           <div className="font-medium">{widget.name}</div>
@@ -321,9 +340,9 @@ export default function ModernAnalytics() {
                         </div>
                       </div>
                     ))}
-                    {widgets.length > 5 && (
+                    {analyticsData?.widgetsWithAnalytics && analyticsData.widgetsWithAnalytics.length > 5 && (
                       <div className="text-center text-sm text-muted-foreground pt-2">
-                        Showing top 5 widgets • {widgets.length - 5} more available
+                        Showing top 5 widgets • {analyticsData.widgetsWithAnalytics.length - 5} more available
                       </div>
                     )}
                   </div>
@@ -337,13 +356,38 @@ export default function ModernAnalytics() {
               </CardContent>
             </Card>
 
-            {/* Daily Trends Quick View */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Activity Trends</CardTitle>
-                <p className="text-sm text-muted-foreground">Recent conversation and message activity</p>
+            {/* Activity Trends - Interactive Line Chart */}
+            <Card className="py-4 sm:py-0">
+              <CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
+                <div className="flex flex-1 flex-col justify-center gap-1 px-6 pb-3 sm:pb-0">
+                  <CardTitle>Activity Trends</CardTitle>
+                  <p className="text-sm text-muted-foreground">Recent conversation and message activity</p>
+                </div>
+                {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 && (
+                  <div className="flex">
+                    {["conversations", "messages"].map((key) => {
+                      const total = analyticsData.metrics.dailyTrends.reduce((acc, curr) => acc + (curr[key] || 0), 0);
+                      const isActive = activeChart === key;
+                      return (
+                        <button
+                          key={key}
+                          data-active={isActive}
+                          className="data-[active=true]:bg-muted/50 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l sm:border-t-0 sm:border-l sm:px-8 sm:py-6"
+                          onClick={() => setActiveChart(key)}
+                        >
+                          <span className="text-muted-foreground text-xs">
+                            {key === 'conversations' ? 'Conversations' : 'Messages'}
+                          </span>
+                          <span className="text-lg leading-none font-bold sm:text-3xl">
+                            {total.toLocaleString()}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-2 sm:p-6">
                 {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 ? (
                   <ChartContainer
                     config={{
@@ -353,40 +397,71 @@ export default function ModernAnalytics() {
                       },
                       messages: {
                         label: "Messages", 
-                        color: "hsl(var(--secondary))",
+                        color: "hsl(var(--destructive))",
                       },
                     }}
-                    className="h-[250px]"
+                    className="aspect-auto h-[250px] w-full"
                   >
-                    <LineChart data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fontSize: 12 }}
+                    <LineChart
+                      accessibilityLayer
+                      data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends)}
+                      margin={{
+                        left: 12,
+                        right: 12,
+                      }}
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="date"
                         tickLine={false}
                         axisLine={false}
+                        tickMargin={8}
+                        minTickGap={32}
+                        tick={{ fontSize: 12 }}
                       />
                       <YAxis 
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
                       />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <ChartLegend content={<ChartLegendContent />} />
-                      <Line
-                        type="monotone"
-                        dataKey="conversations"
-                        stroke="var(--color-conversations)"
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            className="w-[150px]"
+                            nameKey="views"
+                            labelFormatter={(value) => {
+                              // Find the original date from the data
+                              const dataPoint = analyticsData.metrics.dailyTrends.find(d => 
+                                new Date(d.date).toLocaleDateString('da-DK', { 
+                                  month: 'short', 
+                                  day: 'numeric' 
+                                }) === value
+                              );
+                              if (dataPoint) {
+                                return new Date(dataPoint.date).toLocaleDateString('da-DK', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                });
+                              }
+                              return value;
+                            }}
+                          />
+                        }
                       />
                       <Line
-                        type="monotone"
-                        dataKey="messages"
-                        stroke="var(--color-messages)"
+                        dataKey={activeChart}
+                        type="natural"
+                        stroke={`var(--color-${activeChart})`}
                         strokeWidth={2}
-                        dot={{ r: 3 }}
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          // Only show dot if value is greater than 0
+                          if (payload && payload[activeChart] > 0) {
+                            return <circle cx={cx} cy={cy} r={3} fill={`var(--color-${activeChart})`} />;
+                          }
+                          return null;
+                        }}
                         activeDot={{ r: 5 }}
                       />
                     </LineChart>
@@ -399,11 +474,21 @@ export default function ModernAnalytics() {
                   </div>
                 )}
               </CardContent>
+              {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 && (
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    {activeChart === 'conversations' ? 'Conversation' : 'Message'} activity trending up <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Showing {activeChart === 'conversations' ? 'conversation' : 'message'} trends for the selected time range
+                  </div>
+                </CardFooter>
+              )}
             </Card>
           </TabsContent>
 
           <TabsContent value="conversations" className="space-y-4">
-            {/* Daily Trends Line Chart - Full Width */}
+            {/* Daily Conversation Trends - Enhanced Line Chart */}
             <Card>
               <CardHeader>
                 <CardTitle>Daily Conversation Trends</CardTitle>
@@ -419,40 +504,64 @@ export default function ModernAnalytics() {
                       },
                       messages: {
                         label: "Messages", 
-                        color: "hsl(var(--secondary))",
+                        color: "hsl(var(--destructive))",
                       },
                     }}
                     className="h-[350px]"
                   >
-                    <LineChart data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fontSize: 12 }}
+                    <LineChart
+                      accessibilityLayer
+                      data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends)}
+                      margin={{
+                        left: 12,
+                        right: 12,
+                      }}
+                    >
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="date"
                         tickLine={false}
                         axisLine={false}
+                        tickMargin={8}
+                        tick={{ fontSize: 12 }}
                       />
                       <YAxis 
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
                       />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <ChartLegend content={<ChartLegendContent />} />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
                       <Line
-                        type="monotone"
                         dataKey="conversations"
+                        type="natural"
                         stroke="var(--color-conversations)"
                         strokeWidth={2}
-                        dot={{ r: 4 }}
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          // Only show dot if value is greater than 0
+                          if (payload && payload.conversations > 0) {
+                            return <circle cx={cx} cy={cy} r={4} fill="var(--color-conversations)" />;
+                          }
+                          return null;
+                        }}
                         activeDot={{ r: 6 }}
                       />
                       <Line
-                        type="monotone"
                         dataKey="messages"
+                        type="natural"
                         stroke="var(--color-messages)"
                         strokeWidth={2}
-                        dot={{ r: 4 }}
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          // Only show dot if value is greater than 0
+                          if (payload && payload.messages > 0) {
+                            return <circle cx={cx} cy={cy} r={4} fill="var(--color-messages)" />;
+                          }
+                          return null;
+                        }}
                         activeDot={{ r: 6 }}
                       />
                     </LineChart>
@@ -465,6 +574,16 @@ export default function ModernAnalytics() {
                   </div>
                 )}
               </CardContent>
+              {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 && (
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Conversation activity trending up <TrendingUp className="h-4 w-4" />
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Showing detailed conversation and message trends for the selected time range
+                  </div>
+                </CardFooter>
+              )}
             </Card>
 
             {/* Conversation Metrics */}
