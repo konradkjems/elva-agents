@@ -190,7 +190,7 @@ export default function ModernAdminDashboard() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-              {session?.user?.platformRole === 'platform_admin' && (
+              {session?.user?.role === 'platform_admin' && (
                 <Badge variant="outline" className="gap-1">
                   <Crown className="h-3 w-3" />
                   Platform Admin

@@ -65,8 +65,6 @@ export const authOptions = {
             email: user.email,
             name: user.name,
             role: user.role,
-            permissions: user.permissions,
-            platformRole: user.platformRole,
             currentOrganizationId: user.currentOrganizationId?.toString()
           }
         } catch (error) {
@@ -100,9 +98,7 @@ export const authOptions = {
               email: user.email,
               name: user.name,
               image: user.image,
-              role: 'admin', // Legacy field
-              permissions: ['read', 'write', 'delete'], // Legacy field
-              platformRole: 'user', // Regular user by default
+              role: 'member', // Regular user by default
               status: 'active',
               provider: 'google',
               emailVerified: true,
@@ -182,8 +178,6 @@ export const authOptions = {
 
           // Add fields to user object for JWT
           user.role = dbUser.role
-          user.permissions = dbUser.permissions
-          user.platformRole = dbUser.platformRole
           user.currentOrganizationId = dbUser.currentOrganizationId?.toString()
           user.id = dbUser._id.toString()
         } catch (error) {
@@ -197,8 +191,6 @@ export const authOptions = {
       // On sign in or update, set user data
       if (user) {
         token.role = user.role
-        token.permissions = user.permissions
-        token.platformRole = user.platformRole
         token.currentOrganizationId = user.currentOrganizationId
         if (account?.provider === 'google') {
           token.provider = 'google'
@@ -219,7 +211,7 @@ export const authOptions = {
           
           if (dbUser) {
             token.currentOrganizationId = dbUser.currentOrganizationId?.toString()
-            token.platformRole = dbUser.platformRole
+            token.role = dbUser.role
           }
         } catch (error) {
           console.error('Error refreshing user data in JWT:', error)
@@ -231,8 +223,6 @@ export const authOptions = {
     async session({ session, token }) {
       session.user.id = token.sub
       session.user.role = token.role
-      session.user.permissions = token.permissions
-      session.user.platformRole = token.platformRole
       session.user.currentOrganizationId = token.currentOrganizationId
       session.user.provider = token.provider
       return session

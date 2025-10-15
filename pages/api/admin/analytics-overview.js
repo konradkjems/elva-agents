@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     }
 
     const currentOrgId = session.user?.currentOrganizationId;
-    const isPlatformAdmin = session.user?.platformRole === 'platform_admin';
+    const isPlatformAdmin = session.user?.role === 'platform_admin';
 
     const client = await clientPromise;
     const db = client.db('elva-agents'); // Use new database

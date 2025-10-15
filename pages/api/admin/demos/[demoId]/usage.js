@@ -103,7 +103,7 @@ export default async function handler(req, res) {
   }
 
   // IMPORTANT: Only platform admins can reset usage counters
-  if (session.user?.platformRole !== 'platform_admin') {
+  if (session.user?.role !== 'platform_admin') {
     return res.status(403).json({ 
       error: 'Access denied. Usage management is only available to platform administrators.' 
     });

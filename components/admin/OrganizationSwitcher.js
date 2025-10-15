@@ -253,7 +253,7 @@ export default function OrganizationSwitcher({ onCreateClick }) {
         </DropdownMenuItem>
 
         {/* Platform Admin Indicator */}
-        {session?.user?.platformRole === 'platform_admin' && (
+        {session?.user?.role === 'platform_admin' && (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5">

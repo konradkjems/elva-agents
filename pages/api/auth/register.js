@@ -67,9 +67,7 @@ export default async function handler(req, res) {
       email: email.toLowerCase(),
       name: name.trim(),
       password: hashedPassword, // ✅ Now hashed with bcrypt!
-      role: 'admin', // Legacy field
-      permissions: ['read', 'write', 'delete'], // Legacy field
-      platformRole: 'user', // Regular user by default
+      role: 'member', // Regular user by default
       status: 'active',
       provider: 'credentials',
       emailVerified: false, // Email verification can be added later

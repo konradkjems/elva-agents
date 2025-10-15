@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     });
 
     const user = await db.collection('users').findOne({ _id: userId });
-    const isPlatformAdmin = user && user.platformRole === 'platform_admin';
+    const isPlatformAdmin = user && user.role === 'platform_admin';
 
     if (!membership && !isPlatformAdmin) {
       return res.status(403).json({ error: 'You are not a member of this organization' });

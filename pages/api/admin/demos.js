@@ -14,11 +14,30 @@ export default async function handler(req, res) {
   }
 
   // Allow access to all authenticated users for search functionality
-  // Platform admin restrictions only apply to POST/PUT/DELETE operations
-  if (req.method !== 'GET' && session.user?.platformRole !== 'platform_admin') {
-    return res.status(403).json({ 
-      error: 'Access denied. Demo management is only available to platform administrators.' 
-    });
+  // POST/PUT/DELETE operations require platform admin OR organization admin/owner role
+  if (req.method !== 'GET') {
+    const isPlatformAdmin = session.user?.role === 'platform_admin';
+    const currentOrgId = session.user?.currentOrganizationId;
+    
+    if (!isPlatformAdmin && currentOrgId) {
+      // Check if user has admin/owner role in their organization
+      const client = await clientPromise;
+      const db = client.db('elva-agents');
+      const teamMember = await db.collection('team_members').findOne({
+        userId: new ObjectId(session.user.id),
+        organizationId: new ObjectId(currentOrgId)
+      });
+      
+      if (!teamMember || !['admin', 'owner'].includes(teamMember.role)) {
+        return res.status(403).json({ 
+          error: 'Access denied. Demo management requires platform admin or organization admin/owner role.' 
+        });
+      }
+    } else if (!isPlatformAdmin) {
+      return res.status(403).json({ 
+        error: 'Access denied. Demo management requires platform admin or organization admin/owner role.' 
+      });
+    }
   }
 
   const client = await clientPromise;
@@ -34,7 +53,7 @@ export default async function handler(req, res) {
     try {
       // Get user's current organization
       const currentOrgId = session.user?.currentOrganizationId;
-      const isPlatformAdmin = session.user?.platformRole === 'platform_admin';
+      const isPlatformAdmin = session.user?.role === 'platform_admin';
       
       // Build query to filter by organization
       let query = {};

@@ -23,7 +23,7 @@ async function getUserRole(db, userId, orgId) {
 // Helper to check if user is platform admin
 async function isPlatformAdmin(db, userId) {
   const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
-  return user && user.platformRole === 'platform_admin';
+  return user && user.role === 'platform_admin';
 }
 
 export default async function handler(req, res) {

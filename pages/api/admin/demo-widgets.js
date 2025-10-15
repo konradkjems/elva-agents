@@ -14,10 +14,27 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // IMPORTANT: Only platform admins can access demos
-  if (session.user?.platformRole !== 'platform_admin') {
+  // IMPORTANT: Only platform admins OR organization admin/owner can access demos
+  const isPlatformAdmin = session.user?.role === 'platform_admin';
+  const currentOrgId = session.user?.currentOrganizationId;
+  
+  if (!isPlatformAdmin && currentOrgId) {
+    // Check if user has admin/owner role in their organization
+    const client = await clientPromise;
+    const db = client.db('elva-agents');
+    const teamMember = await db.collection('team_members').findOne({
+      userId: new ObjectId(session.user.id),
+      organizationId: new ObjectId(currentOrgId)
+    });
+    
+    if (!teamMember || !['admin', 'owner'].includes(teamMember.role)) {
+      return res.status(403).json({ 
+        error: 'Access denied. Demo management requires platform admin or organization admin/owner role.' 
+      });
+    }
+  } else if (!isPlatformAdmin) {
     return res.status(403).json({ 
-      error: 'Access denied. Demos are only available to platform administrators.' 
+      error: 'Access denied. Demo management requires platform admin or organization admin/owner role.' 
     });
   }
 

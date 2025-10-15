@@ -39,7 +39,7 @@ export default async function handler(req, res) {
       _id: user?._id,
       email: user?.email,
       name: user?.name,
-      platformRole: user?.platformRole,
+      role: user?.role,
       currentOrganizationId: user?.currentOrganizationId,
       status: user?.status
     },
