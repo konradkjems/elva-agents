@@ -38,7 +38,8 @@ import {
   Users,
   Globe,
   Zap,
-  Info
+  Info,
+  Code
 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
@@ -501,6 +502,23 @@ export default function WidgetsPage() {
     }
   };
 
+  const handleCopyEmbedScript = async (widgetId) => {
+    try {
+      const embedScript = `<script src="${window.location.origin}/api/widget-embed/${widgetId}"></script>`;
+      await navigator.clipboard.writeText(embedScript);
+      toast({
+        title: "Embed script copied",
+        description: "The embed script has been copied to your clipboard.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Copy failed",
+        description: "Failed to copy embed script to clipboard.",
+      });
+    }
+  };
+
   // Get widget-specific analytics data
   const getWidgetAnalytics = (widget) => {
     console.log('📝 Getting analytics for widget:', widget.name, widget._id);
@@ -891,6 +909,10 @@ export default function WidgetsPage() {
                               <DropdownMenuItem onClick={() => handleDuplicateWidget(widget)}>
                                 <Copy className="mr-2 h-4 w-4" />
                                 Duplicate
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCopyEmbedScript(widget._id)}>
+                                <Code className="mr-2 h-4 w-4" />
+                                Copy Embed Script
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem 
