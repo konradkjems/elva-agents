@@ -21,10 +21,13 @@ import {
   Calendar,
   Filter,
   Building2,
-  Crown
+  Crown,
+  Star,
+  Info
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const StatCard = ({ title, value, icon: Icon }) => (
+const StatCard = ({ title, value, icon: Icon, subtitle }) => (
   <Card className="hover:shadow-md transition-shadow">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -34,6 +37,9 @@ const StatCard = ({ title, value, icon: Icon }) => (
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold">{value}</div>
+      {subtitle && (
+        <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+      )}
     </CardContent>
   </Card>
 );
@@ -51,6 +57,7 @@ export default function ModernAdminDashboard() {
   const [customDateRange, setCustomDateRange] = useState(null);
   const [isCustomRange, setIsCustomRange] = useState(false);
   const { toast } = useToast();
+  const isReadOnly = session?.user?.teamRole === 'member';
 
   useEffect(() => {
     if (session?.user?.currentOrganizationId) {
@@ -61,11 +68,13 @@ export default function ModernAdminDashboard() {
 
   useEffect(() => {
     fetchAnalyticsData();
+    fetchDashboardData();
   }, [dateRange]);
 
   useEffect(() => {
     if (isCustomRange && customDateRange?.from && customDateRange?.to) {
       fetchAnalyticsData();
+      fetchDashboardData();
     }
   }, [customDateRange, isCustomRange]);
 
@@ -85,7 +94,18 @@ export default function ModernAdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/admin/analytics-overview');
+      let url = '/api/admin/analytics-overview';
+      const params = new URLSearchParams();
+      
+      if (isCustomRange && customDateRange?.from && customDateRange?.to) {
+        params.append('startDate', customDateRange.from.toISOString());
+        params.append('endDate', customDateRange.to.toISOString());
+        params.append('period', 'custom');
+      } else {
+        params.append('period', dateRange);
+      }
+      
+      const response = await fetch(`${url}?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data');
       }
@@ -163,22 +183,30 @@ export default function ModernAdminDashboard() {
     {
       title: 'Total Widgets',
       value: widgets.length || 0,
-      icon: MessageCircle
-    },
-    {
-      title: 'Active Widgets', 
-      value: analyticsOverview?.activeWidgets || widgets.filter(w => w.status === 'active').length || 0,
-      icon: Activity
+      icon: MessageCircle,
+      subtitle: `${analyticsOverview?.activeWidgets || 0} active`
     },
     {
       title: 'Total Conversations',
-      value: analyticsData?.metrics?.totalConversations || 0,
-      icon: Users
+      value: analyticsOverview?.totalConversations || 0,
+      icon: Users,
+      subtitle: `${analyticsData?.metrics?.totalMessages || 0} messages`
+    },
+    {
+      title: 'Avg Satisfaction', 
+      value: analyticsOverview?.satisfaction?.average 
+        ? `${analyticsOverview.satisfaction.average.toFixed(1)} ⭐` 
+        : 'N/A',
+      icon: Star,
+      subtitle: analyticsOverview?.satisfaction?.total 
+        ? `${analyticsOverview.satisfaction.total} ratings` 
+        : 'No ratings yet'
     },
     {
       title: 'Avg Response Time',
       value: analyticsData?.metrics?.avgResponseTime ? `${(analyticsData.metrics.avgResponseTime / 1000).toFixed(1)}s` : '0s',
-      icon: Zap
+      icon: Zap,
+      subtitle: 'Response performance'
     }
   ];
 
@@ -251,47 +279,58 @@ export default function ModernAdminDashboard() {
               />
             )}
             
-            <Button onClick={handleCreateWidget} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Widget
-            </Button>
+            {!isReadOnly && (
+              <Button onClick={handleCreateWidget} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Widget
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Organization Stats */}
-        {currentOrganization && currentOrganization.stats && (
+        {/* Organization Management */}
+        {!isReadOnly && currentOrganization && currentOrganization.stats && (
           <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
             <CardHeader>
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                Organization Overview
+                Organization Management
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Team Members</p>
                   <p className="text-2xl font-bold">{currentOrganization.stats.members || 0}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Widgets</p>
-                  <p className="text-2xl font-bold">{currentOrganization.stats.widgets || 0}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Conversations</p>
-                  <p className="text-2xl font-bold">{currentOrganization.stats.conversations || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Active users</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Pending Invites</p>
                   <p className="text-2xl font-bold">{currentOrganization.stats.pendingInvitations || 0}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Awaiting response</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Plan</p>
+                  <p className="text-lg font-bold">
+                    {currentOrganization.plan 
+                      ? currentOrganization.plan.charAt(0).toUpperCase() + currentOrganization.plan.slice(1)
+                      : 'Free'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Current subscription</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Stats Overview */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Performance Metrics */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Performance Metrics</h2>
+            <span className="text-sm text-muted-foreground">({getDateRangeLabel()})</span>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {loading ? (
             Array.from({ length: 4 }).map((_, i) => (
               <Card key={i}>
@@ -310,52 +349,8 @@ export default function ModernAdminDashboard() {
               <StatCard key={index} {...stat} />
             ))
           )}
+          </div>
         </div>
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              Quick Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <Button variant="outline" className="h-auto p-4 flex-col gap-2" onClick={handleCreateWidget}>
-                <Plus className="h-8 w-8" />
-                <div className="text-center">
-                  <div className="font-semibold">Create Widget</div>
-                  <div className="text-xs text-muted-foreground">Set up a new chat widget</div>
-                </div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="h-auto p-4 flex-col gap-2"
-                onClick={() => router.push('/admin/analytics')}
-              >
-                <Activity className="h-8 w-8" />
-                <div className="text-center">
-                  <div className="font-semibold">View Analytics</div>
-                  <div className="text-xs text-muted-foreground">Check performance metrics</div>
-                </div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="h-auto p-4 flex-col gap-2"
-                onClick={() => router.push('/admin/settings')}
-              >
-                <Users className="h-8 w-8" />
-                <div className="text-center">
-                  <div className="font-semibold">Manage Settings</div>
-                  <div className="text-xs text-muted-foreground">Configure your platform</div>
-                </div>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Recent Widgets */}
         <div className="space-y-4">
@@ -372,6 +367,15 @@ export default function ModernAdminDashboard() {
               </Button>
             )}
           </div>
+
+          {isReadOnly && widgets.length > 0 && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                You have view-only access to these widgets. Contact an admin to make changes.
+              </AlertDescription>
+            </Alert>
+          )}
           
           {loading ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -409,7 +413,7 @@ export default function ModernAdminDashboard() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {widgets.slice(0, 6).map((widget) => (
-                <ModernWidgetCard key={widget._id} widget={widget} />
+                <ModernWidgetCard key={widget._id} widget={widget} isReadOnly={isReadOnly} />
               ))}
             </div>
           )}

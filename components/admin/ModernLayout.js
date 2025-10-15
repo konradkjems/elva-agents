@@ -143,13 +143,16 @@ export default function ModernLayout({ children }) {
         
         console.log('🔍 Data received:', { widgets: widgets.length, demos: demos.length });
 
-        // Define searchable pages
+        // Define searchable pages (filter based on role)
         const pages = [
           { name: 'Dashboard', href: '/admin', icon: Home, description: 'Overview and statistics' },
           { name: 'Widgets', href: '/admin/widgets', icon: MessageCircle, description: 'Manage chat widgets' },
-          { name: 'Demo Widgets', href: '/admin/demo-widgets', icon: Globe, description: 'Client demonstrations' },
           { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, description: 'Performance insights' },
-          { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform configuration' },
+          { name: 'Support Requests', href: '/admin/support-requests', icon: ClipboardList, description: 'User support' },
+          ...(session?.user?.teamRole !== 'member' ? [
+            { name: 'Demo Widgets', href: '/admin/demo-widgets', icon: Globe, description: 'Client demonstrations' },
+            { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform configuration' }
+          ] : []),
           { name: 'Profile', href: '/admin/profile', icon: User, description: 'Your account settings' }
         ];
 

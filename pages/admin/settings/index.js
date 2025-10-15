@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import ModernLayout from '../../../components/admin/ModernLayout';
 import { 
@@ -13,11 +15,18 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function Settings() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState(0);
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+
+  // Check if user has access to settings
+  const isReadOnly = session?.user?.teamRole === 'member';
+  const isPlatformAdmin = session?.user?.role === 'platform_admin';
+  const hasAccess = !isReadOnly || isPlatformAdmin;
 
   const tabs = [
     { id: 0, name: 'System', icon: Cog6ToothIcon },
@@ -29,8 +38,18 @@ export default function Settings() {
   ];
 
   useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!hasAccess) {
+      setMessage({ type: 'error', text: 'Access denied. You do not have permission to access settings.' });
+      setTimeout(() => {
+        router.push('/admin');
+      }, 2000);
+      return;
+    }
+    
     fetchSettings();
-  }, []);
+  }, [status, hasAccess]);
 
   const fetchSettings = async () => {
     try {

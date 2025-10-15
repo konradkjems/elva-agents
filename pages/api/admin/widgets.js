@@ -3,6 +3,7 @@ import { withAdmin } from '../../../lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { ObjectId } from 'mongodb';
+import { requireRole } from '../../../lib/roleCheck';
 
 // Mock data for testing (fallback)
 const mockWidgets = [
@@ -338,6 +339,12 @@ async function handler(req, res) {
         res.status(200).json(mockWidgets);
       }
     } else if (req.method === 'POST') {
+      // Check role permissions for creating widgets
+      const roleCheck = await requireRole(req, res, ['owner', 'admin']);
+      if (!roleCheck.authorized) {
+        return res.status(403).json({ error: roleCheck.error });
+      }
+      
       // Create new widget in MongoDB
       try {
         if (!currentOrgId) {

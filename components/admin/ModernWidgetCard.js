@@ -23,10 +23,11 @@ import {
   Users,
   Calendar,
   Globe,
-  Zap
+  Zap,
+  Code
 } from 'lucide-react';
 
-export default function ModernWidgetCard({ widget }) {
+export default function ModernWidgetCard({ widget, isReadOnly = false }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -103,6 +104,23 @@ export default function ModernWidgetCard({ widget }) {
     }
   };
 
+  const handleCopyEmbedScript = async () => {
+    try {
+      const embedScript = `<script src="${window.location.origin}/api/widget-embed/${widget._id}"></script>`;
+      await navigator.clipboard.writeText(embedScript);
+      toast({
+        title: "Embed script copied",
+        description: "The embed script has been copied to your clipboard.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Copy failed",
+        description: "Failed to copy embed script to clipboard.",
+      });
+    }
+  };
+
   const getStatusColor = (status) => {
     return status === 'active' ? "default" : "secondary";
   };
@@ -162,41 +180,56 @@ export default function ModernWidgetCard({ widget }) {
             </div>
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                disabled={isLoading}
-              >
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleView}>
-                <Eye className="mr-2 h-4 w-4" />
-                Preview Widget
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleEdit}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Widget
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDuplicate} disabled={isLoading}>
-                <Copy className="mr-2 h-4 w-4" />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-destructive focus:text-destructive"
-                onClick={handleDelete}
-                disabled={isLoading}
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isReadOnly ? (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={handleEdit}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  disabled={isLoading}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleView}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Preview Widget
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleEdit}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Widget
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDuplicate} disabled={isLoading}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyEmbedScript}>
+                  <Code className="mr-2 h-4 w-4" />
+                  Copy Embed Script
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive"
+                  onClick={handleDelete}
+                  disabled={isLoading}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </CardHeader>
 
@@ -230,7 +263,7 @@ export default function ModernWidgetCard({ widget }) {
               <Zap className="h-4 w-4 text-purple-500" />
             </div>
             <div className="text-lg font-semibold">
-              {widget.stats?.responseTime || 0}ms
+              {widget.stats?.responseTime ? `${(widget.stats.responseTime / 1000).toFixed(1)}s` : '0s'}
             </div>
             <div className="text-xs text-muted-foreground">Avg Response</div>
           </div>
@@ -259,8 +292,17 @@ export default function ModernWidgetCard({ widget }) {
             className="flex-1"
             onClick={handleEdit}
           >
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
+            {isReadOnly ? (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                View Widget
+              </>
+            ) : (
+              <>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </>
+            )}
           </Button>
         </div>
       </CardFooter>

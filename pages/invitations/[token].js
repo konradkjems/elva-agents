@@ -177,28 +177,14 @@ export default function InvitationPage() {
         return;
       }
 
-      // Wait for session to update
-      setTimeout(async () => {
-        // Accept the invitation
-        const acceptResponse = await fetch(`/api/invitations/${token}?action=accept`, {
-          method: 'POST',
-        });
-
-        const acceptData = await acceptResponse.json();
-
-        if (!acceptResponse.ok) {
-          setError(acceptData.error || 'Account created but failed to accept invitation');
-          setProcessing(false);
-          return;
-        }
-
-        setSuccess('Account created and invitation accepted!');
-        
-        // Redirect to admin
-        setTimeout(() => {
-          router.push('/admin');
-        }, 2000);
-      }, 1000);
+      // Account created and invitation already accepted during registration
+      console.log('✅ Account created and invitation accepted automatically');
+      setSuccess('Account created and invitation accepted! Redirecting...');
+      
+      // Wait for session to update, then redirect
+      setTimeout(() => {
+        router.push('/admin');
+      }, 1500);
 
     } catch (err) {
       console.error('Error creating account:', err);

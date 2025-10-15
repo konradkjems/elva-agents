@@ -18,10 +18,11 @@ import {
   Plus,
   ArrowUpRight,
   Calendar,
-  Filter
+  Filter,
+  Star
 } from 'lucide-react';
 
-const StatCard = ({ title, value, icon: Icon }) => (
+const StatCard = ({ title, value, icon: Icon, subtitle }) => (
   <Card className="hover:shadow-md transition-shadow">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -31,6 +32,9 @@ const StatCard = ({ title, value, icon: Icon }) => (
     </CardHeader>
     <CardContent>
       <div className="text-2xl font-bold">{value}</div>
+      {subtitle && (
+        <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+      )}
     </CardContent>
   </Card>
 );
@@ -52,17 +56,30 @@ export default function ModernAdminDashboard() {
 
   useEffect(() => {
     fetchAnalyticsData();
+    fetchDashboardData();
   }, [dateRange]);
 
   useEffect(() => {
     if (isCustomRange && customDateRange?.from && customDateRange?.to) {
       fetchAnalyticsData();
+      fetchDashboardData();
     }
   }, [customDateRange, isCustomRange]);
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/admin/analytics-overview');
+      let url = '/api/admin/analytics-overview';
+      const params = new URLSearchParams();
+      
+      if (isCustomRange && customDateRange?.from && customDateRange?.to) {
+        params.append('startDate', customDateRange.from.toISOString());
+        params.append('endDate', customDateRange.to.toISOString());
+        params.append('period', 'custom');
+      } else {
+        params.append('period', dateRange);
+      }
+      
+      const response = await fetch(`${url}?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data');
       }
@@ -143,13 +160,18 @@ export default function ModernAdminDashboard() {
       icon: MessageCircle
     },
     {
-      title: 'Active Widgets', 
-      value: analyticsOverview?.activeWidgets || widgets.filter(w => w.status === 'active').length || 0,
-      icon: Activity
+      title: 'Avg Satisfaction', 
+      value: analyticsOverview?.satisfaction?.average 
+        ? `${analyticsOverview.satisfaction.average.toFixed(1)} ⭐` 
+        : 'N/A',
+      icon: Star,
+      subtitle: analyticsOverview?.satisfaction?.total 
+        ? `${analyticsOverview.satisfaction.total} ratings` 
+        : 'No ratings yet'
     },
     {
       title: 'Total Conversations',
-      value: analyticsData?.metrics?.totalConversations || 0,
+      value: analyticsOverview?.totalConversations || 0,
       icon: Users
     },
     {

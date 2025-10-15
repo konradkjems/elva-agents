@@ -38,12 +38,8 @@ const ROLE_INFO = {
   },
   member: {
     label: 'Member',
-    description: 'Can create and edit widgets'
-  },
-  viewer: {
-    label: 'Viewer',
     description: 'Read-only access to widgets and analytics'
-  }
+  },
 };
 
 export default function InviteMemberModal({ open, onOpenChange, organizationId, onSuccess }) {

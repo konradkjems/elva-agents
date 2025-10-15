@@ -26,51 +26,65 @@ import {
   ClipboardList
 } from 'lucide-react';
 
-const navigation = [
-  { 
-    name: 'Dashboard', 
-    href: '/admin', 
-    icon: Home,
-    description: 'Overview and quick stats'
-  },
-  { 
-    name: 'Widgets', 
-    href: '/admin/widgets', 
-    icon: MessageCircle,
-    description: 'Manage chat widgets',
-    badge: 'New'
-  },
-  { 
-    name: 'Demo Widgets', 
-    href: '/admin/demo-widgets', 
-    icon: Globe,
-    description: 'Client demonstrations',
-    badge: 'Demo'
-  },
-  { 
-    name: 'Analytics', 
-    href: '/admin/analytics', 
-    icon: BarChart3,
-    description: 'Performance insights'
-  },
-  { 
-    name: 'Support Requests', 
-    href: '/admin/support-requests', 
-    icon: ClipboardList,
-    description: 'Review user requests'
-  },
-  { 
-    name: 'Settings', 
-    href: '/admin/settings', 
-    icon: Settings,
-    description: 'Platform configuration'
-  },
-];
-
+const getNavigationForRole = (session) => {
+  const teamRole = session?.user?.teamRole;
+  const isPlatformAdmin = session?.user?.role === 'platform_admin';
+  
+  const allUsersNav = [
+    { 
+      name: 'Dashboard', 
+      href: '/admin', 
+      icon: Home,
+      description: 'Overview and quick stats'
+    },
+    { 
+      name: 'Widgets', 
+      href: '/admin/widgets', 
+      icon: MessageCircle,
+      description: teamRole === 'member' ? 'View chat widgets' : 'Manage chat widgets',
+      badge: teamRole === 'member' ? 'View Only' : 'New'
+    },
+    { 
+      name: 'Analytics', 
+      href: '/admin/analytics', 
+      icon: BarChart3,
+      description: 'Performance insights'
+    },
+    { 
+      name: 'Support Requests', 
+      href: '/admin/support-requests', 
+      icon: ClipboardList,
+      description: 'Review user requests'
+    }
+  ];
+  
+  const adminOnlyNav = [
+    { 
+      name: 'Demo Widgets', 
+      href: '/admin/demo-widgets', 
+      icon: Globe,
+      description: 'Client demonstrations',
+      badge: 'Demo'
+    },
+    { 
+      name: 'Settings', 
+      href: '/admin/settings', 
+      icon: Settings,
+      description: 'Platform configuration'
+    }
+  ];
+  
+  if (teamRole === 'member' && !isPlatformAdmin) {
+    return allUsersNav;
+  }
+  
+  return [...allUsersNav, ...adminOnlyNav];
+};
 
 export default function ModernSidebar({ open, setOpen }) {
   const router = useRouter();
   const { data: session } = useSession();
+  const navigation = getNavigationForRole(session);
 
   const getInitials = (name) => {
     if (!name) return '?';

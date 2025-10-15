@@ -24,7 +24,8 @@ import {
   Calendar,
   BarChart3,
   Activity,
-  Zap
+  Zap,
+  Star
 } from 'lucide-react';
 
 
@@ -50,6 +51,7 @@ export default function ModernAnalytics() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState(null);
+  const [satisfactionData, setSatisfactionData] = useState(null);
   const [widgets, setWidgets] = useState([]);
   const [dateRange, setDateRange] = useState('30d');
   const [selectedWidget, setSelectedWidget] = useState('all');
@@ -100,6 +102,28 @@ export default function ModernAnalytics() {
     }
   }, [dateRange, selectedWidget]);
 
+  const fetchSatisfactionData = useCallback(async () => {
+    if (selectedWidget === 'all') {
+      setSatisfactionData(null);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/satisfaction/analytics?widgetId=${selectedWidget}&timeRange=${dateRange}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('⭐ Frontend received satisfaction data:', data);
+        setSatisfactionData(data.data);
+      } else {
+        console.error('Satisfaction API response not ok:', response.status, response.statusText);
+        setSatisfactionData(null);
+      }
+    } catch (error) {
+      console.error('Failed to fetch satisfaction data:', error);
+      setSatisfactionData(null);
+    }
+  }, [dateRange, selectedWidget]);
+
   const fetchInitialData = async () => {
     setLoading(true);
     try {
@@ -133,7 +157,8 @@ export default function ModernAnalytics() {
   useEffect(() => {
     console.log('📊 useEffect triggered with:', { dateRange, selectedWidget, widgetsLength: widgets.length });
     fetchAnalyticsData();
-  }, [dateRange, selectedWidget, fetchAnalyticsData]);
+    fetchSatisfactionData();
+  }, [dateRange, selectedWidget, fetchAnalyticsData, fetchSatisfactionData]);
 
 
   // Debug logging
@@ -161,10 +186,10 @@ export default function ModernAnalytics() {
       subtitle: 'Average response time'
     },
     {
-      title: 'Avg Conversation Length',
-      value: analyticsData?.metrics?.avgConversationLength ? analyticsData.metrics.avgConversationLength.toFixed(1) : '0',
-      icon: Activity,
-      subtitle: 'Messages per conversation'
+      title: 'Avg Satisfaction',
+      value: satisfactionData?.average ? `${satisfactionData.average.toFixed(1)} ⭐` : 'N/A',
+      icon: Star,
+      subtitle: satisfactionData?.total ? `${satisfactionData.total} ratings` : 'No ratings yet'
     }
   ];
 
@@ -243,7 +268,7 @@ export default function ModernAnalytics() {
 
         {/* Charts and Analytics */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Overview
@@ -256,6 +281,10 @@ export default function ModernAnalytics() {
               <Zap className="h-4 w-4" />
               Performance
             </TabsTrigger>
+            <TabsTrigger value="satisfaction" className="gap-2">
+              <Star className="h-4 w-4" />
+              Satisfaction
+            </TabsTrigger>
             <TabsTrigger value="insights" className="gap-2">
               <Activity className="h-4 w-4" />
               Insights
@@ -263,205 +292,227 @@ export default function ModernAnalytics() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            {/* Widget Performance Comparison */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Widget Performance Overview</CardTitle>
+                <p className="text-sm text-muted-foreground">Compare performance across all your widgets</p>
+              </CardHeader>
+              <CardContent>
+                {widgets.length > 0 ? (
+                  <div className="space-y-3">
+                    {widgets.slice(0, 5).map((widget) => (
+                      <div key={widget._id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                        <div className="flex-1">
+                          <div className="font-medium">{widget.name}</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {widget.stats?.conversations || 0} conversations • {widget.stats?.messages || 0} messages
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="text-center">
+                            <div className="font-semibold">{widget.stats?.responseTime ? `${(widget.stats.responseTime / 1000).toFixed(1)}s` : '0s'}</div>
+                            <div className="text-xs text-muted-foreground">Response</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="font-semibold">{widget.stats?.uniqueUsers || 0}</div>
+                            <div className="text-xs text-muted-foreground">Users</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {widgets.length > 5 && (
+                      <div className="text-center text-sm text-muted-foreground pt-2">
+                        Showing top 5 widgets • {widgets.length - 5} more available
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageCircle className="mx-auto h-8 w-8 mb-2" />
+                    <p className="text-sm">No widgets available</p>
+                    <p className="text-xs mt-1">Create your first widget to see performance data</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Daily Trends Quick View */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Activity Trends</CardTitle>
+                <p className="text-sm text-muted-foreground">Recent conversation and message activity</p>
+              </CardHeader>
+              <CardContent>
+                {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 ? (
+                  <ChartContainer
+                    config={{
+                      conversations: {
+                        label: "Conversations",
+                        color: "hsl(var(--primary))",
+                      },
+                      messages: {
+                        label: "Messages", 
+                        color: "hsl(var(--secondary))",
+                      },
+                    }}
+                    className="h-[250px]"
+                  >
+                    <LineChart data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="conversations"
+                        stroke="var(--color-conversations)"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="messages"
+                        stroke="var(--color-messages)"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="mx-auto h-8 w-8 mb-2" />
+                    <p className="text-sm">No trend data available</p>
+                    <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="conversations" className="space-y-4">
+            {/* Daily Trends Line Chart - Full Width */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Conversation Trends</CardTitle>
+                <p className="text-sm text-muted-foreground">Conversation and message activity over time</p>
+              </CardHeader>
+              <CardContent>
+                {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 ? (
+                  <ChartContainer
+                    config={{
+                      conversations: {
+                        label: "Conversations",
+                        color: "hsl(var(--primary))",
+                      },
+                      messages: {
+                        label: "Messages", 
+                        color: "hsl(var(--secondary))",
+                      },
+                    }}
+                    className="h-[350px]"
+                  >
+                    <LineChart data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends)}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="conversations"
+                        stroke="var(--color-conversations)"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="messages"
+                        stroke="var(--color-messages)"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageCircle className="mx-auto h-8 w-8 mb-2" />
+                    <p className="text-sm">No daily trends available</p>
+                    <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Conversation Metrics */}
+            <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader>
-                  <CardTitle>Analytics Summary</CardTitle>
+                  <CardTitle className="text-base">Total Conversations</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-primary mb-1">
-                        {analyticsData?.metrics?.totalConversations || 0}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total Conversations</div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <div className="font-semibold">{analyticsData?.metrics?.totalMessages || 0}</div>
-                        <div className="text-muted-foreground text-xs">Messages</div>
-                      </div>
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <div className="font-semibold">
-                          {analyticsData?.metrics?.avgResponseTime ? `${(analyticsData.metrics.avgResponseTime / 1000).toFixed(1)}s` : '0s'}
-                        </div>
-                        <div className="text-muted-foreground text-xs">Avg Response</div>
-                      </div>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="text-sm text-muted-foreground mb-2">
-                        Showing data for: <strong>
-                          {selectedWidget === 'all' ? 'All Widgets' : widgets.find(w => w._id === selectedWidget)?.name || 'Selected Widget'}
-                        </strong>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Period: {dateRange === '7d' ? 'Last 7 days' : dateRange === '30d' ? 'Last 30 days' : dateRange === '90d' ? 'Last 3 months' : 'All time'}
-                      </div>
-                    </div>
+                  <div className="text-3xl font-bold text-primary">
+                    {analyticsData?.metrics?.totalConversations || 0}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    All conversations in selected period
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Hourly Activity</CardTitle>
+                  <CardTitle className="text-base">Total Messages</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {analyticsData?.metrics?.hourlyDistribution ? (
-                    <div className="space-y-2">
-                      <div className="text-sm text-muted-foreground mb-3">Hourly activity distribution</div>
-                      {analyticsData.metrics.hourlyDistribution
-                        .sort((a, b) => {
-                          // Sort chronologically by hour
-                          const hourA = parseInt(a.hour.split(':')[0]);
-                          const hourB = parseInt(b.hour.split(':')[0]);
-                          return hourA - hourB;
-                        })
-                        .slice(0, 6)
-                        .map((hour, index) => (
-                          <div key={hour.hour} className="flex items-center justify-between text-sm">
-                            <span className="font-medium">{hour.hour}</span>
-                            <div className="flex items-center space-x-2">
-                              <div 
-                                className="h-2 bg-primary rounded-full" 
-                                style={{ 
-                                  width: `${Math.max(20, (hour.count / Math.max(...analyticsData.metrics.hourlyDistribution.map(h => h.count))) * 60)}px` 
-                                }}
-                              />
-                              <span className="text-muted-foreground w-8 text-right">{hour.count}</span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Clock className="mx-auto h-8 w-8 mb-2" />
-                      <p className="text-sm">No hourly data available</p>
-                    </div>
-                  )}
+                  <div className="text-3xl font-bold text-primary">
+                    {analyticsData?.metrics?.totalMessages || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Messages sent across all conversations
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Unique Users</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-primary">
+                    {analyticsData?.metrics?.uniqueUsers || 0}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Individual users who started conversations
+                  </p>
                 </CardContent>
               </Card>
             </div>
+
           </TabsContent>
-
-           <TabsContent value="conversations" className="space-y-4">
-             <div className="grid gap-4 md:grid-cols-2">
-               {/* Daily Trends Line Chart */}
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Daily Conversation Trends</CardTitle>
-                   <p className="text-sm text-muted-foreground">Conversation and message activity over time</p>
-                 </CardHeader>
-                 <CardContent>
-                   {analyticsData?.metrics?.dailyTrends && analyticsData.metrics.dailyTrends.length > 0 ? (
-                     <ChartContainer
-                       config={{
-                         conversations: {
-                           label: "Conversations",
-                           color: "hsl(var(--primary))",
-                         },
-                         messages: {
-                           label: "Messages", 
-                           color: "hsl(var(--secondary))",
-                         },
-                       }}
-                       className="h-[300px]"
-                     >
-                       <LineChart data={prepareDailyTrendsChart(analyticsData.metrics.dailyTrends)}>
-                         <CartesianGrid strokeDasharray="3 3" />
-                         <XAxis 
-                           dataKey="date" 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <YAxis 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <ChartTooltip content={<ChartTooltipContent />} />
-                         <ChartLegend content={<ChartLegendContent />} />
-                         <Line
-                           type="monotone"
-                           dataKey="conversations"
-                           stroke="var(--color-conversations)"
-                           strokeWidth={2}
-                           dot={{ r: 4 }}
-                           activeDot={{ r: 6 }}
-                         />
-                         <Line
-                           type="monotone"
-                           dataKey="messages"
-                           stroke="var(--color-messages)"
-                           strokeWidth={2}
-                           dot={{ r: 4 }}
-                           activeDot={{ r: 6 }}
-                         />
-                       </LineChart>
-                     </ChartContainer>
-                   ) : (
-                     <div className="text-center py-8 text-muted-foreground">
-                       <MessageCircle className="mx-auto h-8 w-8 mb-2" />
-                       <p className="text-sm">No daily trends available</p>
-                       <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
-                     </div>
-                   )}
-                 </CardContent>
-               </Card>
-
-               {/* Hourly Activity Bar Chart */}
-               <Card>
-                 <CardHeader>
-                   <CardTitle>Hourly Activity Distribution</CardTitle>
-                   <p className="text-sm text-muted-foreground">When your users are most active</p>
-                 </CardHeader>
-                 <CardContent>
-                   {analyticsData?.metrics?.hourlyDistribution && analyticsData.metrics.hourlyDistribution.length > 0 ? (
-                     <ChartContainer
-                       config={{
-                         activity: {
-                           label: "Activity",
-                           color: "hsl(var(--primary))",
-                         },
-                       }}
-                       className="h-[300px]"
-                     >
-                       <BarChart data={prepareHourlyChart(analyticsData.metrics.hourlyDistribution)}>
-                         <CartesianGrid strokeDasharray="3 3" />
-                         <XAxis 
-                           dataKey="hour" 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <YAxis 
-                           tick={{ fontSize: 12 }}
-                           tickLine={false}
-                           axisLine={false}
-                         />
-                         <ChartTooltip content={<ChartTooltipContent />} />
-                         <Bar 
-                           dataKey="activity" 
-                           fill="var(--color-activity)"
-                           radius={[4, 4, 0, 0]}
-                         />
-                       </BarChart>
-                     </ChartContainer>
-                   ) : (
-                     <div className="text-center py-8 text-muted-foreground">
-                       <BarChart3 className="mx-auto h-8 w-8 mb-2" />
-                       <p className="text-sm">No hourly data available</p>
-                       <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
-                     </div>
-                   )}
-                 </CardContent>
-               </Card>
-             </div>
-
-           </TabsContent>
 
            <TabsContent value="performance" className="space-y-4">
              <div className="grid gap-4 md:grid-cols-2">
@@ -541,6 +592,206 @@ export default function ModernAnalytics() {
              </div>
 
            </TabsContent>
+
+          <TabsContent value="satisfaction" className="space-y-4">
+            {selectedWidget === 'all' ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      Please select a specific widget to view satisfaction ratings
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : !satisfactionData || satisfactionData.total === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">
+                      No satisfaction ratings yet for this widget
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Satisfaction Overview */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Average Rating
+                      </CardTitle>
+                      <Star className="h-4 w-4 text-yellow-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {satisfactionData.average.toFixed(1)} ⭐
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Out of 5 stars
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Total Ratings
+                      </CardTitle>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{satisfactionData.total}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ratings received
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Satisfaction Rate
+                      </CardTitle>
+                      <Activity className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {satisfactionData.distribution ? 
+                          Math.round(((satisfactionData.distribution[4] + satisfactionData.distribution[5]) / satisfactionData.total) * 100) : 0}%
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        4-5 star ratings
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Rating Distribution */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Rating Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {[5, 4, 3, 2, 1].map((rating) => {
+                          const count = satisfactionData.distribution?.[rating] || 0;
+                          const percentage = satisfactionData.total > 0 ? (count / satisfactionData.total) * 100 : 0;
+                          const emoji = ['😡', '😞', '😐', '😊', '🤩'][rating - 1];
+                          
+                          return (
+                            <div key={rating} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2">
+                                  <span className="text-lg">{emoji}</span>
+                                  <span className="font-medium">{rating} Star</span>
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {count} ({percentage.toFixed(0)}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-muted rounded-full h-2">
+                                <div 
+                                  className="bg-yellow-500 h-2 rounded-full transition-all"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Rating Trends */}
+                  {satisfactionData.trends?.daily && satisfactionData.trends.daily.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Rating Trends</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ChartContainer
+                          config={{
+                            average: {
+                              label: "Average Rating",
+                              color: "hsl(var(--chart-1))",
+                            },
+                          }}
+                          className="h-[300px]"
+                        >
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={satisfactionData.trends.daily.map(day => ({
+                              date: new Date(day.date).toLocaleDateString('da-DK', { month: 'short', day: 'numeric' }),
+                              average: day.average
+                            }))}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis 
+                                dataKey="date" 
+                                tick={{ fontSize: 12 }}
+                              />
+                              <YAxis 
+                                domain={[0, 5]}
+                                tick={{ fontSize: 12 }}
+                              />
+                              <ChartTooltip content={<ChartTooltipContent />} />
+                              <Line 
+                                type="monotone" 
+                                dataKey="average" 
+                                stroke="hsl(var(--chart-1))" 
+                                strokeWidth={2}
+                                dot={{ r: 4 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </ChartContainer>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                {/* Recent Ratings with Feedback */}
+                {satisfactionData.recentRatings && satisfactionData.recentRatings.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Ratings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {satisfactionData.recentRatings.slice(0, 10).map((rating, index) => (
+                          <div key={index} className="flex items-start gap-3 p-3 bg-muted rounded-lg">
+                            <div className="text-2xl">
+                              {['😡', '😞', '😐', '😊', '🤩'][rating.rating - 1]}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium">{rating.rating} stars</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(rating.submittedAt).toLocaleDateString('da-DK', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                              {rating.feedback && (
+                                <p className="text-sm text-muted-foreground">"{rating.feedback}"</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </TabsContent>
 
           <TabsContent value="insights" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">

@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { withAdmin } from '../../../../lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
+import { requireRole } from '../../../../lib/roleCheck';
 
 // Mock data for testing (fallback when MongoDB is unavailable)
 const mockWidgets = [
@@ -279,6 +280,12 @@ async function handler(req, res) {
       
       res.status(200).json(widget);
     } else if (req.method === 'PUT') {
+      // Check role permissions for updating widgets
+      const roleCheck = await requireRole(req, res, ['owner', 'admin']);
+      if (!roleCheck.authorized) {
+        return res.status(403).json({ error: roleCheck.error });
+      }
+      
       // Update widget in MongoDB
       try {
         const client = await clientPromise;
@@ -351,6 +358,12 @@ async function handler(req, res) {
       mockWidgets[widgetIndex] = { ...mockWidgets[widgetIndex], ...updateData };
       res.status(200).json(mockWidgets[widgetIndex]);
     } else if (req.method === 'DELETE') {
+      // Check role permissions for deleting widgets
+      const roleCheck = await requireRole(req, res, ['owner', 'admin']);
+      if (!roleCheck.authorized) {
+        return res.status(403).json({ error: roleCheck.error });
+      }
+      
       // Delete widget from MongoDB
       try {
         const client = await clientPromise;

@@ -954,52 +954,6 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       </p>
                     </div>
 
-                    {/* Feedback Settings */}
-                    <div className="space-y-4">
-                      <Switch.Group>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <Switch.Label className="text-sm font-medium text-gray-700">
-                              Allow Feedback
-                            </Switch.Label>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Show optional text area for additional feedback
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.satisfaction?.allowFeedback !== false}
-                            onChange={(checked) => handleFieldChange('satisfaction', 'allowFeedback', checked)}
-                            className={`${
-                              settings.satisfaction?.allowFeedback !== false ? 'bg-yellow-600' : 'bg-gray-200'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2`}
-                          >
-                            <span
-                              className={`${
-                                settings.satisfaction?.allowFeedback !== false ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                            />
-                          </Switch>
-                        </div>
-                      </Switch.Group>
-
-                      {settings.satisfaction?.allowFeedback !== false && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Feedback Placeholder
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.satisfaction?.feedbackPlaceholder || 'Optional feedback...'}
-                            onChange={(e) => handleFieldChange('satisfaction', 'feedbackPlaceholder', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
-                            placeholder="Optional feedback..."
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Placeholder text for the feedback text area
-                          </p>
-                        </div>
-                      )}
-                    </div>
 
                     {/* Rating Scale Preview */}
                     <div>
@@ -1009,7 +963,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-lg">
                         <span className="text-sm text-gray-600">Poor</span>
                         <div className="flex gap-2">
-                          <span className="text-2xl">😡</span>
+                          <span className="text-2xl">🙁</span>
                           <span className="text-2xl">😞</span>
                           <span className="text-2xl">😐</span>
                           <span className="text-2xl">😊</span>

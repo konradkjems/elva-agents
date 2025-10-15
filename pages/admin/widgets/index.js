@@ -26,7 +26,6 @@ import {
   Search,
   Calendar,
   Star,
-  Download,
   Plus,
   Settings,
   BarChart3,
@@ -38,8 +37,10 @@ import {
   Copy,
   Users,
   Globe,
-  Zap
+  Zap,
+  Info
 } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 // Create Demo Modal Component
 function CreateDemoModal({ widget, onClose, onSuccess }) {
@@ -215,6 +216,7 @@ export default function WidgetsPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const { toast } = useToast();
+  const isReadOnly = session?.user?.teamRole === 'member';
   
   // State for conversations tab
   const [widgets, setWidgets] = useState([]);
@@ -555,14 +557,28 @@ export default function WidgetsPage() {
               <BarChart3 className="h-4 w-4 mr-2" />
               Analytics
             </Button>
-            <Button
-              onClick={() => router.push('/admin/widgets/create')}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Widget
-            </Button>
+            {!isReadOnly && (
+              <Button
+                onClick={() => router.push('/admin/widgets/create')}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Widget
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Read-Only Banner */}
+        {isReadOnly && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Read-Only Access</AlertTitle>
+            <AlertDescription>
+              You can view widget details and analytics, but cannot create or edit widgets. 
+              Contact your organization admin for edit access.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue={router.query.tab === 'conversations' ? 'conversations' : 'management'} className="space-y-6">
@@ -616,10 +632,6 @@ export default function WidgetsPage() {
                 />
               </div>
 
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
             </div>
 
             {/* Main Content */}
@@ -847,39 +859,50 @@ export default function WidgetsPage() {
                           </div>
                         </div>
                         
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => handleViewWidget(widget._id)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              Preview Widget
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/admin/widgets/${widget._id}`)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Widget
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleDuplicateWidget(widget)}>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDeleteWidget(widget._id)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {isReadOnly ? (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => router.push(`/admin/widgets/${widget._id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => handleViewWidget(widget._id)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Preview Widget
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/admin/widgets/${widget._id}`)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Widget
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDuplicateWidget(widget)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Duplicate
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => handleDeleteWidget(widget._id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </CardHeader>
 
@@ -942,17 +965,28 @@ export default function WidgetsPage() {
                           className="flex-1"
                           onClick={() => router.push(`/admin/widgets/${widget._id}`)}
                         >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          {isReadOnly ? (
+                            <>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Widget
+                            </>
+                          ) : (
+                            <>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </>
+                          )}
                         </Button>
-                        <Button 
-                          size="sm" 
-                          className="flex-1 bg-green-600 hover:bg-green-700"
-                          onClick={() => handleCreateDemo(widget)}
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          Demo
-                        </Button>
+                        {!isReadOnly && (
+                          <Button 
+                            size="sm" 
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                            onClick={() => handleCreateDemo(widget)}
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Demo
+                          </Button>
+                        )}
                       </div>
                     </CardFooter>
                   </Card>

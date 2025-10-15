@@ -212,6 +212,20 @@ export const authOptions = {
           if (dbUser) {
             token.currentOrganizationId = dbUser.currentOrganizationId?.toString()
             token.role = dbUser.role
+            
+            // Fetch team role and permissions from current organization
+            if (dbUser.currentOrganizationId) {
+              const teamMember = await db.collection('team_members').findOne({
+                userId: new ObjectId(token.sub),
+                organizationId: dbUser.currentOrganizationId,
+                status: 'active'
+              })
+              
+              if (teamMember) {
+                token.teamRole = teamMember.role
+                token.permissions = teamMember.permissions
+              }
+            }
           }
         } catch (error) {
           console.error('Error refreshing user data in JWT:', error)
@@ -225,6 +239,8 @@ export const authOptions = {
       session.user.role = token.role
       session.user.currentOrganizationId = token.currentOrganizationId
       session.user.provider = token.provider
+      session.user.teamRole = token.teamRole
+      session.user.permissions = token.permissions
       return session
     }
   },

@@ -19,6 +19,42 @@ export default async function handler(req, res) {
     const currentOrgId = session.user?.currentOrganizationId;
     const isPlatformAdmin = session.user?.role === 'platform_admin';
 
+    // Get query parameters for date filtering
+    const { 
+      period = '30d', 
+      startDate: customStartDate, 
+      endDate: customEndDate 
+    } = req.query;
+
+    // Calculate date range
+    const now = new Date();
+    let startDate;
+    let endDate = now;
+    
+    if (period === 'custom' && customStartDate && customEndDate) {
+      startDate = new Date(customStartDate);
+      endDate = new Date(customEndDate);
+    } else {
+      switch (period) {
+        case '1d':
+          startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case '90d':
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startDate = null; // All time
+      }
+    }
+
+    console.log('📊 Analytics overview date range:', { period, startDate, endDate });
+
     const client = await clientPromise;
     const db = client.db('elva-agents'); // Use new database
     const analytics = db.collection('analytics');
@@ -26,6 +62,7 @@ export default async function handler(req, res) {
     const organizations = db.collection('organizations');
     const teamMembers = db.collection('team_members');
     const invitations = db.collection('invitations');
+    const satisfactionAnalytics = db.collection('satisfaction_analytics');
 
     // Build query to filter by organization
     const widgetQuery = {
@@ -53,10 +90,22 @@ export default async function handler(req, res) {
         return typeof w._id === 'object' ? w._id.toString() : String(w._id);
       });
       
-      // Query analytics for these specific widgets
-      analyticsData = await analytics.find({
+      // Build analytics query with date filtering
+      const analyticsQuery = {
         agentId: { $in: widgetIds }
-      }).sort({ date: -1 }).toArray();
+      };
+      
+      // Add date filter if startDate is provided
+      if (startDate) {
+        if (period === 'custom' && endDate) {
+          analyticsQuery.date = { $gte: startDate, $lte: endDate };
+        } else {
+          analyticsQuery.date = { $gte: startDate };
+        }
+      }
+      
+      // Query analytics for these specific widgets
+      analyticsData = await analytics.find(analyticsQuery).sort({ date: -1 }).toArray();
       
       console.log('📊 Found analytics data for org widgets:', analyticsData.map(a => ({ agentId: a.agentId, date: a.date, conversations: a.metrics?.conversations })));
     } else {
@@ -76,6 +125,63 @@ export default async function handler(req, res) {
     console.log('📊 Widget statuses:', allWidgets.map(w => ({ name: w.name, status: w.status })));
     const activeWidgets = allWidgets.filter(widget => widget.status === 'active');
     console.log('📊 Active widgets count:', activeWidgets.length);
+
+    // Get satisfaction data for all widgets in organization
+    let satisfactionData = { total: 0, average: 0 };
+    if (allWidgets.length > 0) {
+      try {
+        // Handle both string and ObjectId widget IDs
+        const widgetIds = allWidgets.map(w => {
+          // If _id is already an ObjectId, use it as is
+          // If _id is a string that looks like an ObjectId, convert it
+          // Otherwise keep it as string
+          if (typeof w._id === 'object') {
+            return w._id;
+          } else if (typeof w._id === 'string' && w._id.match(/^[0-9a-fA-F]{24}$/)) {
+            return new ObjectId(w._id);
+          } else {
+            return w._id;
+          }
+        });
+        console.log('⭐ Fetching satisfaction for widget IDs:', widgetIds.map(id => id.toString ? id.toString() : id));
+        
+        // Calculate date range for last 30 days
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 30);
+        console.log('⭐ Date range:', startDate.toISOString(), 'to', endDate.toISOString());
+        
+        const satisfactionRecords = await satisfactionAnalytics.find({
+          widgetId: { $in: widgetIds },
+          date: { $gte: startDate, $lte: endDate }
+        }).toArray();
+        
+        console.log('⭐ Found', satisfactionRecords.length, 'satisfaction records');
+        
+        if (satisfactionRecords.length > 0) {
+          const totalRatings = satisfactionRecords.reduce((sum, record) => sum + (record.ratings?.total || 0), 0);
+          const weightedSum = satisfactionRecords.reduce((sum, record) => {
+            return sum + ((record.ratings?.average || 0) * (record.ratings?.total || 0));
+          }, 0);
+          
+          satisfactionData = {
+            total: totalRatings,
+            average: totalRatings > 0 ? Math.round((weightedSum / totalRatings) * 10) / 10 : 0
+          };
+          
+          console.log('⭐ Calculated satisfaction - Total:', totalRatings, 'Average:', satisfactionData.average);
+        } else {
+          console.log('⭐ No satisfaction records found in date range');
+        }
+        
+        console.log('⭐ Final satisfaction data:', satisfactionData);
+      } catch (satisfactionError) {
+        console.error('⭐ Error fetching satisfaction data:', satisfactionError);
+        // Continue with default satisfaction data
+      }
+    } else {
+      console.log('⭐ No widgets found, skipping satisfaction data fetch');
+    }
 
     // Get analytics for each widget
     const widgetsWithAnalytics = allWidgets.map(widget => {
@@ -146,6 +252,7 @@ export default async function handler(req, res) {
         totalConversations,
         avgResponseTime: Math.round(avgResponseTime),
         avgSatisfaction: avgSatisfaction ? Math.round(avgSatisfaction * 10) / 10 : null,
+        satisfaction: satisfactionData,
         organizationStats: orgStats
       },
       widgets: widgetsWithAnalytics

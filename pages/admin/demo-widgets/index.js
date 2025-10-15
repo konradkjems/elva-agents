@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import ModernLayout from '../../../components/admin/ModernLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Plus,
   Eye,
@@ -21,20 +24,42 @@ import {
   AlertTriangle,
   CheckCircle,
   RefreshCw,
-  Settings
+  Settings,
+  Copy,
+  ShieldAlert
 } from 'lucide-react';
 
 export default function DemoWidgetsPage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const { toast } = useToast();
   const [demos, setDemos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDemo, setSelectedDemo] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [usageStats, setUsageStats] = useState({});
+  const [screenshotLoading, setScreenshotLoading] = useState({});
+
+  // Check if user has access to demo widgets
+  const isReadOnly = session?.user?.teamRole === 'member';
+  const isPlatformAdmin = session?.user?.role === 'platform_admin';
+  const hasAccess = !isReadOnly || isPlatformAdmin;
 
   useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!hasAccess) {
+      toast({
+        variant: "destructive",
+        title: "Access Denied",
+        description: "You don't have permission to access demo widgets."
+      });
+      router.push('/admin');
+      return;
+    }
+    
     fetchDemos();
-  }, []);
+  }, [status, hasAccess]);
 
   const fetchDemos = async () => {
     try {
@@ -103,6 +128,9 @@ export default function DemoWidgetsPage() {
   };
 
   const captureScreenshot = async (demo, isRetake = false) => {
+    // Set loading state for this specific demo
+    setScreenshotLoading(prev => ({ ...prev, [demo._id]: true }));
+    
     try {
       const response = await fetch('/api/admin/screenshot', {
         method: 'POST',
@@ -131,6 +159,63 @@ export default function DemoWidgetsPage() {
         title: "Error",
         description: "Failed to capture screenshot",
       });
+    } finally {
+      // Clear loading state
+      setScreenshotLoading(prev => ({ ...prev, [demo._id]: false }));
+    }
+  };
+
+  const copyDemoLink = async (demo) => {
+    try {
+      const demoUrl = `${window.location.origin}/demo/${demo._id}`;
+      await navigator.clipboard.writeText(demoUrl);
+      toast({
+        title: "Success",
+        description: "Demo link copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to copy demo link",
+      });
+    }
+  };
+
+  const resetScreenshot = async (demo) => {
+    // Set loading state for this specific demo
+    setScreenshotLoading(prev => ({ ...prev, [demo._id]: true }));
+    
+    try {
+      const response = await fetch('/api/admin/screenshot', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          demoId: demo._id
+        })
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Screenshot reset successfully",
+        });
+        // Refresh data after a short delay
+        setTimeout(() => fetchDemos(), 1000);
+      } else {
+        throw new Error('Failed to reset screenshot');
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to reset screenshot",
+      });
+    } finally {
+      // Clear loading state
+      setScreenshotLoading(prev => ({ ...prev, [demo._id]: false }));
     }
   };
 
@@ -329,32 +414,53 @@ export default function DemoWidgetsPage() {
                     {/* Screenshot Status */}
                     {demo.demoSettings?.clientWebsiteUrl && (
                       <div className="text-sm">
-                        <p className="text-gray-600 mb-1">Screenshot:</p>
+                        <p className="text-gray-600 mb-2">Screenshot:</p>
                         <div className="flex items-center justify-between">
                           <span className={`text-xs px-2 py-1 rounded ${
                             demo.demoSettings?.screenshotUrl 
                               ? 'bg-green-100 text-green-800' 
                               : 'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {demo.demoSettings?.screenshotUrl ? 'Captured' : 'Not captured'}
+                            {screenshotLoading[demo._id] 
+                              ? 'Capturing...' 
+                              : demo.demoSettings?.screenshotUrl 
+                                ? 'Captured' 
+                                : 'Not captured'
+                            }
                           </span>
-                          <div className="flex items-center gap-2">
-                            {demo.demoSettings?.screenshotUrl ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => captureScreenshot(demo, true)}
-                                className="text-xs"
-                              >
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                                Retake
-                              </Button>
+                          <div className="flex items-center gap-1">
+                            {screenshotLoading[demo._id] ? (
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                Processing...
+                              </div>
+                            ) : demo.demoSettings?.screenshotUrl ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => captureScreenshot(demo, true)}
+                                  className="text-xs px-2 py-1 h-6"
+                                >
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  Retake
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => resetScreenshot(demo)}
+                                  className="text-xs px-2 py-1 h-6"
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  Reset
+                                </Button>
+                              </>
                             ) : (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => captureScreenshot(demo)}
-                                className="text-xs"
+                                className="text-xs px-2 py-1 h-6"
                               >
                                 <ExternalLink className="h-3 w-3 mr-1" />
                                 Capture
@@ -366,32 +472,43 @@ export default function DemoWidgetsPage() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => window.open(demo.demoSettings?.demoUrl, '_blank')}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => resetUsage(demo._id)}
-                          disabled={!usage}
-                        >
-                          <RefreshCw className="h-4 w-4 mr-1" />
-                          Reset
-                        </Button>
-                      </div>
+                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(demo.demoSettings?.demoUrl, '_blank')}
+                        className="text-xs px-3 py-1 h-7"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyDemoLink(demo)}
+                        className="text-xs px-3 py-1 h-7"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy Link
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resetUsage(demo._id)}
+                        disabled={!usage}
+                        className="text-xs px-3 py-1 h-7"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Reset Usage
+                      </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => deleteDemo(demo._id)}
+                        className="text-xs px-3 py-1 h-7"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
                       </Button>
                     </div>
                   </CardContent>

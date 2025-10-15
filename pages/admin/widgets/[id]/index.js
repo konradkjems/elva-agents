@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import ModernLayout from '../../../../components/admin/ModernLayout';
 import LivePreview from '../../../../components/admin/WidgetEditor/LivePreview';
 import SettingsPanel from '../../../../components/admin/WidgetEditor/SettingsPanel';
@@ -9,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ArrowLeft,
   Check,
@@ -17,12 +19,14 @@ import {
   Share,
   Save,
   Eye,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Info
 } from 'lucide-react';
 
 export default function WidgetEditor() {
   const router = useRouter();
   const { id } = router.query;
+  const { data: session } = useSession();
   const { toast } = useToast();
   const [widget, setWidget] = useState(null);
   const [settings, setSettings] = useState({});
@@ -30,6 +34,7 @@ export default function WidgetEditor() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'success', 'error', null
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const isReadOnly = session?.user?.teamRole === 'member';
 
   useEffect(() => {
     if (id) {
@@ -252,26 +257,39 @@ export default function WidgetEditor() {
               Embed Code
             </Button>
             
-            {/* Save Button */}
-            <Button 
-              onClick={handleSave}
-              disabled={saving || !hasUnsavedChanges}
-              className="min-w-[120px]"
-            >
-              {saving ? (
-                <>
-                  <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
+            {/* Save Button - Only show for admin/owner */}
+            {!isReadOnly && (
+              <Button 
+                onClick={handleSave}
+                disabled={saving || !hasUnsavedChanges}
+                className="min-w-[120px]"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Read-Only Banner */}
+        {isReadOnly && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Read-Only Mode</AlertTitle>
+            <AlertDescription>
+              You are viewing this widget in read-only mode. Contact your organization admin to request edit access.
+            </AlertDescription>
+          </Alert>
+        )}
 
          {/* Main Content */}
          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-12rem)]">
@@ -286,14 +304,15 @@ export default function WidgetEditor() {
                  Configure your widget's appearance and behavior
                </CardDescription>
              </CardHeader>
-             <CardContent className="flex-1 overflow-y-auto p-0">
-               <SettingsPanel
-                 settings={settings}
-                 onChange={setSettings}
-                 onSave={handleSave}
-                 saving={saving}
-               />
-             </CardContent>
+            <CardContent className="flex-1 overflow-y-auto p-0">
+              <SettingsPanel
+                settings={settings}
+                onChange={isReadOnly ? () => {} : setSettings}
+                onSave={handleSave}
+                saving={saving}
+                disabled={isReadOnly}
+              />
+            </CardContent>
            </Card>
            
            {/* Preview Panel - Takes up 2 columns */}
