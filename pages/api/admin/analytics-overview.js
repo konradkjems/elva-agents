@@ -73,8 +73,8 @@ export default async function handler(req, res) {
     const avgSatisfaction = analyticsData.length > 0 ? totalSatisfaction / analyticsData.length : null;
 
     // Calculate active widgets (widgets with status 'active')
-    console.log('📊 Widget statuses:', allWidgets.map(w => ({ name: w.name, status: w.status, isActive: w.isActive })));
-    const activeWidgets = allWidgets.filter(widget => widget.status === 'active' || widget.isActive === true);
+    console.log('📊 Widget statuses:', allWidgets.map(w => ({ name: w.name, status: w.status })));
+    const activeWidgets = allWidgets.filter(widget => widget.status === 'active');
     console.log('📊 Active widgets count:', activeWidgets.length);
 
     // Get analytics for each widget

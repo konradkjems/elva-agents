@@ -327,12 +327,18 @@ export default function ModernAnalytics() {
                           <div className="space-y-1">
                             <div className="font-medium text-sm">{widget.name}</div>
                             <div className="text-xs text-muted-foreground">
-                              {widget.isActive ? 'Active' : 'Inactive'} • Created {new Date(widget.createdAt).toLocaleDateString()}
+                              {widget.status === 'active' ? 'Active' : 'Inactive'} • Created {new Date(widget.createdAt).toLocaleDateString()}
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <Badge variant={widget.isActive ? "default" : "secondary"} className="text-xs">
-                              {widget.isActive ? 'Active' : 'Inactive'}
+                            <Badge 
+                              variant="outline"
+                              className={widget.status === 'active' 
+                                ? "bg-green-100 text-green-800 hover:bg-green-200" 
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                              }
+                            >
+                              {widget.status === 'active' ? 'Active' : 'Inactive'}
                             </Badge>
                             <Button
                               variant="ghost"
@@ -506,7 +512,7 @@ export default function ModernAnalytics() {
                     <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <span className="text-sm font-medium">Active Widgets</span>
                       <span className="text-sm font-semibold">
-                        {widgets.filter(w => w.isActive).length}/{widgets.length}
+                        {widgets.filter(w => w.status === 'active').length}/{widgets.length}
                       </span>
                     </div>
                   </div>
@@ -526,7 +532,7 @@ export default function ModernAnalytics() {
                     <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                       <span className="text-sm font-medium">Active Widgets</span>
                       <span className="text-sm font-semibold">
-                        {widgets.filter(w => w.isActive).length} of {widgets.length}
+                        {widgets.filter(w => w.status === 'active').length} of {widgets.length}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-muted rounded-lg">

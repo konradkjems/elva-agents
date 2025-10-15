@@ -53,8 +53,8 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'No organization access' });
       }
 
-      // Get manual reviews for user's organizations
-      const reviews = await db.collection('manual_reviews')
+      // Get support requests for user's organizations
+      const requests = await db.collection('support_requests')
         .find({
           organizationId: { $in: organizationIds }
         })
@@ -62,23 +62,23 @@ export default async function handler(req, res) {
         .limit(100)
         .toArray();
 
-      // Get widget and organization information for each review
-      const reviewsWithDetails = await Promise.all(
-        reviews.map(async (review) => {
+      // Get widget and organization information for each request
+      const requestsWithDetails = await Promise.all(
+        requests.map(async (request) => {
           const widget = await db.collection('widgets').findOne({
-            _id: review.widgetId
+            _id: request.widgetId
           });
           
           const conversation = await db.collection('conversations').findOne({
-            _id: review.conversationId
+            _id: request.conversationId
           });
 
           const organization = await db.collection('organizations').findOne({
-            _id: review.organizationId
+            _id: request.organizationId
           });
 
           return {
-            ...review,
+            ...request,
             widget: widget ? {
               _id: widget._id,
               name: widget.name,
@@ -102,11 +102,11 @@ export default async function handler(req, res) {
 
       res.status(200).json({
         success: true,
-        reviews: reviewsWithDetails
+        requests: requestsWithDetails
       });
 
     } catch (error) {
-      console.error('❌ Error fetching manual reviews:', error);
+      console.error('❌ Error fetching support requests:', error);
       res.status(500).json({ 
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -114,11 +114,11 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'PUT') {
     try {
-      const { reviewId, status, notes } = req.body;
+      const { requestId, status, notes } = req.body;
 
-      if (!reviewId || !status) {
+      if (!requestId || !status) {
         return res.status(400).json({ 
-          error: 'Missing required fields: reviewId and status' 
+          error: 'Missing required fields: requestId and status' 
         });
       }
 
@@ -149,17 +149,17 @@ export default async function handler(req, res) {
 
       const organizationIds = memberships.map(m => m.organizationId);
 
-      // Verify user has access to this review
-      const review = await db.collection('manual_reviews').findOne({
-        _id: new ObjectId(reviewId),
+      // Verify user has access to this support request
+      const request = await db.collection('support_requests').findOne({
+        _id: new ObjectId(requestId),
         organizationId: { $in: organizationIds }
       });
 
-      if (!review) {
-        return res.status(404).json({ error: 'Review not found or access denied' });
+      if (!request) {
+        return res.status(404).json({ error: 'Support request not found or access denied' });
       }
 
-      // Update review status
+      // Update request status
       const updateData = {
         status,
         updatedAt: new Date()
@@ -174,28 +174,28 @@ export default async function handler(req, res) {
         updateData.completedBy = user._id;
       }
 
-      const result = await db.collection('manual_reviews').updateOne(
-        { _id: new ObjectId(reviewId) },
+      const result = await db.collection('support_requests').updateOne(
+        { _id: new ObjectId(requestId) },
         { $set: updateData }
       );
 
       if (result.modifiedCount === 0) {
-        return res.status(404).json({ error: 'Review not found' });
+        return res.status(404).json({ error: 'Support request not found' });
       }
 
-      console.log('✅ Manual review status updated:', {
-        reviewId,
+      console.log('✅ Support request status updated:', {
+        requestId,
         status,
         updatedBy: user.email
       });
 
       res.status(200).json({
         success: true,
-        message: 'Review status updated successfully'
+        message: 'Support request status updated successfully'
       });
 
     } catch (error) {
-      console.error('❌ Error updating manual review:', error);
+      console.error('❌ Error updating support request:', error);
       res.status(500).json({ 
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined

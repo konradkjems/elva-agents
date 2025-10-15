@@ -180,16 +180,10 @@ export default function InviteMemberModal({ open, onOpenChange, organizationId, 
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="viewer">
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">Viewer</span>
-                    <span className="text-xs text-muted-foreground">Read-only access</span>
-                  </div>
-                </SelectItem>
                 <SelectItem value="member">
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Member</span>
-                    <span className="text-xs text-muted-foreground">Can create and edit widgets</span>
+                    <span className="text-xs text-muted-foreground">View only access</span>
                   </div>
                 </SelectItem>
                 <SelectItem value="admin">

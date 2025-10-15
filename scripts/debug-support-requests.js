@@ -18,7 +18,7 @@ async function debugManualReviews() {
     const db = client.db('elva-agents');
     
     // Get all manual reviews
-    const reviews = await db.collection('manual_reviews').find({}).toArray();
+    const reviews = await db.collection('support_requests').find({}).toArray();
     console.log(`📊 Found ${reviews.length} manual reviews total`);
     
     if (reviews.length > 0) {

@@ -19,7 +19,7 @@ async function migrateManualReviews() {
     const db = client.db('elva-agents');
     
     // Find alle manual reviews hvor organizationId er string
-    const reviews = await db.collection('manual_reviews').find({
+    const reviews = await db.collection('support_requests').find({
       organizationId: { $type: 'string' }
     }).toArray();
     
@@ -35,7 +35,7 @@ async function migrateManualReviews() {
     
     for (const review of reviews) {
       try {
-        await db.collection('manual_reviews').updateOne(
+        await db.collection('support_requests').updateOne(
           { _id: review._id },
           { $set: { organizationId: new ObjectId(review.organizationId) } }
         );

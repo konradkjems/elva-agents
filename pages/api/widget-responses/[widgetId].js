@@ -179,6 +179,7 @@ export default async function handler(req, res) {
     right: 24px;
     width: 450px;
     height: 600px;
+    max-height: calc(100vh - 180px);
     background: \${WIDGET_CONFIG.theme.chatBg || '#ffffff'};
     border: none;
     border-radius: 20px;
@@ -769,16 +770,25 @@ export default async function handler(req, res) {
     if (window.innerWidth <= 480) {
       chatBox.style.width = 'calc(100vw - 40px)';
       chatBox.style.height = 'calc(100vh - 140px)';
+      chatBox.style.maxHeight = 'calc(100vh - 140px)';
       chatBox.style.right = '20px';
       chatBox.style.bottom = '70px';
     } else if (window.innerWidth <= 768) {
       chatBox.style.width = '400px';
       chatBox.style.height = '550px';
+      chatBox.style.maxHeight = 'calc(100vh - 160px)';
       chatBox.style.right = '20px';
       chatBox.style.bottom = '90px';
     } else {
+      // Desktop: Intelligent height scaling
+      const viewportHeight = window.innerHeight;
+      const configuredHeight = 600;
+      const availableHeight = viewportHeight - 180; // Margins + button space
+      const finalHeight = Math.max(Math.min(configuredHeight, availableHeight), 300);
+      
       chatBox.style.width = '450px';
-      chatBox.style.height = '600px';
+      chatBox.style.height = finalHeight + 'px';
+      chatBox.style.maxHeight = 'calc(100vh - 180px)';
       chatBox.style.right = '24px';
       chatBox.style.bottom = '100px';
     }

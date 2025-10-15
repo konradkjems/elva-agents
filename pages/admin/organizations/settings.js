@@ -362,8 +362,23 @@ export default function OrganizationSettings() {
         return 'default';
       case 'admin':
         return 'secondary';
+      case 'member':
+        return 'outline';
       default:
         return 'outline';
+    }
+  };
+  
+  const getRoleDisplayName = (role) => {
+    switch (role) {
+      case 'owner':
+        return 'Owner';
+      case 'admin':
+        return 'Admin';
+      case 'member':
+        return 'Member (view only)';
+      default:
+        return role;
     }
   };
 
@@ -508,10 +523,15 @@ export default function OrganizationSettings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="starter">Starter</SelectItem>
+                        <SelectItem value="free">
+                          <div className="flex flex-col">
+                            <span>Gratis</span>
+                            <span className="text-xs text-muted-foreground">30 dage gratis prøve</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="basic">Basis</SelectItem>
+                        <SelectItem value="growth">Vækst</SelectItem>
                         <SelectItem value="pro">Pro</SelectItem>
-                        <SelectItem value="enterprise">Enterprise</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -647,8 +667,8 @@ export default function OrganizationSettings() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={getRoleBadgeVariant(member.role)} className="capitalize">
-                            {member.role}
+                          <Badge variant={getRoleBadgeVariant(member.role)}>
+                            {getRoleDisplayName(member.role)}
                           </Badge>
                           <Badge variant="outline" className="capitalize">
                             {member.status}
@@ -680,17 +700,13 @@ export default function OrganizationSettings() {
                                   </DropdownMenuSubTrigger>
                                   <DropdownMenuSubContent>
                                     <DropdownMenuItem 
-                                      onClick={() => handleChangeRole(member._id, 'viewer')}
-                                      disabled={member.role === 'viewer'}
-                                    >
-                                      Viewer
-                                      {member.role === 'viewer' && ' ✓'}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem 
                                       onClick={() => handleChangeRole(member._id, 'member')}
                                       disabled={member.role === 'member'}
                                     >
-                                      Member
+                                      <div className="flex flex-col">
+                                        <span>Member</span>
+                                        <span className="text-xs text-muted-foreground">View only</span>
+                                      </div>
                                       {member.role === 'member' && ' ✓'}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem 

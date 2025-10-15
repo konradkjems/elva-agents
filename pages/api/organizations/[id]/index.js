@@ -151,13 +151,36 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
 
-      const { name, logo, primaryColor, domain, settings } = req.body;
+      const { name, slug, logo, primaryColor, domain, plan, settings } = req.body;
 
       const updates = {};
       if (name !== undefined) updates.name = name.trim();
+      if (slug !== undefined) updates.slug = slug.trim();
       if (logo !== undefined) updates.logo = logo;
       if (primaryColor !== undefined) updates.primaryColor = primaryColor;
       if (domain !== undefined) updates.domain = domain;
+      if (plan !== undefined) {
+        updates.plan = plan;
+        
+        // Update limits based on new plan
+        updates.limits = {
+          maxWidgets: plan === 'pro' ? 50 : plan === 'growth' ? 25 : 10,
+          maxTeamMembers: plan === 'pro' ? 30 : plan === 'growth' ? 15 : 5,
+          maxConversations: plan === 'pro' ? 100000 : plan === 'growth' ? 50000 : 10000,
+          maxDemos: organization.limits?.maxDemos || 0 // Preserve existing maxDemos
+        };
+        
+        // Update subscription status
+        if (plan === 'free' && organization.plan !== 'free') {
+          // Downgrading to free - set trial period
+          updates.subscriptionStatus = 'trial';
+          updates.trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        } else if (plan !== 'free' && organization.plan === 'free') {
+          // Upgrading from free - set active
+          updates.subscriptionStatus = 'active';
+          updates.trialEndsAt = null;
+        }
+      }
       if (settings !== undefined) {
         // Merge settings
         updates.settings = { ...organization.settings, ...settings };

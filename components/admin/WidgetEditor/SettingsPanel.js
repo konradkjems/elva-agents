@@ -94,7 +94,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
     { id: 1, name: 'Messages', icon: ChatBubbleLeftRightIcon, color: 'green' },
     { id: 2, name: 'Branding', icon: BuildingOfficeIcon, color: 'purple' },
     { id: 3, name: 'Satisfaction', icon: StarIcon, color: 'yellow' },
-    { id: 4, name: 'Manual Review', icon: ClipboardDocumentListIcon, color: 'red' },
+    { id: 4, name: 'Support Request', icon: ClipboardDocumentListIcon, color: 'red' },
     { id: 5, name: 'Advanced', icon: Cog6ToothIcon, color: 'orange' },
     { id: 6, name: 'Embed Code', icon: CodeBracketIcon, color: 'indigo' }
   ];
@@ -1061,10 +1061,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <Switch.Label className="text-sm font-medium text-gray-700">
-                              Enable Manual Review
+                              Enable Support Request
                             </Switch.Label>
                             <p className="text-xs text-gray-500 mt-1">
-                              Allow users to request manual review of their conversation
+                              Allow users to request support from your team
                             </p>
                           </div>
                           <Switch
@@ -1084,7 +1084,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       </Switch.Group>
                     </div>
 
-                    {/* Manual Review Settings */}
+                    {/* Support Request Settings */}
                     {settings.manualReview?.enabled !== false && (
                       <div className="space-y-4">
                         <div>
@@ -1093,13 +1093,13 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           </label>
                           <input
                             type="text"
-                            value={settings.manualReview?.buttonText || 'Request Manual Review'}
+                            value={settings.manualReview?.buttonText || 'Request Support'}
                             onChange={(e) => handleFieldChange('manualReview', 'buttonText', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
-                            placeholder="Request Manual Review"
+                            placeholder="Request Support"
                           />
                           <p className="text-xs text-gray-500 mt-1">
-                            Text displayed on the manual review button
+                            Text displayed on the support request button
                           </p>
                         </div>
 
@@ -1109,10 +1109,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           </label>
                           <input
                             type="text"
-                            value={settings.manualReview?.formTitle || 'Request Manual Review'}
+                            value={settings.manualReview?.formTitle || 'Request Support'}
                             onChange={(e) => handleFieldChange('manualReview', 'formTitle', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
-                            placeholder="Request Manual Review"
+                            placeholder="Request Support"
                           />
                           <p className="text-xs text-gray-500 mt-1">
                             Title displayed at the top of the contact form
@@ -1158,9 +1158,9 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       <div className="flex items-start">
                         <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
                         <div className="text-sm text-blue-800">
-                          <p className="font-medium mb-1">How Manual Review Works</p>
+                          <p className="font-medium mb-1">How Support Requests Work</p>
                           <ul className="space-y-1 text-xs">
-                            <li>• Users can request manual review from any conversation</li>
+                            <li>• Users can request support from any conversation</li>
                             <li>• Contact form collects name, email, and phone number</li>
                             <li>• Full conversation history is sent to your team</li>
                             <li>• Requests appear in the admin dashboard for review</li>

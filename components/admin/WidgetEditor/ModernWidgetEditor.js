@@ -31,7 +31,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
     name: '',
     description: '',
     promptId: '',
-    isActive: true,
+    status: 'active',
     appearance: {
       primaryColor: '#3b82f6',
       secondaryColor: '#8b5cf6',
@@ -73,7 +73,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
         name: widget.name || '',
         description: widget.description || '',
         promptId: widget.promptId || '',
-        isActive: widget.isActive !== false,
+        status: widget.status || 'active',
         appearance: {
           ...formData.appearance,
           ...widget.appearance
@@ -175,8 +175,14 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <Badge variant={formData.isActive ? "default" : "secondary"}>
-                  {formData.isActive ? 'Active' : 'Inactive'}
+                <Badge 
+                  variant="outline"
+                  className={formData.status === 'active' 
+                    ? "bg-green-100 text-green-800 hover:bg-green-200" 
+                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                  }
+                >
+                  {formData.status === 'active' ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
             </div>
@@ -215,11 +221,11 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="isActive"
-                  checked={formData.isActive}
-                  onCheckedChange={(checked) => handleInputChange('', 'isActive', checked)}
+                  id="status"
+                  checked={formData.status === 'active'}
+                  onCheckedChange={(checked) => handleInputChange('', 'status', checked ? 'active' : 'inactive')}
                 />
-                <Label htmlFor="isActive">Widget is active</Label>
+                <Label htmlFor="status">Widget is active</Label>
               </div>
             </div>
           </CardContent>

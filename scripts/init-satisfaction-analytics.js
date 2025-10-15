@@ -21,8 +21,8 @@ async function initSatisfactionAnalytics() {
     
     console.log('✅ Satisfaction analytics collection created with indexes');
     
-    // Create manual_reviews collection with indexes (for future manual review system)
-    const manualReviewsCollection = db.collection('manual_reviews');
+    // Create support_requests collection with indexes (for future manual review system)
+    const manualReviewsCollection = db.collection('support_requests');
     
     await manualReviewsCollection.createIndex({ widgetId: 1 });
     await manualReviewsCollection.createIndex({ conversationId: 1 });

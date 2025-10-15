@@ -106,12 +106,13 @@ export default async function handler(req, res) {
         ownerId: userId,
         plan: plan || 'free',
         limits: {
-          maxWidgets: plan === 'pro' ? 50 : plan === 'enterprise' ? 999 : 10,
-          maxTeamMembers: plan === 'pro' ? 20 : plan === 'enterprise' ? 999 : 5,
-          maxConversations: plan === 'pro' ? 100000 : plan === 'enterprise' ? 999999 : 10000,
+          maxWidgets: plan === 'pro' ? 50 : plan === 'growth' ? 25 : 10,
+          maxTeamMembers: plan === 'pro' ? 30 : plan === 'growth' ? 15 : 5,
+          maxConversations: plan === 'pro' ? 100000 : plan === 'growth' ? 50000 : 10000,
           maxDemos: 0 // Regular users can't create demos
         },
-        subscriptionStatus: 'trial',
+        subscriptionStatus: plan === 'free' ? 'trial' : 'active',
+        trialEndsAt: plan === 'free' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null, // 30 days for free plan
         settings: {
           allowDemoCreation: false,
           requireEmailVerification: false,

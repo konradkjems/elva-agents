@@ -70,7 +70,7 @@ async function processAccountDeletions() {
         console.log(`   Deleted ${conversationsDeleted.deletedCount} conversations`);
 
         // Delete manual reviews
-        const reviewsDeleted = await db.collection('manual_reviews').deleteMany({
+        const reviewsDeleted = await db.collection('support_requests').deleteMany({
           widgetId: { $in: widgetIds }
         });
         console.log(`   Deleted ${reviewsDeleted.deletedCount} manual reviews`);

@@ -114,7 +114,6 @@ export default async function handler(req, res) {
         lastEditedAt: new Date(),
         
         status: isDemoMode ? 'demo' : 'active',
-        isActive: !isDemoMode, // Demo widgets start as inactive
         createdAt: new Date(),
         updatedAt: new Date(),
         slug: name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),

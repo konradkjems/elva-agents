@@ -72,18 +72,13 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
   };
 
   const handleNameChange = (name) => {
-    setFormData({ ...formData, name });
+    // Auto-generate slug from name (always update as user types)
+    const autoSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
     
-    // Auto-generate slug from name if slug is empty
-    if (!formData.slug) {
-      const autoSlug = name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-      setFormData({ ...formData, name, slug: autoSlug });
-    } else {
-      setFormData({ ...formData, name });
-    }
+    setFormData({ ...formData, name, slug: autoSlug });
   };
 
   return (
@@ -160,35 +155,27 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="free">
-                    <div className="flex items-center gap-2">
-                      <span>Free</span>
-                      <span className="text-xs text-muted-foreground">
-                        • 10 widgets • 5 members
-                      </span>
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Gratis</span>
+                      <span className="text-xs text-muted-foreground">30 dage gratis prøve</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="starter">
-                    <div className="flex items-center gap-2">
-                      <span>Starter</span>
-                      <span className="text-xs text-muted-foreground">
-                        • 25 widgets • 10 members
-                      </span>
+                  <SelectItem value="basic">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Basis</span>
+                      <span className="text-xs text-muted-foreground">10 widgets • 5 medlemmer</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="growth">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Vækst</span>
+                      <span className="text-xs text-muted-foreground">25 widgets • 15 medlemmer</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="pro">
-                    <div className="flex items-center gap-2">
-                      <span>Pro</span>
-                      <span className="text-xs text-muted-foreground">
-                        • 50 widgets • 20 members
-                      </span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="enterprise">
-                    <div className="flex items-center gap-2">
-                      <span>Enterprise</span>
-                      <span className="text-xs text-muted-foreground">
-                        • Unlimited
-                      </span>
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Pro</span>
+                      <span className="text-xs text-muted-foreground">50 widgets • 30 medlemmer</span>
                     </div>
                   </SelectItem>
                 </SelectContent>

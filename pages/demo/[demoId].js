@@ -109,9 +109,13 @@ export default function DemoPage() {
     const existingScripts = document.querySelectorAll('script[src*="widget-embed"]');
     existingScripts.forEach(script => script.remove());
     
-    // Create and load the widget script
+    // Create and load the widget script using the SOURCE WIDGET ID
+    // This way the demo uses the actual widget configuration from the database
+    const widgetId = demo.sourceWidgetId || demoId;
+    console.log('📝 Loading widget with ID:', widgetId);
+    
     const script = document.createElement('script');
-    script.src = `/api/widget-embed/${demoId}`;
+    script.src = `/api/widget-embed/${widgetId}`;
     script.async = true;
     
     // Track interactions when widget is used

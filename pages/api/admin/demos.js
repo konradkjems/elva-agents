@@ -119,8 +119,8 @@ export default async function handler(req, res) {
       const demoId = `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Get organizationId from source widget or current user
-      const organizationId = sourceWidget.organizationId || 
-                            (session.user?.currentOrganizationId ? new ObjectId(session.user.currentOrganizationId) : null);
+      // IMPORTANT: Always ensure it's stored as ObjectId, not string
+      let organizationId = sourceWidget.organizationId || session.user?.currentOrganizationId;
       
       if (!organizationId) {
         return res.status(400).json({ 
@@ -128,12 +128,31 @@ export default async function handler(req, res) {
         });
       }
       
+      // Convert to ObjectId if it's a string
+      if (typeof organizationId === 'string') {
+        organizationId = new ObjectId(organizationId);
+      } else if (!(organizationId instanceof ObjectId)) {
+        // If it's already an ObjectId, keep it as is
+        // If it's neither string nor ObjectId, try to convert
+        try {
+          organizationId = new ObjectId(organizationId);
+        } catch (error) {
+          return res.status(400).json({ 
+            message: 'Invalid organization ID format' 
+          });
+        }
+      }
+      
+      console.log('📝 Organization ID (as ObjectId):', organizationId);
+      
       // Prepare demo data with organization
+      // NOTE: We only store metadata about the demo, not the full widget config
+      // The demo page will load the actual widget using sourceWidgetId
       const demoData = {
         _id: demoId,
         name,
         description: description || `Demo of ${sourceWidget.name}`,
-        sourceWidgetId: widgetId,
+        sourceWidgetId: widgetId, // The actual widget ID to use
         sourceWidgetName: sourceWidget.name,
         
         // Organization-specific
@@ -143,17 +162,7 @@ export default async function handler(req, res) {
         createdBy: new ObjectId(session.user.id),
         targetClient: clientInfo?.companyName || clientInfo || 'Unknown Client',
         
-        // Copy widget configuration
-        openai: sourceWidget.openai,
-        appearance: sourceWidget.appearance,
-        messages: sourceWidget.messages,
-        branding: sourceWidget.branding,
-        behavior: sourceWidget.behavior,
-        integrations: sourceWidget.integrations,
-        timezone: sourceWidget.timezone,
-        analytics: sourceWidget.analytics,
-        
-        // Demo-specific settings
+        // Demo-specific settings (only metadata, widget config comes from sourceWidgetId)
         demoSettings: {
           clientWebsiteUrl: clientWebsiteUrl || '',
           clientInfo: clientInfo || '',
@@ -174,6 +183,9 @@ export default async function handler(req, res) {
         createdAt: new Date(),
         updatedAt: new Date()
       };
+      
+      console.log('📝 Demo will use source widget ID:', widgetId);
+      console.log('📝 Demo data structure (simplified - no widget config duplication)');
 
       // Insert demo
       console.log('📝 Inserting demo into database...');

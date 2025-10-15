@@ -65,7 +65,7 @@ async function createTestManualReviewWidget() {
         allowFeedback: false,
         feedbackPlaceholder: 'Optional feedback...'
       },
-      manualReview: {
+      supportRequest: {
         enabled: true,
         buttonText: 'Anmod om Manuel Gennemgang',
         formTitle: 'Anmod om Manuel Gennemgang',
@@ -82,8 +82,8 @@ async function createTestManualReviewWidget() {
     console.log('✅ Test manual review widget created successfully!');
     console.log('Widget ID:', result.insertedId);
     console.log('Widget Name:', testWidget.name);
-    console.log('Manual Review Enabled:', testWidget.manualReview.enabled);
-    console.log('Button Text:', testWidget.manualReview.buttonText);
+    console.log('Manual Review Enabled:', testWidget.supportRequest.enabled);
+    console.log('Button Text:', testWidget.supportRequest.buttonText);
     
     // Create a test HTML file for the widget
     const testHtml = `<!DOCTYPE html>
@@ -155,7 +155,7 @@ async function createTestManualReviewWidget() {
         <div class="widget-info">
             <strong>Widget ID:</strong> ${result.insertedId}<br>
             <strong>Manual Review:</strong> Aktiveret<br>
-            <strong>Knap Tekst:</strong> ${testWidget.manualReview.buttonText}
+            <strong>Knap Tekst:</strong> ${testWidget.supportRequest.buttonText}
         </div>
         
         <div class="instructions">

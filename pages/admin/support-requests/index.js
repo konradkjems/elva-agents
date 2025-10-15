@@ -69,9 +69,9 @@ export default function ManualReviews() {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/manual-reviews');
+      const response = await fetch('/api/admin/support-requests');
       if (!response.ok) {
-        throw new Error('Failed to fetch manual reviews');
+        throw new Error('Failed to fetch support requests');
       }
       const data = await response.json();
       
@@ -90,11 +90,11 @@ export default function ManualReviews() {
       
       setReviews(filteredReviews);
     } catch (error) {
-      console.error('Failed to fetch manual reviews:', error);
+      console.error('Failed to fetch support requests:', error);
       toast({
         variant: "destructive",
         title: "Failed to load reviews",
-        description: "There was a problem loading manual review requests.",
+        description: "There was a problem loading support requests.",
       });
     } finally {
       setLoading(false);
@@ -216,9 +216,9 @@ export default function ManualReviews() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Manual Reviews</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Support Requests</h1>
             <p className="text-muted-foreground">
-              Review and manage manual review requests from users
+              Review and manage support requests from users
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -314,7 +314,7 @@ export default function ManualReviews() {
               <CardContent>
                 {reviews.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    No manual review requests found.
+                    No support requests found.
                   </div>
                 ) : (
                   <div className="space-y-4">

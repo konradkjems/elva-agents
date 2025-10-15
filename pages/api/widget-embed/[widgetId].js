@@ -181,8 +181,8 @@ export default async function handler(req, res) {
     },
     manualReview: {
       enabled: widget.manualReview?.enabled !== false,
-      buttonText: widget.manualReview?.buttonText || 'Request Manual Review',
-      formTitle: widget.manualReview?.formTitle || 'Request Manual Review',
+      buttonText: widget.manualReview?.buttonText || 'Request Support',
+      formTitle: widget.manualReview?.formTitle || 'Request Support',
       formDescription: widget.manualReview?.formDescription || 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.',
       successMessage: widget.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'
     }
@@ -527,6 +527,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 600}px;
+    max-height: calc(100vh - 180px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -687,7 +688,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   \`;
 
-  // Manual review button (right side)
+  // Support request button (right side)
   const manualReviewButton = document.createElement("button");
   manualReviewButton.className = 'manual-review-button';
   manualReviewButton.innerHTML = \`
@@ -891,6 +892,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 600}px;
+    max-height: calc(100vh - 180px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -2212,7 +2214,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   let inactivityTimer = null;
   let lastActivityTime = Date.now();
   
-  // Manual review form state
+  // Support request form state
   let manualReviewFormOpen = false;
   
   function checkAndShowSatisfactionRating() {
@@ -2809,7 +2811,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
             console.log('⏰ Cleared inactivity timer for new conversation');
           }
           
-          // Reset manual review form state for new conversation
+          // Reset support request form state for new conversation
           manualReviewFormOpen = false;
         } else {
           console.log('📝 Using existing conversation ID:', currentConversationId);
@@ -3298,11 +3300,26 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       // Bottom sheet handle removed per user request
       
     } else {
-      // Desktop positioning (unchanged)
-      chatBox.style.width = \`\${WIDGET_CONFIG.theme.width || 400}px\`;
-      chatBox.style.height = \`\${WIDGET_CONFIG.theme.height || 600}px\`;
-      historyView.style.width = \`\${WIDGET_CONFIG.theme.width || 400}px\`;
-      historyView.style.height = \`\${WIDGET_CONFIG.theme.height || 600}px\`;
+      // Desktop positioning with intelligent height scaling
+      const configuredWidth = WIDGET_CONFIG.theme.width || 400;
+      const configuredHeight = WIDGET_CONFIG.theme.height || 600;
+      
+      // Calculate available height accounting for margins and button
+      const availableHeight = vh - 180; // 90px top/bottom margins + button space
+      
+      // Use the smaller of configured height or available height
+      const actualHeight = Math.min(configuredHeight, availableHeight);
+      
+      // Also ensure minimum height for usability
+      const finalHeight = Math.max(actualHeight, 300); // Minimum 300px
+      
+      chatBox.style.width = \`\${configuredWidth}px\`;
+      chatBox.style.height = \`\${finalHeight}px\`;
+      chatBox.style.maxHeight = \`calc(100vh - 180px)\`; // CSS fallback
+      
+      historyView.style.width = \`\${configuredWidth}px\`;
+      historyView.style.height = \`\${finalHeight}px\`;
+      historyView.style.maxHeight = \`calc(100vh - 180px)\`;
       
       if (placement === 'bottom-left') {
         chatBox.style.left = '24px';
@@ -3546,17 +3563,17 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     }
   }, 100);
 
-  // Manual Review Functions
+  // Support Request Functions
   function setupManualReviewButton() {
     const manualReviewConfig = WIDGET_CONFIG.manualReview || {};
     
     if (!manualReviewConfig.enabled) {
-      // Hide manual review button if disabled
+      // Hide support request button if disabled
       manualReviewButton.style.display = 'none';
       return;
     }
 
-    // Show manual review button and add click handler
+    // Show support request button and add click handler
     manualReviewButton.style.display = 'flex';
     manualReviewButton.addEventListener('click', showManualReviewForm);
   }
@@ -3564,9 +3581,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   function showManualReviewForm() {
     console.log('📧 showManualReviewForm called');
     
-    // Check if manual review form is already open
+    // Check if support request form is already open
     if (manualReviewFormOpen) {
-      console.log('🚫 Manual review form already open, ignoring click');
+      console.log('🚫 Support request form already open, ignoring click');
       return;
     }
     
@@ -3880,7 +3897,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       submitButton.disabled = true;
       
       try {
-        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/manual-review/submit\`, {
+        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/support-request/submit\`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3919,7 +3936,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           throw new Error('Failed to submit request');
         }
       } catch (error) {
-        console.error('Error submitting manual review:', error);
+        console.error('Error submitting support request:', error);
         submitButton.textContent = submitButtonText;
         submitButton.disabled = false;
         
@@ -3981,7 +3998,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     nameInput.focus();
   }
 
-  // Setup manual review button after initialization
+  // Setup support request button after initialization
   setTimeout(() => {
     setupManualReviewButton();
   }, 100);

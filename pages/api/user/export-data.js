@@ -87,11 +87,11 @@ export default async function handler(req, res) {
       }).toArray();
       userData.analytics = analytics;
 
-      // 6. Manual reviews
-      const reviews = await db.collection('manual_reviews').find({
+      // 6. Support requests
+      const requests = await db.collection('support_requests').find({
         widgetId: { $in: widgetIds }
       }).toArray();
-      userData.manualReviews = reviews;
+      userData.supportRequests = requests;
     }
 
     // 7. Invitations sent to this user

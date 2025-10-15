@@ -54,8 +54,8 @@ const navigation = [
     description: 'Performance insights'
   },
   { 
-    name: 'Manual Reviews', 
-    href: '/admin/manual-reviews', 
+    name: 'Support Requests', 
+    href: '/admin/support-requests', 
     icon: ClipboardList,
     description: 'Review user requests'
   },

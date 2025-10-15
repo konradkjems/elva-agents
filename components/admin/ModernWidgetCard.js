@@ -103,8 +103,15 @@ export default function ModernWidgetCard({ widget }) {
     }
   };
 
-  const getStatusColor = (isActive) => {
-    return isActive ? "default" : "secondary";
+  const getStatusColor = (status) => {
+    return status === 'active' ? "default" : "secondary";
+  };
+
+  const getStatusClassName = (status) => {
+    if (status === 'active') {
+      return "bg-green-100 text-green-800 hover:bg-green-200";
+    }
+    return "bg-gray-100 text-gray-800 hover:bg-gray-200";
   };
 
   const formatDate = (dateString) => {
@@ -139,8 +146,11 @@ export default function ModernWidgetCard({ widget }) {
                 {widget.name}
               </CardTitle>
               <div className="flex items-center space-x-2 mt-1">
-                <Badge variant={getStatusColor(widget.isActive)}>
-                  {widget.isActive ? 'Active' : 'Inactive'}
+                <Badge 
+                  variant="outline" 
+                  className={getStatusClassName(widget.status)}
+                >
+                  {widget.status === 'active' ? 'Active' : 'Inactive'}
                 </Badge>
                 {widget.domain && (
                   <div className="flex items-center text-xs text-muted-foreground">

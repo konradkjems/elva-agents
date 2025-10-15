@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import clientPromise from '../../../lib/mongodb';
-import { sendManualReviewEmail } from '../../../lib/email';
+import { sendSupportRequestEmail } from '../../../lib/email';
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -70,8 +70,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Create manual review request
-    const manualReview = {
+    // Create support request
+    const supportRequest = {
       _id: new ObjectId(),
       widgetId: new ObjectId(widgetId),
       organizationId: new ObjectId(widget.organizationId),
@@ -87,11 +87,11 @@ export default async function handler(req, res) {
       updatedAt: new Date()
     };
 
-    // Insert manual review request
-    const result = await db.collection('manual_reviews').insertOne(manualReview);
+    // Insert support request
+    const result = await db.collection('support_requests').insertOne(supportRequest);
 
-    console.log('✅ Manual review request submitted:', {
-      reviewId: result.insertedId,
+    console.log('✅ Support request submitted:', {
+      requestId: result.insertedId,
       widgetId,
       conversationId,
       contactName: name,
@@ -108,7 +108,7 @@ export default async function handler(req, res) {
       const supportEmail = organization?.settings?.supportEmail || organization?.settings?.manualReviewEmail;
       
       if (supportEmail) {
-        await sendManualReviewEmail({
+        await sendSupportRequestEmail({
           supportEmail,
           contactName: name,
           contactEmail: email,
@@ -116,26 +116,26 @@ export default async function handler(req, res) {
           widgetName: widget.name,
           organizationName: organization?.name || 'Unknown Organization',
           conversationId: conversationId,
-          reviewId: result.insertedId.toString(),
+          requestId: result.insertedId.toString(),
           conversationMessages: conversation?.messages || []
         });
-        console.log('✅ Manual review email sent to:', supportEmail);
+        console.log('✅ Support request email sent to:', supportEmail);
       } else {
         console.log('⚠️ No support email configured for organization:', organization?.name);
       }
     } catch (emailError) {
-      console.error('⚠️ Failed to send manual review email:', emailError);
-      // Continue anyway - manual review is saved even if email fails
+      console.error('⚠️ Failed to send support request email:', emailError);
+      // Continue anyway - support request is saved even if email fails
     }
 
     res.status(201).json({
       success: true,
-      reviewId: result.insertedId,
-      message: 'Manual review request submitted successfully'
+      requestId: result.insertedId,
+      message: 'Support request submitted successfully'
     });
 
   } catch (error) {
-    console.error('❌ Error submitting manual review:', error);
+    console.error('❌ Error submitting support request:', error);
     res.status(500).json({ 
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined

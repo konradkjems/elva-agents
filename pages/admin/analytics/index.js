@@ -84,15 +84,6 @@ export default function ModernAnalytics() {
       }));
   };
 
-  const prepareConversationLengthDistribution = (analyticsData) => {
-    // Only show if we have actual conversation length distribution data
-    if (!analyticsData?.metrics?.conversationLengthDistribution) {
-      return [];
-    }
-    
-    // Return the actual distribution from the backend
-    return analyticsData.metrics.conversationLengthDistribution;
-  };
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
@@ -144,12 +135,6 @@ export default function ModernAnalytics() {
     fetchAnalyticsData();
   }, [dateRange, selectedWidget, fetchAnalyticsData]);
 
-  const handleExport = () => {
-    toast({
-      title: "Export started",
-      description: "Your analytics data is being prepared for download.",
-    });
-  };
 
   // Debug logging
   console.log('📊 Current analyticsData in component:', analyticsData);
@@ -221,7 +206,7 @@ export default function ModernAnalytics() {
           </div>
           <div className="flex items-center space-x-2">
             <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-40">
                 <Calendar className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -233,7 +218,7 @@ export default function ModernAnalytics() {
               </SelectContent>
             </Select>
             <Select value={selectedWidget} onValueChange={setSelectedWidget}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-48">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue />
               </SelectTrigger>
@@ -246,10 +231,6 @@ export default function ModernAnalytics() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleExport} variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
           </div>
         </div>
 
@@ -282,7 +263,7 @@ export default function ModernAnalytics() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Analytics Summary</CardTitle>
@@ -330,9 +311,14 @@ export default function ModernAnalytics() {
                 <CardContent>
                   {analyticsData?.metrics?.hourlyDistribution ? (
                     <div className="space-y-2">
-                      <div className="text-sm text-muted-foreground mb-3">Peak activity hours</div>
+                      <div className="text-sm text-muted-foreground mb-3">Hourly activity distribution</div>
                       {analyticsData.metrics.hourlyDistribution
-                        .sort((a, b) => b.count - a.count)
+                        .sort((a, b) => {
+                          // Sort chronologically by hour
+                          const hourA = parseInt(a.hour.split(':')[0]);
+                          const hourB = parseInt(b.hour.split(':')[0]);
+                          return hourA - hourB;
+                        })
                         .slice(0, 6)
                         .map((hour, index) => (
                           <div key={hour.hour} className="flex items-center justify-between text-sm">
@@ -355,46 +341,6 @@ export default function ModernAnalytics() {
                       <p className="text-sm">No hourly data available</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your Widgets</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {widgets.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MessageCircle className="mx-auto h-8 w-8 mb-2" />
-                        <p>No widgets found</p>
-                      </div>
-                    ) : (
-                      widgets.map((widget) => (
-                        <div key={widget._id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors">
-                          <div className="space-y-1">
-                            <div className="font-medium text-sm">{widget.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {widget.isActive ? 'Active' : 'Inactive'} • Created {new Date(widget.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant={widget.isActive ? "default" : "secondary"} className="text-xs">
-                              {widget.isActive ? 'Active' : 'Inactive'}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedWidget(widget._id)}
-                              className="text-xs"
-                            >
-                              View
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -586,7 +532,7 @@ export default function ModernAnalytics() {
                      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                        <span className="text-sm font-medium">Active Widgets</span>
                        <span className="text-sm font-semibold">
-                         {widgets.filter(w => w.isActive).length}/{widgets.length}
+                         {widgets.filter(w => w.status === 'active').length}/{widgets.length}
                        </span>
                      </div>
                    </div>
@@ -594,53 +540,6 @@ export default function ModernAnalytics() {
                </Card>
              </div>
 
-            {/* Conversation Length Distribution */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Conversation Length Distribution</CardTitle>
-                <p className="text-sm text-muted-foreground">Distribution of conversation lengths</p>
-              </CardHeader>
-              <CardContent>
-                {prepareConversationLengthDistribution(analyticsData).length > 0 ? (
-                  <ChartContainer
-                    config={{
-                      count: {
-                        label: "Conversations",
-                        color: "hsl(var(--primary))",
-                      },
-                    }}
-                    className="h-[300px]"
-                  >
-                    <BarChart data={prepareConversationLengthDistribution(analyticsData)}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="length" 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar 
-                        dataKey="count" 
-                        fill="var(--color-count)"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ChartContainer>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Activity className="mx-auto h-8 w-8 mb-2" />
-                    <p className="text-sm">No conversation length data available</p>
-                    <p className="text-xs mt-1">Data will appear as conversations are recorded</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
            </TabsContent>
 
           <TabsContent value="insights" className="space-y-4">
@@ -654,7 +553,7 @@ export default function ModernAnalytics() {
                     <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
                       <span className="text-sm font-medium">Active Widgets</span>
                       <span className="text-sm font-semibold">
-                        {widgets.filter(w => w.isActive).length} of {widgets.length}
+                        {widgets.filter(w => w.status === 'active').length} of {widgets.length}
                       </span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
