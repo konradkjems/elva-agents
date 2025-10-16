@@ -138,7 +138,23 @@ export default async function handler(req, res) {
       inputPlaceholder: widget.messages?.inputPlaceholder || 'Type your message...',
       suggestedResponses: widget.messages?.suggestedResponses || [],
       bannerText: widget.messages?.bannerText || null,
-      disclaimerText: widget.messages?.disclaimerText || 'Opgiv ikke personlige oplysninger'
+      disclaimerText: widget.messages?.disclaimerText || 'Opgiv ikke personlige oplysninger',
+      voiceInput: {
+        enabled: widget.messages?.voiceInput?.enabled !== false,
+        language: widget.messages?.voiceInput?.language || 'da-DK',
+        buttonPosition: widget.messages?.voiceInput?.buttonPosition || 'left',
+        continuousRecording: widget.messages?.voiceInput?.continuousRecording || false,
+        autoSendOnComplete: widget.messages?.voiceInput?.autoSendOnComplete || false
+      },
+      productCards: {
+        enabled: widget.messages?.productCards?.enabled !== false,
+        layout: widget.messages?.productCards?.layout || 'horizontal',
+        cardsPerRow: widget.messages?.productCards?.cardsPerRow || 3,
+        showPrice: widget.messages?.productCards?.showPrice !== false,
+        priceCurrency: widget.messages?.productCards?.priceCurrency || 'kr.',
+        cardStyle: widget.messages?.productCards?.cardStyle || 'standard',
+        autoFetchProductData: widget.messages?.productCards?.autoFetchProductData || false
+      }
     },
     branding: {
       title: widget.branding?.title || widget.name || 'AI Assistant',
@@ -732,6 +748,40 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     align-items: center;
   \`;
 
+  // VOICE BUTTON - Placeret INDE i input feltet til venstre
+  const voiceButton = document.createElement("button");
+  voiceButton.className = "widget-voice-button";
+  voiceButton.setAttribute('aria-label', 'Voice input');
+  voiceButton.innerHTML = \`
+    <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      <line x1="12" y1="19" x2="12" y2="23"/>
+      <line x1="8" y1="23" x2="16" y2="23"/>
+    </svg>
+    <svg class="recording-icon" style="display:none" width="18" height="18" viewBox="0 0 24 24" fill="red">
+      <circle cx="12" cy="12" r="8"/>
+    </svg>
+  \`;
+  voiceButton.style.cssText = \`
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    z-index: 2;
+    border-radius: 4px;
+  \`;
+
+  // INPUT FIELD - Med padding til venstre for mikrofon
   const input = document.createElement("input");
   input.type = "text";
   input.className = "widget-input";
@@ -739,7 +789,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   input.style.cssText = \`
     width: 100%;
     height: 50px;
-    padding: 0 16px;
+    padding: 0 16px 0 \${WIDGET_CONFIG.messages.voiceInput.enabled ? '46px' : '16px'};
     border: none;
     font-size: 16px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -750,12 +800,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     box-sizing: border-box;
   \`;
 
+  // LABEL - Justeret for mikrofon ikon
   const inputLabel = document.createElement("label");
   inputLabel.htmlFor = "widget-input-field";
-  inputLabel.textContent = WIDGET_CONFIG.messages.inputPlaceholder || "Type your message...";
+  inputLabel.textContent = WIDGET_CONFIG.messages.inputPlaceholder || "Stil et spørgsmål";
   inputLabel.style.cssText = \`
     position: absolute;
-    left: 16px;
+    left: \${WIDGET_CONFIG.messages.voiceInput.enabled ? '46px' : '16px'};
     top: 50%;
     transform: translateY(-50%);
     font-size: 16px;
@@ -766,6 +817,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
 
+  // Tilføj elementer i korrekt rækkefølge
+  if (WIDGET_CONFIG.messages.voiceInput.enabled) {
+    inputFieldWrapper.appendChild(voiceButton);
+  }
   inputFieldWrapper.appendChild(input);
   inputFieldWrapper.appendChild(inputLabel);
 
@@ -823,6 +878,116 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   input.oninput = () => {
     updateLabelPosition();
   };
+
+  // VOICE INPUT IMPLEMENTATION
+  let recognition = null;
+  let isRecording = false;
+
+  // Initialize Speech Recognition if voice input is enabled
+  if (WIDGET_CONFIG.messages.voiceInput.enabled) {
+    // Check browser support
+    const hasVoiceSupport = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+    
+    if (hasVoiceSupport) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      
+      recognition.continuous = WIDGET_CONFIG.messages.voiceInput.continuousRecording;
+      recognition.interimResults = true;
+      recognition.lang = WIDGET_CONFIG.messages.voiceInput.language;
+      
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('');
+        input.value = transcript;
+        updateLabelPosition();
+      };
+      
+      recognition.onend = () => {
+        if (WIDGET_CONFIG.messages.voiceInput.autoSendOnComplete && input.value.trim()) {
+          sendMessage();
+        }
+        isRecording = false;
+        updateVoiceButtonState();
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        isRecording = false;
+        updateVoiceButtonState();
+        
+        // Show user-friendly error message
+        if (event.error === 'not-allowed') {
+          alert('Mikrofon tilladelse er nødvendig for voice input. Tillad adgang i dine browser indstillinger.');
+        } else if (event.error === 'no-speech') {
+          console.log('No speech detected');
+        }
+      };
+    } else {
+      // Hide voice button if not supported
+      voiceButton.style.display = 'none';
+      // Adjust input padding back to normal
+      input.style.padding = '0 16px';
+      inputLabel.style.left = '16px';
+    }
+  }
+
+  // Voice button state management
+  function updateVoiceButtonState() {
+    const micIcon = voiceButton.querySelector('.mic-icon');
+    const recordingIcon = voiceButton.querySelector('.recording-icon');
+    
+    if (isRecording) {
+      micIcon.style.display = 'none';
+      recordingIcon.style.display = 'block';
+      voiceButton.style.color = '#ef4444';
+      voiceButton.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+    } else {
+      micIcon.style.display = 'block';
+      recordingIcon.style.display = 'none';
+      voiceButton.style.color = '#6b7280';
+      voiceButton.style.backgroundColor = 'transparent';
+    }
+  }
+
+  // Voice button event handlers
+  if (WIDGET_CONFIG.messages.voiceInput.enabled && recognition) {
+    voiceButton.onclick = () => {
+      if (!recognition) {
+        alert('Voice input is not supported in your browser');
+        return;
+      }
+      
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        try {
+          recognition.start();
+          isRecording = true;
+          updateVoiceButtonState();
+        } catch (error) {
+          console.error('Failed to start speech recognition:', error);
+          alert('Kunne ikke starte voice input. Prøv igen.');
+        }
+      }
+    };
+
+    // Hover effects for voice button
+    voiceButton.onmouseover = () => {
+      if (!isRecording) {
+        voiceButton.style.backgroundColor = 'rgba(107, 114, 128, 0.1)';
+        voiceButton.style.transform = 'translateY(-50%) scale(1.05)';
+      }
+    };
+    
+    voiceButton.onmouseout = () => {
+      if (!isRecording) {
+        voiceButton.style.backgroundColor = 'transparent';
+        voiceButton.style.transform = 'translateY(-50%) scale(1)';
+      }
+    };
+  }
 
   sendButton.onmouseover = () => {
     sendButton.style.transform = 'scale(1.05)';
@@ -1896,9 +2061,469 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     return formatted;
   }
 
+  // PRODUCT CARDS PARSER AND RENDERING
+  function parseProductCards(messageText) {
+    const products = [];
+    let cleanText = messageText;
+    
+    // Remove inline citations like ([cotonshoppen.dk](URL)) or (cotonshoppen.dk)
+    cleanText = cleanText.replace(/\\s*\\(\\[?cotonshoppen\\.dk\\]?\\([^)]+\\)\\)/g, '');
+    cleanText = cleanText.replace(/\\s*\\(cotonshoppen\\.dk\\)/g, '');
+    
+    // Find [PRODUCTS]...[/PRODUCTS] JSON blocks
+    const productsJsonRegex = /\\[PRODUCTS\\]([\\s\\S]*?)\\[\\/PRODUCTS\\]/g;
+    let match;
+    
+    while ((match = productsJsonRegex.exec(messageText)) !== null) {
+      try {
+        const jsonText = match[1].trim();
+        if (!jsonText) continue;
+        
+        const productData = JSON.parse(jsonText);
+        
+        if (Array.isArray(productData)) {
+          products.push(...productData);
+        } else if (productData.url) {
+          products.push(productData);
+        }
+        
+        // Remove the JSON block from clean text
+        cleanText = cleanText.replace(match[0], '');
+      } catch (error) {
+        console.error('Error parsing product cards JSON:', error);
+        console.error('JSON text:', match[1]);
+        // Still remove the block from clean text even if parsing fails
+        cleanText = cleanText.replace(match[0], '');
+      }
+    }
+    
+    // Find single [PRODUCT:...] tags
+    const productRegex = /\\[PRODUCT:url="([^"]+)"\\|image="([^"]+)"\\|name="([^"]+)"\\|price="([^"]+)"\\]/g;
+    cleanText = cleanText.replace(productRegex, (match, url, image, name, price) => {
+      products.push({
+        url: url,
+        image: image,
+        name: name,
+        price: price
+      });
+      return ''; // Remove the tag from clean text
+    });
+    
+    // Find markdown links [text](url) from cotonshoppen.dk
+    const linkRegex = /\\[([^\\]]+)\\]\\((https:\\/\\/cotonshoppen\\.dk\\/[^)]+)\\)/g;
+    let linkMatch;
+    
+    while ((linkMatch = linkRegex.exec(messageText)) !== null) {
+      const linkText = linkMatch[1];
+      const url = linkMatch[2];
+      
+      // Mark for fetching metadata
+      products.push({
+        url: url,
+        name: linkText,
+        needsMetadata: true
+      });
+      
+      // Replace the link with a clickable link (keep the product name clickable)
+      cleanText = cleanText.replace(linkMatch[0], \`<a href="\${url}" target="_blank" style="color: \${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'}; text-decoration: underline;">\${linkText}</a>\`);
+    }
+    
+    // Deduplicate products by URL and normalize URLs
+    const uniqueProducts = [];
+    const seenUrls = new Set();
+    
+    for (const product of products) {
+      // Normalize URL by removing query parameters and fragments for comparison
+      const normalizedUrl = product.url.split('?')[0].split('#')[0];
+      
+      if (!seenUrls.has(normalizedUrl)) {
+        seenUrls.add(normalizedUrl);
+        uniqueProducts.push(product);
+      }
+    }
+    
+    return {
+      cleanText: cleanText.trim(),
+      products: uniqueProducts
+    };
+  }
+
+  // Add fetch product metadata function
+  async function fetchProductMetadata(url) {
+    try {
+      // Use full URL to avoid CORS issues
+      const apiUrl = window.location.origin + '/api/product-metadata';
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: url })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        // Handle 404 gracefully - product doesn't exist
+        if (response.status === 404) {
+          console.warn('Product not found (404):', url);
+          return null; // Return null instead of throwing
+        }
+        
+        console.error('Failed to fetch product metadata:', response.status, url);
+        return null;
+      }
+      
+      const metadata = await response.json();
+      return metadata;
+    } catch (error) {
+      console.error('Error fetching product metadata:', error.message);
+      return null;
+    }
+  }
+
+  function createProductCard(product) {
+    const card = document.createElement('a');
+    card.href = product.url;
+    card.target = '_blank';
+    card.className = 'product-card';
+    card.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+      min-width: 175px;
+      max-width: 175px;
+      width: 175px;
+      margin: 4px;
+      flex-shrink: 0;
+    \`;
+    
+    // Product image - use proxy to avoid CORS issues
+    const img = document.createElement('img');
+    img.src = \`/api/image-proxy?url=\${encodeURIComponent(product.image)}\`;
+    img.alt = product.name;
+    img.style.cssText = \`
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: #f3f4f6;
+    \`;
+    
+    // Add error handling for image loading
+    img.onerror = () => {
+      console.error('Failed to load product image:', product.image);
+      img.style.display = 'none';
+      // Show placeholder instead
+      const placeholder = document.createElement('div');
+      placeholder.style.cssText = \`
+        width: 100%;
+        height: 180px;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 14px;
+      \`;
+      placeholder.textContent = 'Billede ikke tilgængeligt';
+      img.parentNode.replaceChild(placeholder, img);
+    };
+    
+    img.onload = () => {
+      // Image loaded successfully
+    };
+    
+    // Product info
+    const info = document.createElement('div');
+    info.style.cssText = \`
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    \`;
+    
+    // Product name
+    const name = document.createElement('div');
+    name.textContent = product.name;
+    name.style.cssText = \`
+      font-size: 14px;
+      font-weight: 600;
+      color: #1f2937;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    \`;
+    
+    // Product price
+    if (product.price && WIDGET_CONFIG.messages.productCards.showPrice) {
+      const price = document.createElement('div');
+      price.textContent = product.price;
+      price.style.cssText = \`
+        font-size: 16px;
+        font-weight: 700;
+        color: \${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'};
+        margin-top: 4px;
+      \`;
+      info.appendChild(name);
+      info.appendChild(price);
+    } else {
+      info.appendChild(name);
+    }
+    
+    card.appendChild(img);
+    card.appendChild(info);
+    
+    // Simplified hover effect - only shadow change, no transform
+    card.onmouseover = () => {
+      card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+    };
+    
+    card.onmouseout = () => {
+      card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+    };
+    
+    return card;
+  }
+
+  function createProductCardsContainer(products, layout) {
+    if (layout === 'horizontal') {
+      // Get widget width dynamically
+      const widgetWidth = chatBox.offsetWidth || 450; // Fallback to 450px
+      
+      // Calculate optimal cards per view based on widget width
+      const cardWidth = 175;
+      const gap = 12;
+      const arrowButtonSpace = 40; // Space for arrow button + padding
+      const availableWidth = widgetWidth - arrowButtonSpace;
+      const cardsPerView = Math.floor((availableWidth + gap) / (cardWidth + gap));
+      const actualCardsPerView = Math.min(cardsPerView, products.length);
+      
+      // Create carousel wrapper
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = \`
+        position: relative;
+        margin-top: 8px;
+        padding: 0 24px 0 0; /* Right padding for arrow button */
+      \`;
+      
+      // Create carousel container with dynamic width
+      const container = document.createElement('div');
+      container.className = 'product-cards-carousel';
+      container.style.cssText = \`
+        display: flex;
+        gap: 12px;
+        overflow: hidden;
+        padding: 8px 0;
+        width: calc(\${cardWidth}px * \${actualCardsPerView} + \${gap}px * \${actualCardsPerView - 1});
+        position: relative;
+      \`;
+      
+      // Create inner container for smooth transform animation
+      const innerContainer = document.createElement('div');
+      innerContainer.style.cssText = \`
+        display: flex;
+        gap: 12px;
+        transition: transform 0.3s ease-in-out;
+        transform: translateX(0);
+      \`;
+      
+      // Add products to inner container
+      products.forEach(product => {
+        innerContainer.appendChild(createProductCard(product));
+      });
+      
+      container.appendChild(innerContainer);
+      
+      // Create navigation buttons
+      const prevButton = document.createElement('button');
+      prevButton.innerHTML = '‹';
+      prevButton.style.cssText = \`
+        position: absolute;
+        left: -16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: white;
+        color: #1f2937;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 10;
+        transition: all 0.2s ease;
+        opacity: 0.9;
+      \`;
+      
+      const nextButton = document.createElement('button');
+      nextButton.innerHTML = '›';
+      nextButton.style.cssText = \`
+        position: absolute;
+        right: -8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: white;
+        color: #1f2937;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 10;
+        transition: all 0.2s ease;
+        opacity: 0.9;
+      \`;
+      
+      // Button hover effects
+      prevButton.onmouseover = () => {
+        prevButton.style.opacity = '1';
+        prevButton.style.transform = 'translateY(-50%) scale(1.1)';
+        prevButton.style.background = \`\${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'}\`;
+        prevButton.style.color = 'white';
+      };
+      prevButton.onmouseout = () => {
+        prevButton.style.opacity = '0.9';
+        prevButton.style.transform = 'translateY(-50%) scale(1)';
+        prevButton.style.background = 'white';
+        prevButton.style.color = '#1f2937';
+      };
+      
+      nextButton.onmouseover = () => {
+        nextButton.style.opacity = '1';
+        nextButton.style.transform = 'translateY(-50%) scale(1.1)';
+        nextButton.style.background = \`\${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'}\`;
+        nextButton.style.color = 'white';
+      };
+      nextButton.onmouseout = () => {
+        nextButton.style.opacity = '0.9';
+        nextButton.style.transform = 'translateY(-50%) scale(1)';
+        nextButton.style.background = 'white';
+        nextButton.style.color = '#1f2937';
+      };
+      
+      // Robust navigation logic with dynamic cards per view
+      let currentIndex = 0;
+      const cardWidth = 187; // Width of card (175px) + gap (12px)
+      let isAnimating = false;
+      
+      const updateButtonVisibility = () => {
+        prevButton.style.display = currentIndex === 0 ? 'none' : 'flex';
+        nextButton.style.display = currentIndex >= products.length - actualCardsPerView ? 'none' : 'flex';
+      };
+      
+      const navigateToIndex = (newIndex) => {
+        if (isAnimating) return; // Prevent multiple clicks during animation
+        
+        isAnimating = true;
+        currentIndex = newIndex;
+        
+        // Use transform instead of scrollLeft for smoother animation
+        const translateX = -currentIndex * cardWidth;
+        innerContainer.style.transform = \`translateX(\${translateX}px)\`;
+        
+        updateButtonVisibility();
+        
+        // Reset animation flag after transition completes
+        setTimeout(() => {
+          isAnimating = false;
+        }, 300);
+      };
+      
+      prevButton.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentIndex > 0 && !isAnimating) {
+          const newIndex = Math.max(0, currentIndex - actualCardsPerView);
+          navigateToIndex(newIndex);
+        }
+      };
+      
+      nextButton.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentIndex < products.length - actualCardsPerView && !isAnimating) {
+          const newIndex = Math.min(products.length - actualCardsPerView, currentIndex + actualCardsPerView);
+          navigateToIndex(newIndex);
+        }
+      };
+      
+      // Initial button visibility
+      updateButtonVisibility();
+      
+      // Add all elements to wrapper
+      wrapper.appendChild(prevButton);
+      wrapper.appendChild(container);
+      wrapper.appendChild(nextButton);
+      
+      return wrapper;
+    } else if (layout === 'grid') {
+      const container = document.createElement('div');
+      container.className = 'product-cards-container';
+      container.style.cssText = \`
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
+        padding: 8px 4px;
+        margin-top: 8px;
+      \`;
+      
+      products.forEach(product => {
+        container.appendChild(createProductCard(product));
+      });
+      
+      return container;
+    } else if (layout === 'vertical') {
+      const container = document.createElement('div');
+      container.className = 'product-cards-container';
+      container.style.cssText = \`
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 8px 4px;
+        margin-top: 8px;
+      \`;
+      
+      products.forEach(product => {
+        container.appendChild(createProductCard(product));
+      });
+      
+      return container;
+    }
+  }
+
   function addMessage(role, content) {
     const messageDiv = document.createElement("div");
     const isUser = role === 'user';
+    
+    // Parse product cards if enabled and this is an assistant message
+    let parsedContent = content;
+    let products = [];
+    
+    if (!isUser && WIDGET_CONFIG.messages.productCards.enabled) {
+      const parsed = parseProductCards(content);
+      parsedContent = parsed.cleanText;
+      products = parsed.products;
+    }
     
     // Store the original raw content for history saving
     messageDiv.setAttribute('data-original-content', content);
@@ -1957,7 +2582,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         word-wrap: break-word;
         text-align: left;
       \`;
-      messageBubble.innerHTML = formatMessage(content);
+      messageBubble.innerHTML = formatMessage(parsedContent);
       messageContentDiv.appendChild(messageBubble);
     } else {
       // Assistant message - with avatar and name like LivePreview
@@ -2014,10 +2639,53 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         line-height: 1.5;
       \`;
       messageBubble.className = 'messageBubble';
-      messageBubble.innerHTML = formatMessage(content);
+      messageBubble.innerHTML = formatMessage(parsedContent);
       
       messageContent.appendChild(nameLabel);
       messageContent.appendChild(messageBubble);
+      
+      // Add product cards if any were found
+      if (products.length > 0) {
+        // Check if any products need metadata fetching
+        const needsMetadata = products.some(p => p.needsMetadata);
+        
+        if (needsMetadata) {
+          // Fetch metadata for products that need it
+          Promise.all(
+            products.map(async (product) => {
+              if (product.needsMetadata) {
+                const metadata = await fetchProductMetadata(product.url);
+                if (metadata) {
+                  product.image = metadata.image;
+                  product.price = metadata.price;
+                  product.name = metadata.name || product.name;
+                  delete product.needsMetadata;
+                }
+              }
+              return product;
+            })
+          ).then((enrichedProducts) => {
+            // Filter out products without images
+            const validProducts = enrichedProducts.filter(p => p.image);
+            
+            // Add product cards container after metadata is fetched
+            if (validProducts.length > 0) {
+              const cardsContainer = createProductCardsContainer(
+                validProducts,
+                WIDGET_CONFIG.messages.productCards.layout
+              );
+              messageContent.appendChild(cardsContainer);
+            }
+          });
+        } else {
+          // Products already have all metadata, show immediately
+          const cardsContainer = createProductCardsContainer(
+            products, 
+            WIDGET_CONFIG.messages.productCards.layout
+          );
+          messageContent.appendChild(cardsContainer);
+        }
+      }
       assistantContainer.appendChild(avatar);
       assistantContainer.appendChild(messageContent);
       messageContentDiv.appendChild(assistantContainer);
@@ -2034,6 +2702,16 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   function addMessageWithTypewriter(role, content) {
     const messageDiv = document.createElement("div");
     const isUser = role === 'user';
+    
+    // Parse product cards if enabled and this is an assistant message
+    let parsedContent = content;
+    let products = [];
+    
+    if (!isUser && WIDGET_CONFIG.messages.productCards.enabled) {
+      const parsed = parseProductCards(content);
+      parsedContent = parsed.cleanText;
+      products = parsed.products;
+    }
     
     // Store the original raw content for history saving
     messageDiv.setAttribute('data-original-content', content);
@@ -2153,6 +2831,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       
       messageContent.appendChild(nameLabel);
       messageContent.appendChild(messageBubble);
+      
+      // Add product cards if any were found (after typewriter completes)
+      if (products.length > 0) {
+        // Store products for later addition after typewriter effect
+        messageBubble.setAttribute('data-products', JSON.stringify(products));
+      }
+      
       assistantContainer.appendChild(avatar);
       assistantContainer.appendChild(messageContent);
       messageContentDiv.appendChild(assistantContainer);
@@ -2164,30 +2849,60 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       messages.appendChild(messageDiv);
       messages.scrollTop = messages.scrollHeight;
       
-      // Start typewriter effect
-      startTypewriterEffect(messageBubble, content, cursor);
+      // Start typewriter effect with parsed content
+      startTypewriterEffect(messageBubble, parsedContent, cursor, products);
     }
   }
 
-  function startTypewriterEffect(element, text, cursor) {
+  function startTypewriterEffect(element, text, cursor, products = []) {
     let currentText = '';
     const speed = 5; // milliseconds per character
     
     // Add cursor initially
     element.appendChild(cursor);
     
+    // Helper function to format text while preserving incomplete links
+    function formatTextSafely(text) {
+      // Temporarily replace incomplete markdown links with placeholders
+      let workingText = text;
+      const incompleteLinkRegex = /\\[([^\\]]*?)(?:\\](?:\\(([^)]*?))?)?$/;
+      const incompleteMatch = workingText.match(incompleteLinkRegex);
+      let placeholder = null;
+      let placeholderText = '';
+      
+      if (incompleteMatch && incompleteMatch[0]) {
+        // Found incomplete link at end
+        placeholderText = incompleteMatch[0];
+        placeholder = '___INCOMPLETE_LINK___';
+        workingText = workingText.slice(0, -placeholderText.length) + placeholder;
+      }
+      
+      // Format the text with complete links
+      let formatted = formatMessage(workingText);
+      
+      // Restore incomplete link as plain text
+      if (placeholder && placeholderText) {
+        formatted = formatted.replace(placeholder, placeholderText);
+      }
+      
+      return formatted;
+    }
+    
     function typeNextCharacter() {
       if (currentText.length < text.length) {
         // Add next character
         currentText += text[currentText.length];
         
-        // Apply formatting to current text and display it
+        // Format the text safely (avoiding incomplete links)
         try {
-          const formatted = formatMessage(currentText);
-          element.innerHTML = formatted + '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+          const formatted = formatTextSafely(currentText);
+          const cursorHTML = '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+          element.innerHTML = formatted + cursorHTML;
         } catch (error) {
-          // If formatting fails, show plain text with cursor
-          element.innerHTML = currentText + '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+          // Fallback to plain text if formatting fails
+          const cursorHTML = '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+          element.textContent = currentText;
+          element.innerHTML += cursorHTML;
         }
         
         // Scroll to bottom to keep up with typing
@@ -2200,7 +2915,52 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         try {
           element.innerHTML = formatMessage(text);
         } catch (error) {
-          element.innerHTML = text;
+          element.textContent = text;
+        }
+        
+        // Add product cards after typewriter effect completes
+        if (products.length > 0) {
+          const messageContent = element.parentElement;
+          
+          // Check if any products need metadata fetching
+          const needsMetadata = products.some(p => p.needsMetadata);
+          
+          if (needsMetadata) {
+            // Fetch metadata for products that need it
+            Promise.all(
+              products.map(async (product) => {
+                if (product.needsMetadata) {
+                  const metadata = await fetchProductMetadata(product.url);
+                  if (metadata) {
+                    product.image = metadata.image;
+                    product.price = metadata.price;
+                    product.name = metadata.name || product.name;
+                    delete product.needsMetadata;
+                  }
+                }
+                return product;
+              })
+            ).then((enrichedProducts) => {
+              // Filter out products without images
+              const validProducts = enrichedProducts.filter(p => p.image);
+              
+              // Add product cards container after metadata is fetched
+              if (validProducts.length > 0) {
+                const cardsContainer = createProductCardsContainer(
+                  validProducts,
+                  WIDGET_CONFIG.messages.productCards.layout
+                );
+                messageContent.appendChild(cardsContainer);
+              }
+            });
+          } else {
+            // Products already have all metadata, show immediately
+            const cardsContainer = createProductCardsContainer(
+              products, 
+              WIDGET_CONFIG.messages.productCards.layout
+            );
+            messageContent.appendChild(cardsContainer);
+          }
         }
       }
     }

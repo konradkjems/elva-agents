@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Tab } from '@headlessui/react';
 import { Switch } from '@headlessui/react';
 import { 
   PaintBrushIcon, 
@@ -16,13 +15,18 @@ import {
   StarIcon,
   ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import ColorPicker from './ColorPicker';
 import FileUpload from './FileUpload';
 import AdvancedSettings from './AdvancedSettings';
 import ImageZoomModal from './ImageZoomModal';
 
 export default function SettingsPanel({ settings, onChange, onSave, saving }) {
-  const [activeTab, setActiveTab] = useState(0);
   const [validationErrors, setValidationErrors] = useState({});
   const [isImageZoomModalOpen, setIsImageZoomModalOpen] = useState(false);
 
@@ -89,16 +93,6 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
     updateSetting(section, key, value);
   };
 
-  const tabs = [
-    { id: 0, name: 'Appearance', icon: PaintBrushIcon, color: 'blue' },
-    { id: 1, name: 'Messages', icon: ChatBubbleLeftRightIcon, color: 'green' },
-    { id: 2, name: 'Branding', icon: BuildingOfficeIcon, color: 'purple' },
-    { id: 3, name: 'Satisfaction', icon: StarIcon, color: 'yellow' },
-    { id: 4, name: 'Support Request', icon: ClipboardDocumentListIcon, color: 'red' },
-    { id: 5, name: 'Advanced', icon: Cog6ToothIcon, color: 'orange' },
-    { id: 6, name: 'Embed Code', icon: CodeBracketIcon, color: 'indigo' }
-  ];
-
   return (
     <div className="h-full bg-white dark:bg-gray-900">
       <div className="px-6 py-6">
@@ -111,24 +105,15 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
           </p>
         </div>
         
-        <Tab.Group selectedIndex={activeTab} onChange={setActiveTab}>
-          <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 mb-6">
-            {tabs.map((tab) => (
-              <Tab key={tab.id} className={({ selected }) =>
-                `flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  selected 
-                    ? `bg-white dark:bg-gray-700 text-${tab.color}-700 dark:text-${tab.color}-300 shadow-sm border border-${tab.color}-200 dark:border-${tab.color}-600` 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50'
-                }`
-              }>
-                <tab.icon className="w-4 h-4 mr-2" />
-                {tab.name}
-              </Tab>
-            ))}
-          </Tab.List>
-          
-          <Tab.Panels className="overflow-y-auto max-h-[calc(100vh-300px)]">
-            <Tab.Panel>
+        <Accordion type="single" collapsible defaultValue="appearance" className="space-y-4">
+          <AccordionItem value="appearance" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <PaintBrushIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Appearance</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
               {/* Appearance Settings */}
               <div className="space-y-8">
                 {/* Color Settings */}
@@ -219,11 +204,29 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                             key={theme.value}
                             type="button"
                             onClick={() => handleFieldChange('appearance', 'theme', theme.value)}
-                            className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                            className={
+                              `p-4 rounded-lg border-2 transition-all duration-200 ` +
+                              (
                               settings.appearance?.theme === theme.value
-                                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
+                                  ? `
+                                      border-blue-500 
+                                      bg-blue-50 text-blue-700 
+                                      dark:border-blue-400
+                                      dark:bg-blue-950
+                                      dark:text-blue-200
+                                    `
+                                  : `
+                                      border-gray-200 
+                                      bg-white text-gray-700 
+                                      hover:border-gray-300 hover:bg-gray-50
+                                      dark:border-gray-700
+                                      dark:bg-gray-900
+                                      dark:text-gray-200
+                                      dark:hover:border-gray-500
+                                      dark:hover:bg-gray-800
+                                    `
+                              )
+                            }
                           >
                             <div className="text-center">
                               <div className="text-2xl mb-2">{theme.icon}</div>
@@ -343,8 +346,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="number"
                         value={settings.appearance?.height || 600}
                         onChange={(e) => handleFieldChange('appearance', 'height', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm ${
-                          validationErrors['appearance.height'] ? 'border-red-300' : 'border-gray-300'
+                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                          validationErrors['appearance.height'] ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
                         }`}
                         min="400"
                         max="800"
@@ -365,8 +368,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="number"
                         value={settings.appearance?.borderRadius || 20}
                         onChange={(e) => handleFieldChange('appearance', 'borderRadius', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm ${
-                          validationErrors['appearance.borderRadius'] ? 'border-red-300' : 'border-gray-300'
+                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                          validationErrors['appearance.borderRadius']
+                            ? 'border-red-300 dark:border-red-600'
+                            : 'border-gray-300 dark:border-gray-600'
                         }`}
                         min="0"
                         max="50"
@@ -436,9 +441,17 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                   </div>
                 </div>
               </div>
-            </Tab.Panel>
-            
-            <Tab.Panel>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="messages" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <ChatBubbleLeftRightIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Messages</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
               {/* Message Settings */}
               <div className="space-y-8">
                 {/* Welcome & Initial Messages */}
@@ -713,10 +726,389 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </div>
                   </div>
                 </div>
+
+                {/* Voice Input Settings */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-indigo-600" />
+                    Voice Input (Diktering)
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Enable Voice Input */}
+                    <Switch.Group>
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div>
+                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Enable Voice Input
+                          </Switch.Label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Allow users to dictate messages using their microphone
+                          </p>
               </div>
-            </Tab.Panel>
-            
-            <Tab.Panel>
+                        <Switch
+                          checked={settings.messages?.voiceInput?.enabled !== false}
+                          onChange={(checked) => handleFieldChange('messages', 'voiceInput', {
+                            ...settings.messages?.voiceInput,
+                            enabled: checked
+                          })}
+                          className={`${
+                            settings.messages?.voiceInput?.enabled !== false ? 'bg-indigo-600' : 'bg-gray-200'
+                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                        >
+                          <span
+                            className={`${
+                              settings.messages?.voiceInput?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
+                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                          />
+                        </Switch>
+                      </div>
+                    </Switch.Group>
+
+                    {/* Voice Input Configuration */}
+                    {settings.messages?.voiceInput?.enabled !== false && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Voice Language
+                          </label>
+                          <select
+                            value={settings.messages?.voiceInput?.language || 'da-DK'}
+                            onChange={(e) => handleFieldChange('messages', 'voiceInput', {
+                              ...settings.messages?.voiceInput,
+                              language: e.target.value
+                            })}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          >
+                            <option value="da-DK">Dansk (Danmark)</option>
+                            <option value="en-US">English (US)</option>
+                            <option value="en-GB">English (UK)</option>
+                            <option value="sv-SE">Svenska (Sverige)</option>
+                            <option value="no-NO">Norsk (Norge)</option>
+                            <option value="de-DE">Deutsch (Deutschland)</option>
+                            <option value="fr-FR">Français (France)</option>
+                            <option value="es-ES">Español (España)</option>
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Language for speech recognition
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Voice Button Position
+                          </label>
+                          <select
+                            value={settings.messages?.voiceInput?.buttonPosition || 'left'}
+                            onChange={(e) => handleFieldChange('messages', 'voiceInput', {
+                              ...settings.messages?.voiceInput,
+                              buttonPosition: e.target.value
+                            })}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          >
+                            <option value="left">Left side of input</option>
+                            <option value="right">Right side of input</option>
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Position of the microphone button in the input field
+                          </p>
+                        </div>
+
+                        <Switch.Group>
+                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div>
+                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Continuous Recording
+                              </Switch.Label>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Keep recording until manually stopped
+                              </p>
+                            </div>
+                            <Switch
+                              checked={settings.messages?.voiceInput?.continuousRecording || false}
+                              onChange={(checked) => handleFieldChange('messages', 'voiceInput', {
+                                ...settings.messages?.voiceInput,
+                                continuousRecording: checked
+                              })}
+                              className={`${
+                                settings.messages?.voiceInput?.continuousRecording ? 'bg-indigo-600' : 'bg-gray-200'
+                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                            >
+                              <span
+                                className={`${
+                                  settings.messages?.voiceInput?.continuousRecording ? 'translate-x-6' : 'translate-x-1'
+                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                              />
+                            </Switch>
+                          </div>
+                        </Switch.Group>
+
+                        <Switch.Group>
+                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div>
+                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Auto-send on Complete
+                              </Switch.Label>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Automatically send message when voice input stops
+                              </p>
+                            </div>
+                            <Switch
+                              checked={settings.messages?.voiceInput?.autoSendOnComplete || false}
+                              onChange={(checked) => handleFieldChange('messages', 'voiceInput', {
+                                ...settings.messages?.voiceInput,
+                                autoSendOnComplete: checked
+                              })}
+                              className={`${
+                                settings.messages?.voiceInput?.autoSendOnComplete ? 'bg-indigo-600' : 'bg-gray-200'
+                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                            >
+                              <span
+                                className={`${
+                                  settings.messages?.voiceInput?.autoSendOnComplete ? 'translate-x-6' : 'translate-x-1'
+                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                              />
+                            </Switch>
+                          </div>
+                        </Switch.Group>
+                      </div>
+                    )}
+
+                    {/* Information Panel */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <InformationCircleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-blue-800 dark:text-blue-300">
+                          <p className="font-medium mb-1">Voice Input Information</p>
+                          <ul className="space-y-1 text-xs">
+                            <li>• Uses browser's built-in speech recognition</li>
+                            <li>• Works best in Chrome, Edge, and Safari</li>
+                            <li>• Requires microphone permission from user</li>
+                            <li>• Speech is processed locally in the browser</li>
+                            <li>• No audio data is sent to our servers</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Product Cards Settings */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-emerald-600" />
+                    Product Recommendation Cards
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Enable Product Cards */}
+                    <Switch.Group>
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div>
+                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Enable Product Cards
+                          </Switch.Label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Allow AI to display product recommendations as visual cards
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settings.messages?.productCards?.enabled !== false}
+                          onChange={(checked) => handleFieldChange('messages', 'productCards', {
+                            ...settings.messages?.productCards,
+                            enabled: checked
+                          })}
+                          className={`${
+                            settings.messages?.productCards?.enabled !== false ? 'bg-emerald-600' : 'bg-gray-200'
+                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2`}
+                        >
+                          <span
+                            className={`${
+                              settings.messages?.productCards?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
+                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                          />
+                        </Switch>
+                      </div>
+                    </Switch.Group>
+
+                    {/* Product Cards Configuration */}
+                    {settings.messages?.productCards?.enabled !== false && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Card Layout
+                            </label>
+                            <select
+                              value={settings.messages?.productCards?.layout || 'horizontal'}
+                              onChange={(e) => handleFieldChange('messages', 'productCards', {
+                                ...settings.messages?.productCards,
+                                layout: e.target.value
+                              })}
+                              className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            >
+                              <option value="horizontal">Horizontal Scroll</option>
+                              <option value="grid">Grid Layout</option>
+                              <option value="vertical">Vertical Stack</option>
+                            </select>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              How product cards are arranged
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Cards per Row
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="4"
+                              value={settings.messages?.productCards?.cardsPerRow || 3}
+                              onChange={(e) => handleFieldChange('messages', 'productCards', {
+                                ...settings.messages?.productCards,
+                                cardsPerRow: parseInt(e.target.value)
+                              })}
+                              className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              Maximum cards per row (for grid layout)
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Card Style
+                            </label>
+                            <select
+                              value={settings.messages?.productCards?.cardStyle || 'standard'}
+                              onChange={(e) => handleFieldChange('messages', 'productCards', {
+                                ...settings.messages?.productCards,
+                                cardStyle: e.target.value
+                              })}
+                              className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            >
+                              <option value="minimal">Minimal</option>
+                              <option value="standard">Standard</option>
+                              <option value="detailed">Detailed</option>
+                            </select>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              Visual style of product cards
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Price Currency
+                            </label>
+                            <input
+                              type="text"
+                              value={settings.messages?.productCards?.priceCurrency || 'kr.'}
+                              onChange={(e) => handleFieldChange('messages', 'productCards', {
+                                ...settings.messages?.productCards,
+                                priceCurrency: e.target.value
+                              })}
+                              className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              placeholder="kr."
+                            />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              Default currency symbol
+                            </p>
+                          </div>
+                        </div>
+
+                        <Switch.Group>
+                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div>
+                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Show Price
+                              </Switch.Label>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Display product prices on cards
+                              </p>
+                            </div>
+                            <Switch
+                              checked={settings.messages?.productCards?.showPrice !== false}
+                              onChange={(checked) => handleFieldChange('messages', 'productCards', {
+                                ...settings.messages?.productCards,
+                                showPrice: checked
+                              })}
+                              className={`${
+                                settings.messages?.productCards?.showPrice !== false ? 'bg-emerald-600' : 'bg-gray-200'
+                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2`}
+                            >
+                              <span
+                                className={`${
+                                  settings.messages?.productCards?.showPrice !== false ? 'translate-x-6' : 'translate-x-1'
+                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                              />
+                            </Switch>
+                          </div>
+                        </Switch.Group>
+
+                        <Switch.Group>
+                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div>
+                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Auto-fetch Product Data
+                              </Switch.Label>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                Automatically fetch product images and details from URLs
+                              </p>
+                            </div>
+                            <Switch
+                              checked={settings.messages?.productCards?.autoFetchProductData || false}
+                              onChange={(checked) => handleFieldChange('messages', 'productCards', {
+                                ...settings.messages?.productCards,
+                                autoFetchProductData: checked
+                              })}
+                              className={`${
+                                settings.messages?.productCards?.autoFetchProductData ? 'bg-emerald-600' : 'bg-gray-200'
+                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2`}
+                            >
+                              <span
+                                className={`${
+                                  settings.messages?.productCards?.autoFetchProductData ? 'translate-x-6' : 'translate-x-1'
+                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                              />
+                            </Switch>
+                          </div>
+                        </Switch.Group>
+                      </div>
+                    )}
+
+                    {/* Information Panel */}
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <InformationCircleIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-emerald-800 dark:text-emerald-300">
+                          <p className="font-medium mb-1">Product Cards Information</p>
+                          <ul className="space-y-1 text-xs">
+                            <li>• AI can display products using [PRODUCTS] markup format</li>
+                            <li>• Cards show product image, name, and price</li>
+                            <li>• Cards are clickable links to product pages</li>
+                            <li>• Supports multiple layout options</li>
+                            <li>• Mobile-responsive with horizontal scroll</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="branding" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <BuildingOfficeIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Branding</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
               {/* Branding Settings */}
               <div className="space-y-8">
                 {/* Company Information */}
@@ -780,8 +1172,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Visual Assets */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <BuildingOfficeIcon className="w-5 h-5 mr-2 text-blue-600" />
-                    Visual Assets
+                    <BuildingOfficeIcon className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+                    <span className="text-gray-900 dark:text-gray-100">Visual Assets</span>
                   </h4>
                   
                   <div className="space-y-6">
@@ -791,6 +1183,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       onRemove={() => handleFieldChange('branding', 'avatarUrl', '')}
                       label="Assistant Avatar"
                       aspectRatio="1:1"
+                      labelClassName="text-gray-800 dark:text-gray-100"
                     />
 
                     <FileUpload
@@ -799,21 +1192,22 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       onRemove={() => handleFieldChange('branding', 'logoUrl', '')}
                       label="Company Logo"
                       aspectRatio="16:9"
+                      labelClassName="text-gray-800 dark:text-gray-100"
                     />
 
                     {/* Image Zoom Customization */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-100 mb-3">
                         Image Zoom & Position
                       </label>
                       <button
                         onClick={() => setIsImageZoomModalOpen(true)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2"
                       >
-                        <MagnifyingGlassIcon className="w-5 h-5 text-gray-500" />
-                        <span className="text-sm font-medium text-gray-700">Customize Image Zoom</span>
+                        <MagnifyingGlassIcon className="w-5 h-5 text-gray-500 dark:text-gray-300" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-100">Customize Image Zoom</span>
                       </button>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                         Adjust zoom level and positioning of uploaded images
                       </p>
                     </div>
@@ -856,9 +1250,17 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                   </div>
                 </div>
               </div>
-            </Tab.Panel>
-            
-            <Tab.Panel>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="satisfaction" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <StarIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Satisfaction Rating</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
               {/* Satisfaction Rating Settings */}
               <div className="space-y-8">
                 {/* Satisfaction Rating Configuration */}
@@ -996,9 +1398,17 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                   </div>
                 </div>
               </div>
-            </Tab.Panel>
-            
-            <Tab.Panel>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="support" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <ClipboardDocumentListIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Support Request</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
               {/* Manual Review Settings */}
               <div className="space-y-8">
                 {/* Manual Review Configuration */}
@@ -1126,16 +1536,32 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                   </div>
                 </div>
               </div>
-            </Tab.Panel>
-            
-            <Tab.Panel>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="advanced" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <Cog6ToothIcon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Advanced Settings</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
               {/* Advanced Settings */}
               <div className="space-y-6">
                 <AdvancedSettings settings={settings} onChange={onChange} />
               </div>
-            </Tab.Panel>
-            
-            <Tab.Panel>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="embed" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <CodeBracketIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Embed Code</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
               {/* Embed Code Settings */}
               <div className="space-y-8">
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
@@ -1222,9 +1648,9 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                   </div>
                 </div>
               </div>
-            </Tab.Panel>
-          </Tab.Panels>
-        </Tab.Group>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
 
       {/* Image Zoom Modal */}

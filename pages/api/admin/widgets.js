@@ -44,7 +44,23 @@ const mockWidgets = [
       popupMessage: 'Hej! 👋 Har du brug for hjælp?',
       popupDelay: 5000,
       autoClose: false,
-      closeButtonText: 'Close'
+      closeButtonText: 'Close',
+      voiceInput: {
+        enabled: true,
+        language: 'da-DK',
+        buttonPosition: 'left',
+        continuousRecording: false,
+        autoSendOnComplete: false
+      },
+      productCards: {
+        enabled: true,
+        layout: 'horizontal',
+        cardsPerRow: 3,
+        showPrice: true,
+        priceCurrency: 'kr.',
+        cardStyle: 'standard',
+        autoFetchProductData: false
+      }
     },
     branding: {
       title: 'Elva AI kundeservice Agent',
@@ -118,7 +134,23 @@ const mockWidgets = [
       popupMessage: '💡 Spørg mig om vores løsninger!',
       popupDelay: 3000,
       autoClose: true,
-      closeButtonText: 'Luk'
+      closeButtonText: 'Luk',
+      voiceInput: {
+        enabled: true,
+        language: 'da-DK',
+        buttonPosition: 'left',
+        continuousRecording: false,
+        autoSendOnComplete: false
+      },
+      productCards: {
+        enabled: true,
+        layout: 'horizontal',
+        cardsPerRow: 3,
+        showPrice: true,
+        priceCurrency: 'kr.',
+        cardStyle: 'standard',
+        autoFetchProductData: false
+      }
     },
     branding: {
       title: 'Elva Sales Assistant',
