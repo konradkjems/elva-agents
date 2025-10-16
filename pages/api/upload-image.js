@@ -27,17 +27,16 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-  // Apply rate limiting
-  try {
-    await runMiddleware(req, res, widgetLimiter);
-  } catch (error) {
-    return res.status(429).json({ 
-      error: 'Too many requests, please slow down',
-      retryAfter: '60 seconds'
-    });
-  }
+    // Apply rate limiting
+    try {
+      await runMiddleware(req, res, widgetLimiter);
+    } catch (error) {
+      return res.status(429).json({ 
+        error: 'Too many requests, please slow down',
+        retryAfter: '60 seconds'
+      });
+    }
 
-  try {
     // Parse form data
     const form = new IncomingForm();
     const [fields, files] = await new Promise((resolve, reject) => {
@@ -130,11 +129,10 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error in /api/widget/upload-image:', error);
+    console.error('Error in /api/upload-image:', error);
     res.status(500).json({ 
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
-
