@@ -911,7 +911,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       formData.append('widgetId', WIDGET_CONFIG.widgetId);
       
       try {
-        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/widget/upload-image\`, {
+        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/upload-image\`, {
           method: 'POST',
           body: formData
         });
@@ -923,9 +923,17 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         });
         
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Upload failed:', errorText);
-          alert(\`Upload fejlede: \${response.status} \${response.statusText}\`);
+          let errorMessage = \`Upload fejlede: \${response.status} \${response.statusText}\`;
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (parseError) {
+            // If response is not JSON, use status text
+            console.error('Upload failed - non-JSON response:', await response.text());
+          }
+          alert(errorMessage);
           return;
         }
         

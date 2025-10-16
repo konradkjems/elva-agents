@@ -1,8 +1,8 @@
 import { IncomingForm } from 'formidable';
-import { uploadToCloudinary } from '../../../lib/cloudinary';
-import clientPromise from '../../../lib/mongodb';
+import { uploadToCloudinary } from '../../lib/cloudinary';
+import clientPromise from '../../lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { widgetLimiter, runMiddleware } from '../../../lib/rate-limit';
+import { widgetLimiter, runMiddleware } from '../../lib/rate-limit';
 
 // Disable body parser for multipart/form-data
 export const config = {
