@@ -43,13 +43,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { widgetId, message, userId, conversationId } = req.body;
+    const { widgetId, message, userId, conversationId, imageUrl } = req.body;
     
     console.log('📥 Received request:', {
       widgetId,
       message: message ? message.substring(0, 50) + '...' : 'null',
       userId,
       conversationId,
+      hasImage: !!imageUrl,
       bodyKeys: Object.keys(req.body)
     });
 
@@ -153,7 +154,10 @@ export default async function handler(req, res) {
       prompt: {
         id: widget.openai.promptId
       },
-      input: message
+      input: imageUrl ? [
+        { type: "text", text: message },
+        { type: "image_url", image_url: { url: imageUrl } }
+      ] : message
     };
 
     // Add version if specified in widget configuration
@@ -212,6 +216,7 @@ export default async function handler(req, res) {
       id: new ObjectId().toString(),
       type: "user",
       content: message,
+      imageUrl: imageUrl || null,
       timestamp: new Date(),
       responseTime: null,
       tokens: null

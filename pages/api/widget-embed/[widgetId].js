@@ -9,6 +9,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-elva-consent-analytics, x-elva-consent-functional');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   
+  // Cache control - allow caching but revalidate
+  res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate'); // 5 minutes cache
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -81,6 +84,15 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Widget not found' });
     }
 
+    // DEBUG: Log widget settings
+    console.log('🔍 Widget Settings Debug:', {
+      widgetId: widget._id,
+      hasSettings: !!widget.settings,
+      settings: widget.settings,
+      imageUpload: widget.settings?.imageUpload,
+      imageupload: widget.settings?.imageupload
+    });
+
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Type', 'application/javascript');
@@ -89,8 +101,9 @@ export default async function handler(req, res) {
     const isDevelopment = false; // Always production in widget
     const cacheTime = isDevelopment ? 10 : 30; // 10 seconds in dev, 30 seconds in production (reduced for testing)
     
-    // Use ETag based on widget's updatedAt timestamp for better cache invalidation
-    const etag = `"${widget.updatedAt ? new Date(widget.updatedAt).getTime() : Date.now()}"`;
+    // Use ETag based on widget's updatedAt timestamp + settings for better cache invalidation
+    const settingsHash = widget.settings ? JSON.stringify(widget.settings).length : 0;
+    const etag = `"${widget.updatedAt ? new Date(widget.updatedAt).getTime() : Date.now()}-${settingsHash}"`;
     res.setHeader('ETag', etag);
     
     // Check if client has cached version
@@ -193,6 +206,13 @@ export default async function handler(req, res) {
       formTitle: widget.manualReview?.formTitle || 'Request Support',
       formDescription: widget.manualReview?.formDescription || 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.',
       successMessage: widget.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'
+    },
+    settings: {
+      imageUpload: {
+        enabled: widget.settings?.imageUpload?.enabled || widget.settings?.imageupload?.enabled || widget.imageUpload?.enabled || widget.imageupload?.enabled || false,
+        maxSizeMB: widget.settings?.imageUpload?.maxSizeMB || widget.settings?.imageupload?.maxSizeMB || widget.imageUpload?.maxSizeMB || widget.imageupload?.maxSizeMB || 5,
+        allowedTypes: widget.settings?.imageUpload?.allowedTypes || widget.settings?.imageupload?.allowedTypes || widget.imageUpload?.allowedTypes || widget.imageupload?.allowedTypes || ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+      }
     }
   })};
 
@@ -804,7 +824,185 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   inputFieldWrapper.appendChild(input);
   inputFieldWrapper.appendChild(inputLabel);
 
+  // IMAGE UPLOAD IMPLEMENTATION
+  let imageUploadButton = null;
+  let currentImageAttachment = null;
+  const fileInput = document.createElement('input');
 
+  console.log('🖼️ Image Upload Check:', {
+    enabled: WIDGET_CONFIG.settings?.imageUpload?.enabled,
+    hasSettings: !!WIDGET_CONFIG.settings,
+    hasImageUpload: !!WIDGET_CONFIG.settings?.imageUpload,
+    fullSettings: WIDGET_CONFIG.settings
+  });
+
+  if (WIDGET_CONFIG.settings?.imageUpload?.enabled) {
+    // Create hidden file input
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    
+    // Create image upload button
+    imageUploadButton = document.createElement('button');
+    imageUploadButton.type = 'button';
+    imageUploadButton.className = 'elva-image-upload-btn';
+    imageUploadButton.innerHTML = \`
+      <svg class="image-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+        <circle cx="9" cy="9" r="2"/>
+        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+      </svg>
+    \`;
+    imageUploadButton.style.cssText = \`
+      position: absolute;
+      left: \${WIDGET_CONFIG.messages.voiceInput.enabled ? '46px' : '16px'};
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      z-index: 10;
+    \`;
+    
+    // Update input padding to make room for image button
+    const leftPadding = WIDGET_CONFIG.messages.voiceInput.enabled ? '76px' : '46px';
+    input.style.paddingLeft = leftPadding;
+    inputLabel.style.left = leftPadding;
+    
+    imageUploadButton.onclick = () => fileInput.click();
+    
+    // Hover effects
+    imageUploadButton.onmouseover = () => {
+      imageUploadButton.style.backgroundColor = 'rgba(107, 114, 128, 0.1)';
+      imageUploadButton.style.transform = 'translateY(-50%) scale(1.05)';
+    };
+    
+    imageUploadButton.onmouseout = () => {
+      imageUploadButton.style.backgroundColor = 'transparent';
+      imageUploadButton.style.transform = 'translateY(-50%) scale(1)';
+    };
+    
+    // Handle file selection
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Billedet skal være mindre end 5MB');
+        return;
+      }
+      
+      // Show loading state
+      const originalHTML = imageUploadButton.innerHTML;
+      imageUploadButton.innerHTML = '⏳';
+      imageUploadButton.style.color = '#4f46e5';
+      
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('widgetId', WIDGET_CONFIG.widgetId);
+      
+      try {
+        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/widget/upload-image\`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        console.log('📤 Upload response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Upload failed:', errorText);
+          alert(\`Upload fejlede: \${response.status} \${response.statusText}\`);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('📤 Upload data:', data);
+        
+        if (data.success) {
+          currentImageAttachment = data.url;
+          showImagePreview(data.url, file.name);
+        } else {
+          alert(\`Upload fejlede: \${data.error || 'Ukendt fejl'}\`);
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert(\`Upload fejlede: \${error.message}\`);
+      } finally {
+        // Restore button
+        imageUploadButton.innerHTML = originalHTML;
+        imageUploadButton.style.color = '#6b7280';
+      }
+      
+      // Reset file input
+      fileInput.value = '';
+    });
+    
+    inputFieldWrapper.appendChild(imageUploadButton);
+    inputFieldWrapper.appendChild(fileInput);
+  }
+
+  // Image preview helper function
+  function showImagePreview(url, filename) {
+    // Remove existing preview if any
+    const existingPreview = inputContainer.querySelector('.elva-image-preview');
+    if (existingPreview) {
+      existingPreview.remove();
+    }
+    
+    const preview = document.createElement('div');
+    preview.className = 'elva-image-preview';
+    preview.style.cssText = \`
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      background: #f3f4f6;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    \`;
+    
+    const removeButton = document.createElement('button');
+    removeButton.textContent = '×';
+    removeButton.style.cssText = \`
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #ef4444;
+      font-size: 20px;
+      font-weight: bold;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    \`;
+    removeButton.onclick = () => {
+      preview.remove();
+      currentImageAttachment = null;
+    };
+    
+    preview.innerHTML = \`
+      <img src="\${url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" />
+      <span style="font-size: 12px; color: #6b7280; flex: 1;">\${filename}</span>
+    \`;
+    preview.appendChild(removeButton);
+    
+    inputContainer.insertBefore(preview, inputWrapper);
+  }
 
   const sendButton = document.createElement("button");
   sendButton.innerHTML = \`
@@ -1537,7 +1735,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         cleanContent = msg.content.replace(/^ECottonshoppen Ai-Kundeservice/, '').trim();
       }
       
-      addMessage(msg.role, cleanContent);
+      addMessage(msg.role, cleanContent, msg.imageUrl || null);
     });
     
     // Hide history view and show chat
@@ -2491,7 +2689,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     }
   }
 
-  function addMessage(role, content) {
+  function addMessage(role, content, imageUrl = null) {
     const messageDiv = document.createElement("div");
     const isUser = role === 'user';
     
@@ -2510,11 +2708,17 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     messageDiv.setAttribute('data-role', role);
     
     // Also store in our conversation messages array
-    currentConversationMessages.push({
+    const messageData = {
       role: role,
       content: content,
       timestamp: new Date().toISOString()
-    });
+    };
+    
+    if (imageUrl) {
+      messageData.imageUrl = imageUrl;
+    }
+    
+    currentConversationMessages.push(messageData);
     
     messageDiv.style.cssText = \`
       margin-bottom: 16px;
@@ -2562,7 +2766,24 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         word-wrap: break-word;
         text-align: left;
       \`;
-      messageBubble.innerHTML = formatMessage(parsedContent);
+      
+      // Add image if present
+      if (imageUrl) {
+        const imageElement = document.createElement('img');
+        imageElement.src = imageUrl;
+        imageElement.style.cssText = \`
+          max-width: 100%;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          display: block;
+        \`;
+        messageBubble.appendChild(imageElement);
+      }
+      
+      const textDiv = document.createElement('div');
+      textDiv.innerHTML = formatMessage(parsedContent);
+      messageBubble.appendChild(textDiv);
+      
       messageContentDiv.appendChild(messageBubble);
     } else {
       // Assistant message - with avatar and name like LivePreview
@@ -3394,7 +3615,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     }
     
     // Add user message to UI
-    addMessage('user', msg);
+    addMessage('user', msg, currentImageAttachment);
     input.value = "";
     
     // Show typing indicator matching LivePreview
@@ -3507,18 +3728,25 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       // GDPR: Send consent status to backend
       const analyticsConsent = ElvaConsent.hasConsent('analytics');
       
+      const requestBody = {
+        widgetId: WIDGET_CONFIG.widgetId,
+        message: msg,
+        userId,
+        conversationId: currentConversationId
+      };
+
+      // Add image URL if there's an attachment
+      if (currentImageAttachment) {
+        requestBody.imageUrl = currentImageAttachment;
+      }
+      
       const res = await fetch(apiEndpoint, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "X-Elva-Consent-Analytics": analyticsConsent ? 'true' : 'false'
         },
-        body: JSON.stringify({ 
-          widgetId: WIDGET_CONFIG.widgetId, 
-          message: msg, 
-          userId,
-          conversationId: currentConversationId 
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       });
       
@@ -3560,6 +3788,15 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         // Add message with typewriter effect
         addMessageWithTypewriter('assistant', data.reply);
         
+        // Clear image attachment and preview after successful send
+        if (currentImageAttachment) {
+          currentImageAttachment = null;
+          const preview = inputContainer.querySelector('.elva-image-preview');
+          if (preview) {
+            preview.remove();
+          }
+        }
+        
         // Check if we should show satisfaction rating
         checkAndShowSatisfactionRating();
         
@@ -3572,10 +3809,17 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
             cleanContent = msg.content.replace(/^ECottonshoppen Ai-Kundeservice/, '').trim();
           }
           
-          return {
+          const messageData = {
             role: msg.role,
             content: cleanContent || ''
           };
+          
+          // Include imageUrl if present
+          if (msg.imageUrl) {
+            messageData.imageUrl = msg.imageUrl;
+          }
+          
+          return messageData;
         }).filter(msg => msg.content && msg.content.trim());
         
         if (allMessages.length > 0) {

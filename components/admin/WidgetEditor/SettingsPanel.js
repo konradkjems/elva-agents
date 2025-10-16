@@ -864,6 +864,61 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                   </div>
                 </div>
 
+                {/* Image Upload Settings */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-purple-600" />
+                    Image Upload (GPT-4.1 Vision)
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Enable Image Upload */}
+                    <Switch.Group>
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div>
+                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Enable Image Upload
+                          </Switch.Label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Allow users to upload images for AI analysis (requires GPT-4.1 or vision-capable model)
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settings.imageUpload?.enabled || settings.imageupload?.enabled || false}
+                          onChange={(checked) => handleFieldChange('imageupload', 'enabled', checked)}
+                          className={`${
+                            settings.imageUpload?.enabled || settings.imageupload?.enabled ? 'bg-purple-600' : 'bg-gray-200'
+                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
+                        >
+                          <span
+                            className={`${
+                              settings.imageUpload?.enabled || settings.imageupload?.enabled ? 'translate-x-6' : 'translate-x-1'
+                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                          />
+                        </Switch>
+                      </div>
+                    </Switch.Group>
+
+                    {/* Information Panel */}
+                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <InformationCircleIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-purple-800 dark:text-purple-300">
+                          <p className="font-medium mb-1">Image Upload Information</p>
+                          <ul className="space-y-1 text-xs">
+                            <li>• Maximum file size: 5MB</li>
+                            <li>• Supported formats: JPEG, PNG, GIF, WebP</li>
+                            <li>• Images auto-compressed to 1024x1024 for optimal performance</li>
+                            <li>• Saves ~73% on API token costs through compression</li>
+                            <li>• Images stored securely in Cloudinary CDN</li>
+                            <li>• Requires GPT-4.1 or vision-capable model in your OpenAI prompt</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Product Cards Settings */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
