@@ -292,8 +292,8 @@ export default function WidgetEditor() {
         )}
 
          {/* Main Content */}
-         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-12rem)]">
-           {/* Settings Panel - Takes up 3 columns for more space */}
+         <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 h-[calc(100vh-12rem)]">
+           {/* Settings Panel - Takes up 2 columns */}
            <Card className="flex flex-col lg:col-span-3">
              <CardHeader className="flex-shrink-0">
                <CardTitle className="flex items-center gap-2">
@@ -304,7 +304,7 @@ export default function WidgetEditor() {
                  Configure your widget's appearance and behavior
                </CardDescription>
              </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-0">
+            <CardContent className="flex-1 overflow-y-auto p-0 max-h-[calc(150vh-16rem)]">
               <SettingsPanel
                 settings={settings}
                 onChange={isReadOnly ? () => {} : setSettings}
@@ -315,8 +315,8 @@ export default function WidgetEditor() {
             </CardContent>
            </Card>
            
-           {/* Preview Panel - Takes up 2 columns */}
-           <Card className="flex flex-col lg:col-span-2">
+           {/* Preview Panel - Takes up 3 columns for more space */}
+           <Card className="flex flex-col lg:col-span-3">
              <CardHeader className="flex-shrink-0">
                <CardTitle className="flex items-center gap-2">
                  <Eye className="h-5 w-5" />
@@ -326,7 +326,7 @@ export default function WidgetEditor() {
                  See your changes in real-time. Click the chat button to test interactions.
                </CardDescription>
              </CardHeader>
-             <CardContent className="flex-1 overflow-y-auto">
+             <CardContent className="flex-1 overflow-visible">
                <LivePreview widget={widget} settings={settings} showMobilePreview={false} />
              </CardContent>
            </Card>

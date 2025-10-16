@@ -91,7 +91,7 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
     }
   }, [isOpen, settings.messages?.popupMessage]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const newMessage = {
@@ -102,20 +102,90 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
     };
 
     setMessages([...messages, newMessage]);
+    const messageText = inputValue;
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = {
+    // Check if widget has necessary configuration for API calls
+    const promptId = widget?.openai?.promptId || settings?.openai?.promptId;
+    if (!widget?._id || !promptId) {
+      const errorResponse = {
         id: Date.now() + 1,
-        text: 'Tak for dit spørgsmål! Dette er en preview af svaret.',
+        text: 'Widget mangler AI konfiguration. Gå til AI Settings og tilføj en system prompt før du tester live preview.',
         sender: 'assistant',
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => [...prev, errorResponse]);
       setIsTyping(false);
-    }, 1500);
+      return;
+    }
+
+    try {
+      // Send message to the actual API
+      const requestBody = {
+        message: messageText,
+        widgetId: widget?._id,
+        userId: 'preview-user', // Use a preview user ID
+        conversationId: `preview-${Date.now()}`, // Generate a unique conversation ID for preview
+      };
+      
+      const response = await fetch('/api/respond-responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          widgetId: widget?._id,
+          message: messageText
+        });
+        throw new Error(`API Error ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      const aiResponse = {
+        id: Date.now() + 1,
+        text: data.reply || 'Jeg beklager, men jeg kunne ikke forstå dit spørgsmål. Prøv venligst igen.',
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Fallback to a helpful message based on the error
+      let fallbackMessage = 'Dette er en preview version. Rigtige svar kræver en deployed widget.';
+      
+      if (error.message.includes('404')) {
+        fallbackMessage = 'Widget ikke fundet. Sørg for at widget\'en er korrekt konfigureret.';
+      } else if (error.message.includes('400') || error.message.includes('Invalid value for \'content\'')) {
+        fallbackMessage = 'Widget mangler AI prompt konfiguration. Gå til AI Settings og tilføj en system prompt.';
+      } else if (error.message.includes('429')) {
+        fallbackMessage = 'For mange anmodninger. Prøv igen om et øjeblik.';
+      } else if (error.message.includes('500')) {
+        fallbackMessage = 'Server fejl. Prøv igen senere.';
+      }
+      
+      const errorResponse = {
+        id: Date.now() + 1,
+        text: fallbackMessage,
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -125,7 +195,7 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
     }
   };
 
-  const handleSuggestedResponse = (response) => {
+  const handleSuggestedResponse = async (response) => {
     const newMessage = {
       id: Date.now(),
       text: response,
@@ -135,33 +205,92 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
     setMessages([newMessage]);
     setIsTyping(true);
     
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = {
+    // Check if widget has necessary configuration for API calls
+    const promptId = widget?.openai?.promptId || settings?.openai?.promptId;
+    if (!widget?._id || !promptId) {
+      const errorResponse = {
         id: Date.now() + 1,
-        text: 'Tak for dit spørgsmål! Dette er en preview af svaret.',
+        text: 'Widget mangler AI konfiguration. Gå til AI Settings og tilføj en system prompt før du tester live preview.',
         sender: 'assistant',
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => [...prev, errorResponse]);
       setIsTyping(false);
-    }, 1500);
+      return;
+    }
+    
+    try {
+      // Send suggested response to the actual API
+      const apiResponse = await fetch('/api/respond-responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: response,
+          widgetId: widget?._id,
+          userId: 'preview-user', // Use a preview user ID
+          conversationId: `preview-${Date.now()}`,
+        }),
+      });
+
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        console.error('API Error (Suggested Response):', {
+          status: apiResponse.status,
+          statusText: apiResponse.statusText,
+          error: errorText,
+          widgetId: widget?._id,
+          message: response
+        });
+        throw new Error(`API Error ${apiResponse.status}: ${apiResponse.statusText}`);
+      }
+
+      const data = await apiResponse.json();
+      
+      const aiResponse = {
+        id: Date.now() + 1,
+        text: data.reply || 'Jeg beklager, men jeg kunne ikke forstå dit spørgsmål. Prøv venligst igen.',
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error sending suggested response:', error);
+      
+      // Fallback to a helpful message based on the error
+      let fallbackMessage = 'Dette er en preview version. Rigtige svar kræver en deployed widget.';
+      
+      if (error.message.includes('404')) {
+        fallbackMessage = 'Widget ikke fundet. Sørg for at widget\'en er korrekt konfigureret.';
+      } else if (error.message.includes('400') || error.message.includes('Invalid value for \'content\'')) {
+        fallbackMessage = 'Widget mangler AI prompt konfiguration. Gå til AI Settings og tilføj en system prompt.';
+      } else if (error.message.includes('429')) {
+        fallbackMessage = 'For mange anmodninger. Prøv igen om et øjeblik.';
+      } else if (error.message.includes('500')) {
+        fallbackMessage = 'Server fejl. Prøv igen senere.';
+      }
+      
+      const errorResponse = {
+        id: Date.now() + 1,
+        text: fallbackMessage,
+        sender: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const getPlacementStyles = () => {
-    const placement = settings.appearance?.placement || 'bottom-right';
-    switch (placement) {
-      case 'bottom-right':
-        return { bottom: '-10px', right: '20px' };
-      case 'bottom-left':
-        return { bottom: '-10px', left: '20px' };
-      case 'top-right':
-        return { top: '-10px', right: '20px' };
-      case 'top-left':
-        return { top: '-10px', left: '20px' };
-      default:
-        return { bottom: '-10px', right: '20px' };
-    }
+    // For live preview, center the widget instead of using placement styles
+    return { 
+      position: 'relative',
+      margin: '20px auto'
+    };
   };
 
   const getWidgetStyles = () => {
@@ -217,8 +346,8 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
     }
     return {
       width: '100%',
-      height: '900px', // Fixed height for desktop view
-      minHeight: '800px',
+      height: '700px', // Fixed height for live preview
+      minHeight: '700px',
       position: 'relative'
     };
   };
@@ -263,21 +392,25 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
 
       {/* Preview Container */}
       <div 
-        className="bg-white rounded-lg p-4 overflow-hidden relative border border-gray-200"
+        className="bg-white dark:bg-gray-800 rounded-lg p-4 overflow-hidden relative border border-gray-200 dark:border-gray-700"
         style={getDeviceStyles()}
       >
-        <div className="text-sm text-gray-600 mb-4 text-center">
+        <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
           {deviceView === 'mobile' ? 'Mobile Preview' : 'Desktop Preview'} - Click the chat button to test
         </div>
         
         {/* Widget Preview */}
-        <div className="relative" style={{ height: 'calc(100% - 80px)' }}>
+        <div className="relative">
           {/* Chat Widget */}
           <div 
-            className={`absolute transition-all duration-500 ease-out transform ${
+            className={`transition-all duration-500 ease-out transform ${
               isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4 pointer-events-none'
             }`}
-            style={getWidgetStyles()}
+            style={{
+              ...getWidgetStyles(),
+              display: 'flex',
+              flexDirection: 'column'
+            }}
           >
             {/* Mobile Bottom Sheet Handle removed per user request */}
 
@@ -316,8 +449,9 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                   <div className="font-semibold text-white text-base">
                     {settings.branding?.title || 'AI Assistant'}
                   </div>
-                  <div className="text-xs opacity-90">
-                    Online now
+                  <div className="text-xs opacity-90 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    Tilgængelig nu
                   </div>
                 </div>
               </div>
@@ -389,11 +523,24 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
               </div>
             </div>
 
+            {/* Banner Text (centered, slight grey) */}
+            {settings.messages?.bannerText && (
+              <div 
+                className="px-4 py-2 text-xs text-center"
+                style={{ 
+                  backgroundColor: "#edeef4",
+                  color: themeColors.textColor,
+                  opacity: 0.9
+                }}
+              >
+                {settings.messages.bannerText}
+              </div>
+            )}
+
             {/* Messages Area */}
             <div 
               className="flex-1 overflow-y-auto p-4"
               style={{ 
-                height: 'calc(100% - 200px)',
                 backgroundColor: themeColors.chatBg
               }}
             >
@@ -434,10 +581,11 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                             borderColor: themeColors.borderColor
                           }}
                         >
-                          {settings.messages?.welcomeMessage || 'Hej! Du kan spørge mig om hvad som helst'}
+                          {settings.messages?.welcomeMessage || 'Hej! 👋 Jeg er kundeservice agent for Elva Solutions. Du kan spørge mig om hvad som helst.'}
                         </div>
                       </div>
                     </div>
+                    <div className="text-xs text-gray-500 ml-3 mt-1">14.19</div>
                   </div>
 
                 </div>
@@ -568,32 +716,153 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                   </div>
                 </div>
               )}
-              
-              <div className="p-4 pt-0">
-                <div className="flex gap-3">
-                <div className="flex-1 relative">
+              {/* Disclaimer Text */}
+              {settings.messages?.disclaimerText && (
+                  <div 
+                    className="px-4 pb-2 text-xs text-center italic"
+                    style={{ 
+                      color: themeColors.textColor,
+                      opacity: 0.7
+                    }}
+                  >
+                    {settings.messages.disclaimerText}
+                  </div>
+                )}
+              {/* Input Container - Matching widget-embed structure */}
+              <div 
+                style={{ 
+                  background: themeColors.inputBg,
+                  borderRadius: `0 0 ${settings.appearance?.borderRadius || 20}px ${settings.appearance?.borderRadius || 20}px`
+                }}
+              >
+                <div 
+                  style={{
+                    padding: '10px',
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center'
+                  }}
+                >
+                  {/* Support Request Button (if enabled) */}
+                  {settings.manualReview?.enabled !== false && (
+                    <button
+                      style={{
+                        width: '44px',
+                        height: '50px',
+                        background: 'transparent',
+                        color: themeColors.textColor,
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.3s ease',
+                        opacity: 0.5,
+                        borderRadius: '12px',
+                        marginRight: '4px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.opacity = '1';
+                        e.target.style.backgroundColor = `${themeColor}15`;
+                        e.target.style.transform = 'scale(1.1)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.opacity = '0.5';
+                        e.target.style.backgroundColor = 'transparent';
+                        e.target.style.transform = 'scale(1)';
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Input Container Inner */}
+                  <div 
+                    style={{
+                      flex: 1,
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: themeColors.inputBg,
+                      border: `2px solid ${themeColors.borderColor}`,
+                      borderRadius: '28px',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s ease',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+                    }}
+                  >
+                    {/* Voice Button (if enabled) */}
+                    {settings.messages?.voiceInput?.enabled !== false && (
+                      <button
+                        style={{
+                          position: 'absolute',
+                          left: '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#6b7280',
+                          transition: 'all 0.2s ease',
+                          zIndex: 2,
+                          borderRadius: '4px'
+                        }}
+                      >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                          <line x1="12" y1="19" x2="12" y2="23"/>
+                          <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Input Field */}
                   <input
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder={settings.messages?.inputPlaceholder || 'Skriv en besked her'}
-                    className="w-full px-4 py-3 border rounded-full text-sm focus:outline-none focus:border-blue-500 transition-all duration-200"
                     style={{ 
-                      backgroundColor: themeColors.chatBg,
-                      borderColor: themeColors.borderColor,
-                      color: themeColors.textColor
-                    }}
-                  />
-                </div>
+                        width: '100%',
+                        height: '50px',
+                        padding: `0 16px 0 ${settings.messages?.voiceInput?.enabled !== false ? '46px' : '16px'}`,
+                        border: 'none',
+                        fontSize: '16px',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                        outline: 'none',
+                        background: 'transparent',
+                        color: themeColors.textColor,
+                        transition: 'all 0.2s ease',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+
+                    {/* Send Button */}
                 <button
                   onClick={handleSendMessage}
-                  className="rounded-full text-white flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                   style={{ 
                     width: `${settings.branding?.iconSizes?.sendButton || 44}px`,
                     height: `${settings.branding?.iconSizes?.sendButton || 44}px`,
-                    backgroundColor: themeColor,
-                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                        background: themeColor,
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                        margin: '3px'
                   }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -601,6 +870,17 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                     <path d="M22 2 11 13"></path>
                   </svg>
                 </button>
+                  </div>
+                </div>
+                {/* Footer Text */}
+                <div 
+                  className="px-4 pb-3 text-xs text-center"
+                  style={{ 
+                    color: themeColors.textColor,
+                    opacity: 0.5
+                  }}
+                >
+                  Drevet af elva-solutions.com
                 </div>
               </div>
             </div>

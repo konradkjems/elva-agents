@@ -101,15 +101,7 @@ export default async function handler(req, res) {
     
     res.setHeader('Cache-Control', `public, max-age=${cacheTime}, must-revalidate`);
 
-    // Debug log for widget configuration
-    console.log('🔧 Widget Embed Debug:', {
-      widgetId: widgetId,
-      showTypingText: widget.messages?.showTypingText,
-      typingText: widget.messages?.typingText,
-      updatedAt: widget.updatedAt,
-      widgetLogoUrl: widget.branding?.widgetLogoUrl,
-      branding: widget.branding
-    });
+    // Debug log for widget configuration (disabled in production)
 
     // Auto-detect if this should use Responses API or legacy
     const useResponsesAPI = widget.openai?.promptId && widget.openai?.promptId !== 'demo-prompt';
@@ -391,19 +383,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     // Use global state if no parameter provided
     const shouldShowMinimized = isMinimized !== null ? isMinimized : widgetIsMinimized;
     
-    // Debug logging
-    console.log('🔧 generateWidgetContent Debug:', {
-      isMinimized,
-      shouldShowMinimized,
-      widgetIsMinimized,
-      forceIcon,
-      widgetLogoUrl: WIDGET_CONFIG.branding?.widgetLogoUrl,
-      logoUrl: WIDGET_CONFIG.branding?.logoUrl,
-      customWidgetLogo: WIDGET_CONFIG.branding?.customWidgetLogo,
-      companyLogo: WIDGET_CONFIG.branding?.companyLogo,
-      branding: WIDGET_CONFIG.branding,
-      satisfaction: WIDGET_CONFIG.satisfaction
-    });
+    // Debug logging (disabled in production)
     
     // If forceIcon is true, always show the chat bubble (for open state)
     if (forceIcon) {
@@ -417,16 +397,16 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
                    WIDGET_CONFIG.branding?.companyLogo || 
                    WIDGET_CONFIG.branding?.logoUrl;
     
-    console.log('🎯 Logo Decision Logic:', {
-      shouldShowMinimized,
-      logoUrl,
-      hasLogoUrl: !!logoUrl,
-      willShowLogo: shouldShowMinimized && logoUrl
-    });
+    // console.log('🎯 Logo Decision Logic:', {
+    //   shouldShowMinimized,
+    //   logoUrl,
+    //   hasLogoUrl: !!logoUrl,
+    //   willShowLogo: shouldShowMinimized && logoUrl
+    // });
     
     if (shouldShowMinimized && logoUrl) {
       // Show custom logo when minimized - use same size as chat bubble icon (32x32px)
-      console.log('🖼️ Using custom logo:', logoUrl);
+      // console.log('🖼️ Using custom logo:', logoUrl);
       
       return \`
         <img src="\${logoUrl}" 
@@ -434,7 +414,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
              class="widget-logo"
              style="width: 32px; height: 32px; object-fit: contain; transition: all 0.3s ease;" 
              onerror="console.error('Failed to load widget logo:', this.src); this.style.display='none';" 
-             onload="console.log('Widget logo loaded successfully:', this.src)" />
+             onload="" />
       \`;
     } else {
       // Show chat bubble icon with consistent sizing
@@ -1148,13 +1128,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
 
   // Function to animate icon change with support for both SVG and images
   function animateIconChange(newIconHTML) {
-    console.log('🔄 animateIconChange called with:', newIconHTML.substring(0, 100) + '...');
+    // console.log('🔄 animateIconChange called with:', newIconHTML.substring(0, 100) + '...');
     const currentIcon = chatBtn.querySelector('svg, img');
     if (!currentIcon) {
       console.log('❌ No current icon found in chatBtn');
       return;
     }
-    console.log('📱 Current icon type:', currentIcon.tagName, 'Current icon src:', currentIcon.src || 'SVG');
+    // console.log('📱 Current icon type:', currentIcon.tagName, 'Current icon src:', currentIcon.src || 'SVG');
     
     // Create new icon element
     const newIcon = document.createElement('div');
@@ -4011,7 +3991,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     const vh = getViewportHeight();
     const vw = getViewportWidth();
     
-    console.log('updatePositioning called:', { placement, mobile, safeArea, vh, vw });
+    // console.log('updatePositioning called:', { placement, mobile, safeArea, vh, vw });
     
     // Clear all positioning properties first
     chatBox.style.left = '';

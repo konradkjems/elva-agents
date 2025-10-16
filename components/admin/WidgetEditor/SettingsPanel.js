@@ -123,62 +123,33 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     Color Scheme
                   </h4>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Primary Theme Color
-                      </label>
+                  <div className="max-w-md">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Primary Theme Color
+                    </label>
                       <div className="flex items-center space-x-3">
-                        <div
-                          className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
-                          style={{ backgroundColor: settings.appearance?.themeColor || '#3b82f6' }}
-                          onClick={() => document.getElementById('themeColor').click()}
-                        />
-                        <input
-                          id="themeColor"
-                          type="color"
-                          value={settings.appearance?.themeColor || '#3b82f6'}
-                          onChange={(e) => handleFieldChange('appearance', 'themeColor', e.target.value)}
-                          className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
-                          style={{ opacity: 0, position: 'absolute', zIndex: 1 }}
-                        />
+                        <div className="relative">
+                          <div
+                            className="w-14 h-14 rounded-xl border-2 border-gray-300 dark:border-gray-600 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                            style={{ backgroundColor: settings.appearance?.themeColor || '#3b82f6' }}
+                            onClick={() => document.getElementById('themeColor').click()}
+                          />
+                          <input
+                            id="themeColor"
+                            type="color"
+                            value={settings.appearance?.themeColor || '#3b82f6'}
+                            onChange={(e) => handleFieldChange('appearance', 'themeColor', e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-xl"
+                          />
+                        </div>
                         <input
                           type="text"
                           value={settings.appearance?.themeColor || '#3b82f6'}
                           onChange={(e) => handleFieldChange('appearance', 'themeColor', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm hover:shadow-md transition-shadow"
                           placeholder="#3b82f6"
                         />
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Secondary Color
-                      </label>
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
-                          style={{ backgroundColor: settings.appearance?.secondaryColor || '#8b5cf6' }}
-                          onClick={() => document.getElementById('secondaryColor').click()}
-                        />
-                        <input
-                          id="secondaryColor"
-                          type="color"
-                          value={settings.appearance?.secondaryColor || '#8b5cf6'}
-                          onChange={(e) => handleFieldChange('appearance', 'secondaryColor', e.target.value)}
-                          className="w-12 h-12 rounded-lg border-2 border-gray-300 cursor-pointer"
-                          style={{ opacity: 0, position: 'absolute', zIndex: 1 }}
-                        />
-                        <input
-                          type="text"
-                          value={settings.appearance?.secondaryColor || '#8b5cf6'}
-                          onChange={(e) => handleFieldChange('appearance', 'secondaryColor', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          placeholder="#8b5cf6"
-                        />
-                      </div>
-                    </div>
                   </div>
                 </div>
 
