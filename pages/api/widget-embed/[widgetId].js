@@ -2300,11 +2300,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const widgetWidth = chatBox.offsetWidth || 450; // Fallback to 450px
       
       // Calculate optimal cards per view based on widget width
-      const cardWidth = 175;
+      const cardWidthPx = 175;
       const gap = 12;
       const arrowButtonSpace = 40; // Space for arrow button + padding
       const availableWidth = widgetWidth - arrowButtonSpace;
-      const cardsPerView = Math.floor((availableWidth + gap) / (cardWidth + gap));
+      const cardsPerView = Math.floor((availableWidth + gap) / (cardWidthPx + gap));
       const actualCardsPerView = Math.min(cardsPerView, products.length);
       
       // Create carousel wrapper
@@ -2323,7 +2323,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         gap: 12px;
         overflow: hidden;
         padding: 8px 0;
-        width: calc(\${cardWidth}px * \${actualCardsPerView} + \${gap}px * \${actualCardsPerView - 1});
+        width: calc(\${cardWidthPx}px * \${actualCardsPerView} + \${gap}px * \${actualCardsPerView - 1});
         position: relative;
       \`;
       
