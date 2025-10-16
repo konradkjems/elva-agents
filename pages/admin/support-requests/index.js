@@ -21,10 +21,10 @@ import {
 } from '@heroicons/react/24/outline';
 
 const statusColors = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  in_review: 'bg-blue-100 text-blue-800',
-  completed: 'bg-green-100 text-green-800',
-  rejected: 'bg-red-100 text-red-800'
+  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+  in_review: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+  completed: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  rejected: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
 };
 
 const statusIcons = {
@@ -254,7 +254,7 @@ export default function ManualReviews() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <ClockIcon className="h-4 w-4 text-yellow-600" />
+              <ClockIcon className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{getStatusCount('pending')}</div>
@@ -263,7 +263,7 @@ export default function ManualReviews() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">In Review</CardTitle>
-              <EyeIcon className="h-4 w-4 text-blue-600" />
+              <EyeIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{getStatusCount('in_review')}</div>
@@ -272,7 +272,7 @@ export default function ManualReviews() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircleIcon className="h-4 w-4 text-green-600" />
+              <CheckCircleIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{getStatusCount('completed')}</div>
@@ -281,7 +281,7 @@ export default function ManualReviews() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Rejected</CardTitle>
-              <XCircleIcon className="h-4 w-4 text-red-600" />
+              <XCircleIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{getStatusCount('rejected')}</div>
@@ -325,8 +325,8 @@ export default function ManualReviews() {
                           key={review._id}
                           className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                             selectedReview?._id === review._id
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400'
+                              : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
                           }`}
                           onClick={() => setSelectedReview(review)}
                         >
@@ -393,7 +393,7 @@ export default function ManualReviews() {
                         <EnvelopeIcon className="h-4 w-4 text-muted-foreground" />
                         <a 
                           href={`mailto:${selectedReview.contactInfo.email}`}
-                          className="text-blue-600 hover:underline"
+                          className="text-blue-600 hover:underline dark:text-blue-400"
                         >
                           {selectedReview.contactInfo.email}
                         </a>
@@ -405,7 +405,7 @@ export default function ManualReviews() {
                   {selectedReview.message && (
                     <div>
                       <h4 className="font-medium text-sm mb-2">Besked fra bruger</h4>
-                      <p className="text-sm text-muted-foreground bg-gray-50 p-3 rounded">
+                      <p className="text-sm text-muted-foreground bg-gray-50 dark:bg-gray-800 p-3 rounded">
                         {selectedReview.message}
                       </p>
                     </div>
@@ -414,7 +414,7 @@ export default function ManualReviews() {
                   {/* Conversation Messages */}
                   <div key={`${selectedReview._id}-${conversationKey}`}>
                     <h4 className="font-medium text-sm mb-3">Samtale ({selectedReview.conversation?.messageCount || 0} beskeder)</h4>
-                    <div className="space-y-3 max-h-96 overflow-y-auto bg-gray-50 p-3 rounded-lg">
+                    <div className="space-y-3 max-h-96 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                       {(() => {
                         console.log('🎯 Rendering conversation messages for review:', selectedReview._id, {
                           hasConversation: !!selectedReview.conversation,
@@ -432,8 +432,8 @@ export default function ManualReviews() {
                             <div
                               className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                                 msg.type === 'user'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border border-gray-200 text-gray-900'
+                                  ? 'bg-blue-600 text-white dark:bg-blue-700'
+                                  : 'bg-white border border-gray-200 text-gray-900 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100'
                               }`}
                             >
                               <div className="flex items-center gap-2 mb-1">

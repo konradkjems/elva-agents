@@ -334,8 +334,8 @@ export default function ModernAnalytics() {
                             <div className="text-xs text-muted-foreground">Response</div>
                           </div>
                           <div className="text-center">
-                            <div className="font-semibold">{widget.stats?.uniqueUsers || 0}</div>
-                            <div className="text-xs text-muted-foreground">Users</div>
+                            <div className="font-semibold">{widget.stats?.totalMessages || 0}</div>
+                            <div className="text-xs text-muted-foreground">Messages</div>
                           </div>
                         </div>
                       </div>

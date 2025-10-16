@@ -290,7 +290,7 @@ export default function ModernAdminDashboard() {
 
         {/* Organization Management */}
         {!isReadOnly && currentOrganization && currentOrganization.stats && (
-          <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+          <Card className="bg-gradient-to-br from-blue-200/50 to-purple-200/50 border-blue-200/70 dark:from-blue-900/40 dark:to-purple-900/40 dark:border-blue-700/40">
             <CardHeader>
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Building2 className="h-4 w-4" />

@@ -47,13 +47,15 @@ import {
   Globe,
   FileText,
   ArrowRight,
-  Loader2
+  Loader2,
+  ClipboardList,
+  Monitor
 } from 'lucide-react';
 
 export default function ModernLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [theme, setTheme] = useState('system'); // 'light', 'dark', 'system'
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState({
@@ -70,6 +72,28 @@ export default function ModernLayout({ children }) {
 
   useEffect(() => {
     setMounted(true);
+    
+    // Initialize theme from localStorage
+    const savedTheme = localStorage.getItem('theme') || 'system';
+    setTheme(savedTheme);
+    
+    if (savedTheme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.classList.toggle('dark', systemTheme === 'dark');
+    } else {
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    }
+    
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (savedTheme === 'system') {
+        document.documentElement.classList.toggle('dark', mediaQuery.matches);
+      }
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   // Keyboard shortcut for search (Cmd+K or Ctrl+K)
@@ -101,9 +125,27 @@ export default function ModernLayout({ children }) {
     }
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
+  const setThemeMode = (newTheme) => {
+    setTheme(newTheme);
+    
+    if (newTheme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.classList.toggle('dark', systemTheme === 'dark');
+    } else {
+      document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    }
+    
+    // Save to localStorage
+    localStorage.setItem('theme', newTheme);
+  };
+
+  const getThemeIcon = () => {
+    switch (theme) {
+      case 'light': return Sun;
+      case 'dark': return Moon;
+      case 'system': return Monitor;
+      default: return Monitor;
+    }
   };
 
   // Search functionality
@@ -518,19 +560,6 @@ export default function ModernLayout({ children }) {
               {/* Organization Switcher */}
               <OrganizationSwitcher onCreateClick={() => setCreateOrgOpen(true)} />
 
-              {/* Dark mode toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleDarkMode}
-              >
-                {darkMode ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-              </Button>
-
               {/* User menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -554,6 +583,29 @@ export default function ModernLayout({ children }) {
                       </p>
                     </div>
                   </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {/* Theme Selector */}
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
+                  <div className="flex items-center justify-between px-2 py-1">
+                    <div className="flex items-center space-x-1">
+                      {['light', 'dark', 'system'].map((themeOption) => {
+                        const Icon = themeOption === 'light' ? Sun : themeOption === 'dark' ? Moon : Monitor;
+                        return (
+                          <Button
+                            key={themeOption}
+                            variant={theme === themeOption ? 'default' : 'ghost'}
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => setThemeMode(themeOption)}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push('/admin/profile')}>
                     <User className="mr-2 h-4 w-4" />

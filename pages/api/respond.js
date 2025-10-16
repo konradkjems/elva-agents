@@ -205,6 +205,15 @@ async function updateAnalytics(db, widgetId, conversation) {
     ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
     : 0;
   
+  // Calculate unique users for this widget on this date
+  const uniqueUsersToday = await db.collection('conversations').distinct('sessionId', {
+    widgetId: widgetId,
+    createdAt: {
+      $gte: new Date(dateKey),
+      $lt: new Date(new Date(dateKey).getTime() + 24 * 60 * 60 * 1000)
+    }
+  });
+  
   // Get or create analytics document for this day
   const existingDoc = await analytics.findOne({ 
     agentId: agentIdString, 
@@ -222,6 +231,7 @@ async function updateAnalytics(db, widgetId, conversation) {
         },
         $set: {
           'metrics.avgResponseTime': Math.round((existingDoc.metrics.avgResponseTime + avgResponseTime) / 2),
+          'metrics.uniqueUsers': uniqueUsersToday.length, // Update with actual count
           [`hourly.${date.getHours()}`]: (existingDoc.hourly[date.getHours().toString()] || 0) + 1
         }
       }
@@ -237,7 +247,7 @@ async function updateAnalytics(db, widgetId, conversation) {
       metrics: {
         conversations: 1,
         messages: messageCount,
-        uniqueUsers: 1,
+        uniqueUsers: uniqueUsersToday.length, // Use actual count
         responseRate: 100,
         avgResponseTime: Math.round(avgResponseTime),
         satisfaction: null
@@ -250,5 +260,5 @@ async function updateAnalytics(db, widgetId, conversation) {
     });
   }
   
-  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey);
+  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey, 'with', uniqueUsersToday.length, 'unique users');
 }

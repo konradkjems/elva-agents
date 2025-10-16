@@ -14,14 +14,14 @@ export default function AdvancedSettings({ settings, onChange }) {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 text-left flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+        className="w-full px-4 py-3 text-left flex items-center justify-between bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
-        <span className="font-medium text-gray-900">Advanced Settings</span>
+        <span className="font-medium text-gray-900 dark:text-gray-100">Advanced Settings</span>
         <svg
-          className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -34,16 +34,16 @@ export default function AdvancedSettings({ settings, onChange }) {
         <div className="p-4 space-y-6">
           {/* Widget Behavior */}
           <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Widget Behavior</h4>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Widget Behavior</h4>
             <div className="space-y-3">
               <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={settings.advanced?.showCloseButton ?? true}
                   onChange={(e) => updateSetting('advanced', 'showCloseButton', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
-                <span className="ml-2 text-sm text-gray-700">Show close button</span>
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Show close button</span>
               </label>
 
               <label className="flex items-center">
@@ -51,9 +51,9 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="checkbox"
                   checked={settings.advanced?.showConversationHistory ?? true}
                   onChange={(e) => updateSetting('advanced', 'showConversationHistory', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
-                <span className="ml-2 text-sm text-gray-700">Show conversation history</span>
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Show conversation history</span>
               </label>
 
               <label className="flex items-center">
@@ -61,29 +61,29 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="checkbox"
                   checked={settings.advanced?.showNewChatButton ?? true}
                   onChange={(e) => updateSetting('advanced', 'showNewChatButton', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
-                <span className="ml-2 text-sm text-gray-700">Show new chat button</span>
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Show new chat button</span>
               </label>
             </div>
           </div>
 
           {/* Analytics */}
           <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Analytics & Tracking</h4>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Analytics & Tracking</h4>
             <div className="space-y-3">
               <label className="flex items-center">
                 <input
                   type="checkbox"
                   checked={settings.advanced?.enableAnalytics ?? true}
                   onChange={(e) => updateSetting('advanced', 'enableAnalytics', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                 />
-                <span className="ml-2 text-sm text-gray-700">Enable analytics tracking</span>
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable analytics tracking</span>
               </label>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Track Events
                 </label>
                 <div className="space-y-2">
@@ -99,7 +99,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                             : events.filter(e => e !== event);
                           updateSetting('advanced', 'trackEvents', newEvents);
                         }}
-                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                       />
                       <span className="ml-2 text-sm text-gray-700 capitalize">
                         {event.replace('_', ' ')}
@@ -113,7 +113,7 @@ export default function AdvancedSettings({ settings, onChange }) {
 
           {/* Data Management */}
           <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Data Management</h4>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Data Management</h4>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -147,7 +147,7 @@ export default function AdvancedSettings({ settings, onChange }) {
 
           {/* Localization */}
           <div>
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Localization</h4>
+            <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Localization</h4>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700">

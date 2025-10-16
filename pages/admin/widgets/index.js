@@ -528,7 +528,7 @@ export default function WidgetsPage() {
     if (widget.stats) {
       const analytics = {
         conversations: widget.stats.totalConversations || 0,
-        users: widget.stats.uniqueUsers || 0,
+        users: widget.stats.totalMessages || 0,
         avgResponseTime: widget.stats.responseTime ? (widget.stats.responseTime / 1000).toFixed(1) : 0
       };
       console.log('📝 Using widget stats:', analytics);
@@ -551,7 +551,7 @@ export default function WidgetsPage() {
 
     return {
       conversations: widgetMetrics.totalConversations || 0,
-      users: widgetMetrics.uniqueUsers || 0,
+      users: widgetMetrics.totalMessages || 0,
       avgResponseTime: widgetMetrics.avgResponseTime ? (widgetMetrics.avgResponseTime / 1000).toFixed(1) : 0
     };
   };
@@ -946,12 +946,12 @@ export default function WidgetsPage() {
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center mb-1">
-                            <Users className="h-4 w-4 text-green-500" />
+                            <MessageCircle className="h-4 w-4 text-green-500" />
                           </div>
                           <div className="text-lg font-semibold">
                             {getWidgetAnalytics(widget).users}
                           </div>
-                          <div className="text-xs text-muted-foreground">Users</div>
+                          <div className="text-xs text-muted-foreground">Messages</div>
                         </div>
                         <div className="text-center">
                           <div className="flex items-center justify-center mb-1">

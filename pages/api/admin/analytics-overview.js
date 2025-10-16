@@ -199,11 +199,9 @@ export default async function handler(req, res) {
         ? widgetAnalytics.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0) / widgetAnalytics.length 
         : 0;
       
-      // Calculate unique users by taking the maximum uniqueUsers value across all analytics records
-      // (since uniqueUsers is cumulative in each analytics document)
-      const widgetUniqueUsers = widgetAnalytics.length > 0
-        ? Math.max(...widgetAnalytics.map(data => data.metrics?.uniqueUsers || 0))
-        : 0;
+      // Calculate unique users by summing unique users across all analytics records
+      // Each analytics record contains unique users for that specific date
+      const widgetUniqueUsers = widgetAnalytics.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
 
       return {
         ...widget,

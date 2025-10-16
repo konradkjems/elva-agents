@@ -365,14 +365,14 @@ export default function DemoWidgetsPage() {
                     {usage && (
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-blue-600" />
-                          <span className="text-gray-600">
+                          <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-gray-600 dark:text-gray-400">
                             {usage.currentUsage?.views || 0} / {demo.demoSettings?.usageLimits?.maxViews || 0} views
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <MessageCircle className="h-4 w-4 text-green-600" />
-                          <span className="text-gray-600">
+                          <MessageCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          <span className="text-gray-600 dark:text-gray-400">
                             {usage.currentUsage?.interactions || 0} / {demo.demoSettings?.usageLimits?.maxInteractions || 0} interactions
                           </span>
                         </div>
@@ -381,19 +381,19 @@ export default function DemoWidgetsPage() {
 
                     {/* Source Widget Info */}
                     <div className="text-sm">
-                      <p className="text-gray-600 mb-1">Source Widget:</p>
-                      <p className="text-gray-900 font-medium">{demo.sourceWidgetName}</p>
+                      <p className="text-gray-600 dark:text-gray-400 mb-1">Source Widget:</p>
+                      <p className="text-gray-900 dark:text-gray-100 font-medium">{demo.sourceWidgetName}</p>
                     </div>
 
                     {/* Client Website */}
                     {demo.demoSettings?.clientWebsiteUrl && (
                       <div className="text-sm">
-                        <p className="text-gray-600 mb-1">Client Website:</p>
+                        <p className="text-gray-600 dark:text-gray-400 mb-1">Client Website:</p>
                         <a 
                           href={demo.demoSettings.clientWebsiteUrl} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
                         >
                           <ExternalLink className="h-3 w-3" />
                           {demo.demoSettings.clientWebsiteUrl}
@@ -404,8 +404,8 @@ export default function DemoWidgetsPage() {
                     {/* Expiration */}
                     {demo.demoSettings?.usageLimits?.expiresAt && (
                       <div className="text-sm">
-                        <p className="text-gray-600 mb-1">Expires:</p>
-                        <p className="text-gray-900">
+                        <p className="text-gray-600 dark:text-gray-400 mb-1">Expires:</p>
+                        <p className="text-gray-900 dark:text-gray-100">
                           {new Date(demo.demoSettings.usageLimits.expiresAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -414,12 +414,12 @@ export default function DemoWidgetsPage() {
                     {/* Screenshot Status */}
                     {demo.demoSettings?.clientWebsiteUrl && (
                       <div className="text-sm">
-                        <p className="text-gray-600 mb-2">Screenshot:</p>
+                        <p className="text-gray-600 dark:text-gray-400 mb-2">Screenshot:</p>
                         <div className="flex items-center justify-between">
                           <span className={`text-xs px-2 py-1 rounded ${
                             demo.demoSettings?.screenshotUrl 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 
+                              : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
                           }`}>
                             {screenshotLoading[demo._id] 
                               ? 'Capturing...' 
@@ -430,7 +430,7 @@ export default function DemoWidgetsPage() {
                           </span>
                           <div className="flex items-center gap-1">
                             {screenshotLoading[demo._id] ? (
-                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                 <RefreshCw className="h-3 w-3 animate-spin" />
                                 Processing...
                               </div>

@@ -158,7 +158,7 @@ export default async function handler(req, res) {
       const totalMessages = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
       const totalResponseTime = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.responseTime || 0), 0);
       const avgResponseTime = widgetAnalyticsData.length > 0 ? totalResponseTime / widgetAnalyticsData.length : 0;
-      const uniqueUsers = Math.max(...widgetAnalyticsData.map(data => data.metrics?.uniqueUsers || 0), 0);
+      const uniqueUsers = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
       
       return {
         _id: widget._id,
@@ -208,6 +208,7 @@ function calculateAggregatedMetrics(analyticsData, period) {
   const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
   const totalResponseTime = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
   const totalSatisfaction = analyticsData.reduce((sum, data) => sum + (data.metrics?.satisfaction || 0), 0);
+  const uniqueUsers = analyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
   
   const avgResponseTime = analyticsData.length > 0 ? totalResponseTime / analyticsData.length : 0;
   const avgConversationLength = totalConversations > 0 ? totalMessages / totalConversations : 0;
@@ -217,6 +218,7 @@ function calculateAggregatedMetrics(analyticsData, period) {
     dataPoints: analyticsData.length,
     totalConversations,
     totalMessages,
+    uniqueUsers: uniqueUsers,
     avgResponseTime: Math.round(avgResponseTime),
     avgConversationLength: Math.round(avgConversationLength * 10) / 10,
     avgSatisfaction: avgSatisfaction ? Math.round(avgSatisfaction * 10) / 10 : null
@@ -235,6 +237,7 @@ function calculateAggregatedMetrics(analyticsData, period) {
     avgResponseTime: Math.round(avgResponseTime),
     avgConversationLength: Math.round(avgConversationLength * 10) / 10,
     totalMessages,
+    uniqueUsers: uniqueUsers,
     avgSatisfaction: avgSatisfaction ? Math.round(avgSatisfaction * 10) / 10 : null,
     hourlyDistribution,
     dailyTrends
@@ -317,6 +320,10 @@ async function getWidgetMetrics(db, widgetId, startDate) {
   
   const analyticsData = await analytics.find(query).toArray();
   const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
+  const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
+  const totalResponseTime = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
+  const avgResponseTime = analyticsData.length > 0 ? totalResponseTime / analyticsData.length : 0;
+  const uniqueUsers = analyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
 
   return {
     widgetId: widgetIdString,
@@ -324,6 +331,9 @@ async function getWidgetMetrics(db, widgetId, startDate) {
     createdAt: widget.createdAt,
     lastUpdated: widget.updatedAt,
     totalConversations,
+    totalMessages,
+    responseTime: avgResponseTime,
+    uniqueUsers: uniqueUsers,
     analyticsDataPoints: analyticsData.length
   };
 }

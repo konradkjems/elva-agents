@@ -116,16 +116,16 @@ export default function Settings() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-          <p className="text-gray-600">Configure your Elva Agents system</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">System Settings</h1>
+          <p className="text-gray-600 dark:text-gray-400">Configure your Elva Agents system</p>
         </div>
 
         {/* Message */}
         {message && (
           <div className={`p-4 rounded-lg flex items-center ${
             message.type === 'success' 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : 'bg-red-50 text-red-800 border border-red-200'
+              ? 'bg-green-50 text-green-800 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
+              : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
           }`}>
             {message.type === 'success' ? (
               <CheckCircleIcon className="h-5 w-5 mr-2" />
@@ -137,7 +137,7 @@ export default function Settings() {
         )}
 
         {/* Tabs */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             {tabs.map((tab) => (
               <button
@@ -145,8 +145,8 @@ export default function Settings() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <tab.icon className="h-5 w-5 mr-2" />
@@ -157,7 +157,7 @@ export default function Settings() {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           {activeTab === 0 && <SystemSettings settings={settings} onSave={saveSettings} />}
           {activeTab === 1 && <APIKeysSettings settings={settings} onSave={saveSettings} />}
           {activeTab === 2 && <DatabaseSettings settings={settings} onSave={saveSettings} />}
@@ -186,41 +186,41 @@ function SystemSettings({ settings, onSave }) {
 
   return (
     <div className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">System Configuration</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">System Configuration</h3>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Application Name
             </label>
             <input
               type="text"
               value={formData.appName}
               onChange={(e) => setFormData(prev => ({ ...prev, appName: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Version
             </label>
             <input
               type="text"
               value={formData.version}
               onChange={(e) => setFormData(prev => ({ ...prev, version: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Environment
             </label>
             <select
               value={formData.environment}
               onChange={(e) => setFormData(prev => ({ ...prev, environment: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               <option value="development">Development</option>
               <option value="staging">Staging</option>
@@ -236,9 +236,9 @@ function SystemSettings({ settings, onSave }) {
               id="debugMode"
               checked={formData.debugMode}
               onChange={(e) => setFormData(prev => ({ ...prev, debugMode: e.target.checked }))}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
             />
-            <label htmlFor="debugMode" className="ml-2 text-sm text-gray-700">
+            <label htmlFor="debugMode" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Enable debug mode (shows detailed error messages)
             </label>
           </div>
@@ -249,9 +249,9 @@ function SystemSettings({ settings, onSave }) {
               id="maintenanceMode"
               checked={formData.maintenanceMode}
               onChange={(e) => setFormData(prev => ({ ...prev, maintenanceMode: e.target.checked }))}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
             />
-            <label htmlFor="maintenanceMode" className="ml-2 text-sm text-gray-700">
+            <label htmlFor="maintenanceMode" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Maintenance mode (disables all widgets)
             </label>
           </div>
@@ -289,10 +289,10 @@ function APIKeysSettings({ settings, onSave }) {
 
   return (
     <div className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">API Keys Configuration</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">API Keys Configuration</h3>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             OpenAI API Key
           </label>
           <input
@@ -300,13 +300,13 @@ function APIKeysSettings({ settings, onSave }) {
             placeholder="Enter new OpenAI API key"
             value={formData.openaiApiKey}
             onChange={(e) => setFormData(prev => ({ ...prev, openaiApiKey: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
-          <p className="text-xs text-gray-500 mt-1">Get your API key from OpenAI Platform</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Get your API key from OpenAI Platform</p>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Cloudinary API Key
           </label>
           <input
@@ -314,12 +314,12 @@ function APIKeysSettings({ settings, onSave }) {
             placeholder="Enter new Cloudinary API key"
             value={formData.cloudinaryApiKey}
             onChange={(e) => setFormData(prev => ({ ...prev, cloudinaryApiKey: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Cloudinary Secret
           </label>
           <input
@@ -327,7 +327,7 @@ function APIKeysSettings({ settings, onSave }) {
             placeholder="Enter new Cloudinary secret"
             value={formData.cloudinarySecret}
             onChange={(e) => setFormData(prev => ({ ...prev, cloudinarySecret: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
         </div>
 
@@ -361,10 +361,10 @@ function DatabaseSettings({ settings, onSave }) {
 
   return (
     <div className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Database Configuration</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Database Configuration</h3>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             MongoDB Connection String
           </label>
           <input
@@ -372,44 +372,44 @@ function DatabaseSettings({ settings, onSave }) {
             placeholder="Enter new MongoDB connection string"
             value={formData.connectionString}
             onChange={(e) => setFormData(prev => ({ ...prev, connectionString: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Max Connections
             </label>
             <input
               type="number"
               value={formData.maxConnections}
               onChange={(e) => setFormData(prev => ({ ...prev, maxConnections: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Timeout (ms)
             </label>
             <input
               type="number"
               value={formData.timeout}
               onChange={(e) => setFormData(prev => ({ ...prev, timeout: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Retry Attempts
             </label>
             <input
               type="number"
               value={formData.retryAttempts}
               onChange={(e) => setFormData(prev => ({ ...prev, retryAttempts: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
         </div>
@@ -441,44 +441,44 @@ function SecuritySettings({ settings, onSave }) {
 
   return (
     <div className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Security Configuration</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Security Configuration</h3>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             CORS Origins
           </label>
           <input
             type="text"
             value={formData.corsOrigins}
             onChange={(e) => setFormData(prev => ({ ...prev, corsOrigins: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             placeholder="https://example.com,https://app.example.com"
           />
-          <p className="text-xs text-gray-500 mt-1">Comma-separated list of allowed origins</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Comma-separated list of allowed origins</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Rate Limit Requests
             </label>
             <input
               type="number"
               value={formData.rateLimitRequests}
               onChange={(e) => setFormData(prev => ({ ...prev, rateLimitRequests: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Rate Limit Window (minutes)
             </label>
             <input
               type="number"
               value={formData.rateLimitWindow}
               onChange={(e) => setFormData(prev => ({ ...prev, rateLimitWindow: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
           </div>
         </div>
@@ -490,9 +490,9 @@ function SecuritySettings({ settings, onSave }) {
               id="enableHttps"
               checked={formData.enableHttps}
               onChange={(e) => setFormData(prev => ({ ...prev, enableHttps: e.target.checked }))}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
             />
-            <label htmlFor="enableHttps" className="ml-2 text-sm text-gray-700">
+            <label htmlFor="enableHttps" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Force HTTPS connections
             </label>
           </div>
@@ -525,7 +525,7 @@ function NotificationSettings({ settings, onSave }) {
 
   return (
     <div className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Notification Configuration</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Notification Configuration</h3>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <div className="flex items-center">
@@ -534,64 +534,64 @@ function NotificationSettings({ settings, onSave }) {
               id="emailNotifications"
               checked={formData.emailNotifications}
               onChange={(e) => setFormData(prev => ({ ...prev, emailNotifications: e.target.checked }))}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
             />
-            <label htmlFor="emailNotifications" className="ml-2 text-sm text-gray-700">
+            <label htmlFor="emailNotifications" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
               Enable email notifications
             </label>
           </div>
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Email Address
           </label>
           <input
             type="email"
             value={formData.emailAddress}
             onChange={(e) => setFormData(prev => ({ ...prev, emailAddress: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Slack Webhook URL
           </label>
           <input
             type="url"
             value={formData.slackWebhook}
             onChange={(e) => setFormData(prev => ({ ...prev, slackWebhook: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             placeholder="https://hooks.slack.com/services/..."
           />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Error Threshold
             </label>
             <input
               type="number"
               value={formData.errorThreshold}
               onChange={(e) => setFormData(prev => ({ ...prev, errorThreshold: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <p className="text-xs text-gray-500 mt-1">Errors per minute before notification</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Errors per minute before notification</p>
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Performance Threshold (ms)
             </label>
             <input
               type="number"
               value={formData.performanceThreshold}
               onChange={(e) => setFormData(prev => ({ ...prev, performanceThreshold: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             />
-            <p className="text-xs text-gray-500 mt-1">Response time threshold for alerts</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Response time threshold for alerts</p>
           </div>
         </div>
 
@@ -637,12 +637,12 @@ function BackupSettings({ settings, onSave }) {
 
   return (
     <div className="p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Backup & Restore</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Backup & Restore</h3>
       
       <div className="space-y-6">
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-2">Database Backup</h4>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Database Backup</h4>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Create a backup of your database including all widgets, conversations, and settings.
           </p>
           <button
@@ -654,9 +654,9 @@ function BackupSettings({ settings, onSave }) {
           </button>
         </div>
         
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-2">Database Restore</h4>
-          <p className="text-sm text-gray-600 mb-4">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+          <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Database Restore</h4>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Restore your database from the latest backup. This will overwrite all current data.
           </p>
           <button
@@ -669,14 +669,14 @@ function BackupSettings({ settings, onSave }) {
         </div>
         
         {backupStatus === 'success' && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800">Operation completed successfully!</p>
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <p className="text-green-800 dark:text-green-300">Operation completed successfully!</p>
           </div>
         )}
         
         {backupStatus === 'error' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800">Operation failed. Please try again.</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <p className="text-red-800 dark:text-red-300">Operation failed. Please try again.</p>
           </div>
         )}
       </div>

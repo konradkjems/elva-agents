@@ -100,25 +100,25 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
   ];
 
   return (
-    <div className="h-full bg-white">
+    <div className="h-full bg-white dark:bg-gray-900">
       <div className="px-6 py-6">
         <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             Widget Settings
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Customize your widget's appearance, behavior, and integration
           </p>
         </div>
         
         <Tab.Group selectedIndex={activeTab} onChange={setActiveTab}>
-          <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 p-1 mb-6">
+          <Tab.List className="flex space-x-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 mb-6">
             {tabs.map((tab) => (
               <Tab key={tab.id} className={({ selected }) =>
                 `flex items-center justify-center px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                   selected 
-                    ? `bg-white text-${tab.color}-700 shadow-sm border border-${tab.color}-200` 
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? `bg-white dark:bg-gray-700 text-${tab.color}-700 dark:text-${tab.color}-300 shadow-sm border border-${tab.color}-200 dark:border-${tab.color}-600` 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-700/50'
                 }`
               }>
                 <tab.icon className="w-4 h-4 mr-2" />
@@ -132,15 +132,15 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
               {/* Appearance Settings */}
               <div className="space-y-8">
                 {/* Color Settings */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <PaintBrushIcon className="w-5 h-5 mr-2 text-blue-600" />
                     Color Scheme
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Primary Theme Color
                       </label>
                       <div className="flex items-center space-x-3">
@@ -161,14 +161,14 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           type="text"
                           value={settings.appearance?.themeColor || '#3b82f6'}
                           onChange={(e) => handleFieldChange('appearance', 'themeColor', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           placeholder="#3b82f6"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Secondary Color
                       </label>
                       <div className="flex items-center space-x-3">
@@ -189,7 +189,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           type="text"
                           value={settings.appearance?.secondaryColor || '#8b5cf6'}
                           onChange={(e) => handleFieldChange('appearance', 'secondaryColor', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           placeholder="#8b5cf6"
                         />
                       </div>
@@ -198,15 +198,15 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Theme Settings */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <PaintBrushIcon className="w-5 h-5 mr-2 text-green-600" />
                     Theme Mode
                   </h4>
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Widget Theme
                       </label>
                       <div className="grid grid-cols-3 gap-3">
@@ -228,14 +228,14 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                             <div className="text-center">
                               <div className="text-2xl mb-2">{theme.icon}</div>
                               <div className="font-medium text-sm">{theme.label}</div>
-                              <div className="text-xs text-gray-500 mt-1">{theme.description}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{theme.description}</div>
                             </div>
                           </button>
                         ))}
                       </div>
                     </div>
                     
-                    <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                       <strong>Note:</strong> Theme affects the overall appearance of the widget. 
                       Light theme uses light backgrounds, Dark theme uses dark backgrounds, 
                       and Auto theme follows the user's system preference.
@@ -244,20 +244,20 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Visual Effects */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <PaintBrushIcon className="w-5 h-5 mr-2 text-purple-600" />
                     Visual Effects
                   </h4>
                   
                   <div className="space-y-4">
                     <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                         <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700">
+                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Use Gradient Colors
                           </Switch.Label>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Creates a smooth gradient between primary and secondary colors
                           </p>
                         </div>
@@ -278,12 +278,12 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </Switch.Group>
 
                     <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                         <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700">
+                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Enable backdrop blur effect
                           </Switch.Label>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Adds a subtle blur effect behind the widget
                           </p>
                         </div>
@@ -306,29 +306,29 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Dimensions */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <PaintBrushIcon className="w-5 h-5 mr-2 text-green-600" />
                     Dimensions & Layout
                   </h4>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Width (px)
                       </label>
                       <input
                         type="number"
                         value={settings.appearance?.width || 450}
                         onChange={(e) => handleFieldChange('appearance', 'width', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm ${
-                          validationErrors['appearance.width'] ? 'border-red-300' : 'border-gray-300'
+                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                          validationErrors['appearance.width'] ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
                         }`}
                         min="300"
                         max="800"
                       />
                       {validationErrors['appearance.width'] && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
                           <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
                           {validationErrors['appearance.width']}
                         </p>
@@ -336,7 +336,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Height (px)
                       </label>
                       <input
@@ -350,7 +350,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         max="800"
                       />
                       {validationErrors['appearance.height'] && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
                           <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
                           {validationErrors['appearance.height']}
                         </p>
@@ -358,7 +358,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Border Radius (px)
                       </label>
                       <input
@@ -372,7 +372,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         max="50"
                       />
                       {validationErrors['appearance.borderRadius'] && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
                           <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
                           {validationErrors['appearance.borderRadius']}
                         </p>
@@ -380,13 +380,13 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Placement
                       </label>
                       <select
                         value={settings.appearance?.placement || 'bottom-right'}
                         onChange={(e) => handleFieldChange('appearance', 'placement', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       >
                         <option value="bottom-right">Bottom Right</option>
                         <option value="bottom-left">Bottom Left</option>
@@ -396,13 +396,13 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Animation Speed
                       </label>
                       <select
                         value={settings.appearance?.animationSpeed || 'normal'}
                         onChange={(e) => handleFieldChange('appearance', 'animationSpeed', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       >
                         <option value="slow">Slow</option>
                         <option value="normal">Normal</option>
@@ -413,8 +413,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Custom CSS */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <CodeBracketIcon className="w-5 h-5 mr-2 text-indigo-600" />
                     Custom Styling
                   </h4>
@@ -427,11 +427,11 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       value={settings.appearance?.customCSS || ''}
                       onChange={(e) => handleFieldChange('appearance', 'customCSS', e.target.value)}
                       rows={6}
-                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm font-mono text-xs"
+                      className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm font-mono text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       placeholder="/* Add custom CSS here */&#10;.widget-container {&#10;  /* Your custom styles */&#10;}"
                     />
-                    <p className="mt-2 text-xs text-gray-500">
-                      Add custom CSS to further customize your widget's appearance. Use classes like <code className="bg-gray-200 px-1 rounded">.widget-container</code> to target specific elements.
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Add custom CSS to further customize your widget's appearance. Use classes like <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">.widget-container</code> to target specific elements.
                     </p>
                   </div>
                 </div>
@@ -442,51 +442,51 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
               {/* Message Settings */}
               <div className="space-y-8">
                 {/* Welcome & Initial Messages */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-green-600" />
                     Welcome & Initial Messages
                   </h4>
                   
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Welcome Message
                       </label>
                       <textarea
                         value={settings.messages?.welcomeMessage || ''}
                         onChange={(e) => handleFieldChange('messages', 'welcomeMessage', e.target.value)}
                         rows={3}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Hej! 😊 Jeg er kundeservice agent for Elva Solutions. Du kan spørge mig om hvad som helst."
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         This message appears when users first open the chat
                       </p>
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Input Placeholder
                       </label>
                       <input
                         type="text"
                         value={settings.messages?.inputPlaceholder || ''}
                         onChange={(e) => handleFieldChange('messages', 'inputPlaceholder', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Skriv en besked her"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Typing Indicator Text
                       </label>
                       <input
                         type="text"
                         value={settings.messages?.typingText || ''}
                         onChange={(e) => handleFieldChange('messages', 'typingText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="AI tænker..."
                       />
                     </div>
@@ -497,13 +497,13 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           type="checkbox"
                           checked={settings.messages?.showTypingText !== false}
                           onChange={(e) => handleFieldChange('messages', 'showTypingText', e.target.checked)}
-                          className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50"
                         />
-                        <span className="ml-2 text-sm font-medium text-gray-700">
+                        <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                           Show typing text with dots
                         </span>
                       </label>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         When disabled, only animated dots will be shown without any text
                       </p>
                     </div>
@@ -511,82 +511,82 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Popup Settings */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-blue-600" />
                     Popup Behavior
                   </h4>
                   
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Popup Message
                       </label>
                       <input
                         type="text"
                         value={settings.messages?.popupMessage || ''}
                         onChange={(e) => handleFieldChange('messages', 'popupMessage', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Hej! 👋 Har du brug for hjælp?"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Message shown in the popup bubble when widget is closed
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Banner Text
                       </label>
                       <input
                         type="text"
                         value={settings.messages?.bannerText || ''}
                         onChange={(e) => handleFieldChange('messages', 'bannerText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="X-Virksomhed står ikke til ansvar for svarene, der kun er vejledende."
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Disclaimer text shown under the header (optional)
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Disclaimer Text
                       </label>
                       <input
                         type="text"
                         value={settings.messages?.disclaimerText || ''}
                         onChange={(e) => handleFieldChange('messages', 'disclaimerText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Opgiv ikke personlige oplysninger"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Warning text shown above the input field
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Popup Delay (milliseconds)
                       </label>
                       <input
                         type="number"
                         value={settings.messages?.popupDelay || 5000}
                         onChange={(e) => handleFieldChange('messages', 'popupDelay', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm ${
-                          validationErrors['messages.popupDelay'] ? 'border-red-300' : 'border-gray-300'
+                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                          validationErrors['messages.popupDelay'] ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
                         }`}
                         min="0"
                         max="30000"
                       />
                       {validationErrors['messages.popupDelay'] && (
-                        <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
                           <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
                           {validationErrors['messages.popupDelay']}
                         </p>
                       )}
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         How long to wait before showing the popup message (0 = show immediately)
                       </p>
                     </div>
@@ -594,14 +594,14 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Suggested Responses */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-purple-600" />
                     Suggested Responses (Max 5)
                   </h4>
                   
                   <div className="space-y-3">
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       These quick response buttons appear when the chat starts
                     </p>
                     
@@ -617,7 +617,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                               responses[index] = e.target.value;
                               handleFieldChange('messages', 'suggestedResponses', responses);
                             }}
-                            className="flex-1 rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm px-3 py-2"
+                            className="flex-1 rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             placeholder={`Suggested response ${index + 1}...`}
                           />
                           {(settings.messages?.suggestedResponses || ['']).length > 1 && (
@@ -628,7 +628,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                 responses.splice(index, 1);
                                 handleFieldChange('messages', 'suggestedResponses', responses);
                               }}
-                              className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+                              className="text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -647,7 +647,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           const responses = [...(settings.messages?.suggestedResponses || ['']), ''];
                           handleFieldChange('messages', 'suggestedResponses', responses);
                         }}
-                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
+                        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-gray-600 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center justify-center gap-2"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -658,7 +658,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     
                     {/* Max limit notice */}
                     {(settings.messages?.suggestedResponses || ['']).length >= 5 && (
-                      <p className="text-xs text-gray-500 text-center">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
                         Maximum 5 responses reached
                       </p>
                     )}
@@ -666,20 +666,20 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Behavior Settings */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-orange-600" />
                     Behavior Settings
                   </h4>
                   
                   <div className="space-y-4">
                     <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                         <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700">
+                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Auto-close after inactivity
                           </Switch.Label>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Automatically close the chat widget after a period of inactivity
                           </p>
                         </div>
@@ -700,14 +700,14 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </Switch.Group>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Close Button Text
                       </label>
                       <input
                         type="text"
                         value={settings.messages?.closeButtonText || 'Close'}
                         onChange={(e) => handleFieldChange('messages', 'closeButtonText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Close"
                       />
                     </div>
@@ -720,57 +720,57 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
               {/* Branding Settings */}
               <div className="space-y-8">
                 {/* Company Information */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <BuildingOfficeIcon className="w-5 h-5 mr-2 text-purple-600" />
                     Company Information
                   </h4>
                   
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Widget Title
                       </label>
                       <input
                         type="text"
                         value={settings.branding?.title || ''}
                         onChange={(e) => handleFieldChange('branding', 'title', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Elva AI kundeservice Agent"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Main title displayed in the widget header
                       </p>
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Assistant Name
                       </label>
                       <input
                         type="text"
                         value={settings.branding?.assistantName || ''}
                         onChange={(e) => handleFieldChange('branding', 'assistantName', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Elva Assistant"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Name of your AI assistant
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Company Name
                       </label>
                       <input
                         type="text"
                         value={settings.branding?.companyName || ''}
                         onChange={(e) => handleFieldChange('branding', 'companyName', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Elva Solutions"
                       />
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Your company or organization name
                       </p>
                     </div>
@@ -778,8 +778,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Visual Assets */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <BuildingOfficeIcon className="w-5 h-5 mr-2 text-blue-600" />
                     Visual Assets
                   </h4>
@@ -803,7 +803,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
                     {/* Image Zoom Customization */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Image Zoom & Position
                       </label>
                       <button
@@ -821,20 +821,20 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 </div>
 
                 {/* Branding Options */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <BuildingOfficeIcon className="w-5 h-5 mr-2 text-green-600" />
                     Branding Options
                   </h4>
                   
                   <div className="space-y-4">
                     <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                         <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700">
+                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Show branding elements
                           </Switch.Label>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Display company logo and branding in the widget
                           </p>
                         </div>
@@ -862,8 +862,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
               {/* Satisfaction Rating Settings */}
               <div className="space-y-8">
                 {/* Satisfaction Rating Configuration */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <StarIcon className="w-5 h-5 mr-2 text-yellow-600" />
                     Satisfaction Rating
                   </h4>
@@ -874,10 +874,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       <Switch.Group>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <Switch.Label className="text-sm font-medium text-gray-700">
+                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                               Enable Satisfaction Rating
                             </Switch.Label>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               Allow users to rate their conversation experience
                             </p>
                           </div>
@@ -901,7 +901,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     {/* Trigger Settings */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Trigger After Messages
                         </label>
                         <input
@@ -910,16 +910,16 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           max="10"
                           value={settings.satisfaction?.triggerAfter || 3}
                           onChange={(e) => handleFieldChange('satisfaction', 'triggerAfter', parseInt(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           placeholder="3"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           Minimum messages before rating can appear
                         </p>
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Inactivity Delay (seconds)
                         </label>
                         <input
@@ -928,10 +928,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           max="300"
                           value={settings.satisfaction?.inactivityDelay ? settings.satisfaction.inactivityDelay / 1000 : 30}
                           onChange={(e) => handleFieldChange('satisfaction', 'inactivityDelay', parseInt(e.target.value) * 1000)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           placeholder="30"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           Seconds of inactivity before showing rating
                         </p>
                       </div>
@@ -939,14 +939,14 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
                     {/* Prompt Text */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Rating Prompt Text
                       </label>
                       <input
                         type="text"
                         value={settings.satisfaction?.promptText || 'How would you rate this conversation so far?'}
                         onChange={(e) => handleFieldChange('satisfaction', 'promptText', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="How would you rate this conversation so far?"
                       />
                       <p className="text-xs text-gray-500 mt-1">
@@ -957,11 +957,11 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
                     {/* Rating Scale Preview */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Rating Scale
                       </label>
-                      <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-lg">
-                        <span className="text-sm text-gray-600">Poor</span>
+                      <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Poor</span>
                         <div className="flex gap-2">
                           <span className="text-2xl">🙁</span>
                           <span className="text-2xl">😞</span>
@@ -969,9 +969,9 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           <span className="text-2xl">😊</span>
                           <span className="text-2xl">🤩</span>
                         </div>
-                        <span className="text-sm text-gray-600">Excellent</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Excellent</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         5-point emoji rating scale (not configurable)
                       </p>
                     </div>
@@ -1002,8 +1002,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
               {/* Manual Review Settings */}
               <div className="space-y-8">
                 {/* Manual Review Configuration */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
                     <ClipboardDocumentListIcon className="w-5 h-5 mr-2 text-red-600" />
                     Manual Review System
                   </h4>
@@ -1014,10 +1014,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       <Switch.Group>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <Switch.Label className="text-sm font-medium text-gray-700">
+                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                               Enable Support Request
                             </Switch.Label>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               Allow users to request support from your team
                             </p>
                           </div>
@@ -1042,65 +1042,65 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     {settings.manualReview?.enabled !== false && (
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Button Text
                           </label>
                           <input
                             type="text"
                             value={settings.manualReview?.buttonText || 'Request Support'}
                             onChange={(e) => handleFieldChange('manualReview', 'buttonText', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             placeholder="Request Support"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Text displayed on the support request button
                           </p>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Form Title
                           </label>
                           <input
                             type="text"
                             value={settings.manualReview?.formTitle || 'Request Support'}
                             onChange={(e) => handleFieldChange('manualReview', 'formTitle', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             placeholder="Request Support"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Title displayed at the top of the contact form
                           </p>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Form Description
                           </label>
                           <textarea
                             value={settings.manualReview?.formDescription || 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.'}
                             onChange={(e) => handleFieldChange('manualReview', 'formDescription', e.target.value)}
                             rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             placeholder="Please provide your contact information and describe what you need help with..."
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Description shown above the contact form
                           </p>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Success Message
                           </label>
                           <textarea
                             value={settings.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'}
                             onChange={(e) => handleFieldChange('manualReview', 'successMessage', e.target.value)}
                             rows={2}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             placeholder="Thank you for your request! Our team will review..."
                           />
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Message shown after successful submission
                           </p>
                         </div>
@@ -1138,18 +1138,18 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
             <Tab.Panel>
               {/* Embed Code Settings */}
               <div className="space-y-8">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold text-blue-900 mb-3 flex items-center">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                  <h3 className="text-xl font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center">
                     <CodeBracketIcon className="w-6 h-6 mr-2" />
                     Widget Integration
                   </h3>
-                  <p className="text-sm text-blue-700 mb-6">
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-6">
                     Copy the code below and add it to your website before the closing &lt;/body&gt; tag.
                   </p>
                   
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Widget ID
                       </label>
                       <div className="flex items-center space-x-3">
@@ -1157,7 +1157,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           type="text"
                           value={settings._id || 'widget-id'}
                           readOnly
-                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono"
+                          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm font-mono text-gray-900 dark:text-gray-100"
                         />
                         <button
                           onClick={() => navigator.clipboard.writeText(settings._id || 'widget-id')}
@@ -1169,7 +1169,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                         Embed Code
                       </label>
                       <div className="relative">
@@ -1177,7 +1177,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           readOnly
                           value={`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`}
                           rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono resize-none"
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm font-mono resize-none text-gray-900 dark:text-gray-100"
                         />
                         <button
                           onClick={() => {

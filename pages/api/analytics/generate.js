@@ -85,13 +85,22 @@ export default async function handler(req, res) {
           ? dayData.satisfactionSum / dayData.satisfactionCount 
           : null;
 
+        // Calculate actual unique users for this widget on this date
+        const uniqueUsers = await db.collection('conversations').distinct('sessionId', {
+          widgetId: widgetId,
+          createdAt: {
+            $gte: new Date(dateKey),
+            $lt: new Date(new Date(dateKey).getTime() + 24 * 60 * 60 * 1000)
+          }
+        });
+
         const analyticsDoc = {
           agentId: widgetId,
           date: new Date(dateKey),
           metrics: {
             conversations: dayData.conversations,
             messages: dayData.messages,
-            uniqueUsers: dayData.conversations, // Simplified
+            uniqueUsers: uniqueUsers.length, // Use actual count
             responseRate: 100, // Simplified
             avgResponseTime: Math.round(avgResponseTime),
             satisfaction: avgSatisfaction ? Math.round(avgSatisfaction * 10) / 10 : null

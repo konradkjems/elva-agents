@@ -178,8 +178,8 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
                 <Badge 
                   variant="outline"
                   className={formData.status === 'active' 
-                    ? "bg-green-100 text-green-800 hover:bg-green-200" 
-                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    ? "bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-300 dark:hover:bg-green-900/70" 
+                    : "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                   }
                 >
                   {formData.status === 'active' ? 'Active' : 'Inactive'}
