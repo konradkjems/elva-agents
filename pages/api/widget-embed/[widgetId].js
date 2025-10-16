@@ -877,17 +877,18 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     imageUploadButton.onclick = () => fileInput.click();
     
-    // Hover effects
+    // Hover effects with rounded corners
     imageUploadButton.onmouseover = () => {
       imageUploadButton.style.backgroundColor = 'rgba(107, 114, 128, 0.1)';
       imageUploadButton.style.transform = 'translateY(-50%) scale(1.05)';
+      imageUploadButton.style.borderRadius = '8px';
     };
     
     imageUploadButton.onmouseout = () => {
       imageUploadButton.style.backgroundColor = 'transparent';
       imageUploadButton.style.transform = 'translateY(-50%) scale(1)';
+      imageUploadButton.style.borderRadius = '8px';
     };
-    
     // Handle file selection
     fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -1151,11 +1152,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       }
     };
 
-    // Hover effects for voice button
+    // Hover effects for voice button - make the corners more round
+    voiceButton.style.borderRadius = '8px'; // Make the corners more round by default
     voiceButton.onmouseover = () => {
       if (!isRecording) {
         voiceButton.style.backgroundColor = 'rgba(107, 114, 128, 0.1)';
         voiceButton.style.transform = 'translateY(-50%) scale(1.05)';
+        voiceButton.style.borderRadius = '8px'; // Even rounder on hover
       }
     };
     
@@ -1163,6 +1166,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       if (!isRecording) {
         voiceButton.style.backgroundColor = 'transparent';
         voiceButton.style.transform = 'translateY(-50%) scale(1)';
+        voiceButton.style.borderRadius = '8px'; // Return to normal roundness
       }
     };
   }

@@ -155,8 +155,13 @@ export default async function handler(req, res) {
         id: widget.openai.promptId
       },
       input: imageUrl ? [
-        { type: "text", text: message },
-        { type: "image_url", image_url: { url: imageUrl } }
+        {
+          role: "user",
+          content: [
+            { type: "text", text: message },
+            { type: "image_url", image_url: { url: imageUrl } }
+          ]
+        }
       ] : message
     };
 
@@ -174,6 +179,7 @@ export default async function handler(req, res) {
       promptId: responsePayload.prompt.id,
       version: responsePayload.prompt.version || 'latest',
       hasContext: !!responsePayload.previous_response_id,
+      hasImage: !!imageUrl,
       messageLength: message.length
     });
 
@@ -208,7 +214,8 @@ export default async function handler(req, res) {
     console.log('✅ OpenAI Responses API success:', {
       responseId: responseId,
       replyLength: aiReply.length,
-      usage: usage
+      usage: usage,
+      hadImage: !!imageUrl
     });
 
     // Add user message to conversation
@@ -282,6 +289,13 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Error in /api/respond (Responses API):', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      widgetId: req.body.widgetId,
+      hasImage: !!req.body.imageUrl,
+      promptId: widget?.openai?.promptId
+    });
     
     // Provide more specific error messages for common issues
     let errorMessage = 'Internal server error';
@@ -296,6 +310,9 @@ export default async function handler(req, res) {
     } else if (error.message?.includes('rate limit')) {
       errorMessage = 'Rate limit exceeded';
       errorDetails = 'Too many requests to OpenAI API';
+    } else if (error.message?.includes('vision') || error.message?.includes('image') || error.message?.includes('multimodal')) {
+      errorMessage = 'Vision not enabled';
+      errorDetails = 'Your OpenAI prompt/assistant does not have vision capabilities enabled. Please enable vision on platform.openai.com';
     }
     
     res.status(500).json({ 
