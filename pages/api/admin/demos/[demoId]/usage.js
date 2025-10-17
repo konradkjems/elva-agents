@@ -2,7 +2,6 @@ import clientPromise from '../../../../../lib/mongodb';
 import { withAdmin } from '../../../../../lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../auth/[...nextauth]';
-import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   // Set CORS headers for public demo access
@@ -19,22 +18,26 @@ export default async function handler(req, res) {
   const db = client.db('elva-agents'); // Use new database
   const { demoId } = req.query;
   
-  // Convert demoId to ObjectId
-  let demoObjectId;
-  try {
-    demoObjectId = new ObjectId(demoId);
-  } catch (error) {
-    console.error('❌ Invalid demoId format:', demoId);
-    return res.status(400).json({ message: 'Invalid demo ID format' });
-  }
+  // Demo IDs are strings, not ObjectIds
+  console.log('📊 Demo ID:', demoId);
 
   if (req.method === 'GET') {
     // GET is public - anyone can view usage data (no authentication required)
     try {
-      const demo = await db.collection('demos').findOne({ _id: demoObjectId });
+      console.log('📊 GET usage for demo:', demoId);
+      const demo = await db.collection('demos').findOne({ _id: demoId });
+      console.log('📊 Demo found:', demo ? 'Yes' : 'No');
+      
       if (!demo) {
+        console.error('❌ Demo not found for ID:', demoId);
         return res.status(404).json({ message: 'Demo not found' });
       }
+
+      console.log('📊 Demo data:', {
+        _id: demo._id,
+        name: demo.name,
+        demoSettings: demo.demoSettings
+      });
 
       const usage = demo.demoSettings?.usageLimits?.currentUsage || {
         interactions: 0,
@@ -47,7 +50,7 @@ export default async function handler(req, res) {
         views: usage.views >= (limits.maxViews || 0)
       };
 
-      return res.status(200).json({
+      const responseData = {
         currentUsage: usage,
         limits: {
           maxInteractions: limits.maxInteractions || 0,
@@ -56,9 +59,13 @@ export default async function handler(req, res) {
         },
         isLimitReached,
         isExpired: limits.expiresAt ? new Date(limits.expiresAt) < new Date() : false
-      });
+      };
+
+      console.log('✅ Returning usage data:', responseData);
+
+      return res.status(200).json(responseData);
     } catch (error) {
-      console.error('Error fetching demo usage:', error);
+      console.error('❌ Error fetching demo usage:', error);
       return res.status(500).json({ message: 'Failed to fetch demo usage' });
     }
   }
@@ -80,7 +87,7 @@ export default async function handler(req, res) {
         : 'demoSettings.usageLimits.currentUsage.interactions';
 
       const result = await db.collection('demos').updateOne(
-        { _id: demoObjectId },
+        { _id: demoId },
         { 
           $inc: { [updateField]: 1 },
           $set: { updatedAt: new Date() }
@@ -95,7 +102,7 @@ export default async function handler(req, res) {
       }
 
       // Return updated usage data
-      const updatedDemo = await db.collection('demos').findOne({ _id: demoObjectId });
+      const updatedDemo = await db.collection('demos').findOne({ _id: demoId });
       const usage = updatedDemo.demoSettings?.usageLimits?.currentUsage || {
         interactions: 0,
         views: 0
@@ -130,7 +137,7 @@ export default async function handler(req, res) {
     try {
       // Reset usage counters
       const result = await db.collection('demos').updateOne(
-        { _id: demoObjectId },
+        { _id: demoId },
         { 
           $set: { 
             'demoSettings.usageLimits.currentUsage.interactions': 0,

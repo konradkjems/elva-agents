@@ -543,7 +543,6 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 600}px;
-    max-height: calc(100vh - 180px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -1247,7 +1246,6 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 600}px;
-    max-height: calc(100vh - 180px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -1660,7 +1658,6 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           font-weight: 500;
           color: \${themeColors.textColor};
           margin-bottom: 4px;
-          white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         ">\${conversation.title}</div>
@@ -2134,23 +2131,30 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       flex-wrap: wrap;
       gap: 8px;
       justify-content: flex-end;
+      align-items: flex-start;
     \`;
     
     validResponses.forEach((response, index) => {
       const button = document.createElement('button');
       button.textContent = response;
+      const horizontalPadding = isMobile() ? '6px' : '10px';
       button.style.cssText = \`
-        padding: 6px 12px;
-        font-size: 12px;
+        padding: 3px \${horizontalPadding};
+        font-size: 14px;
         color: \${themeColors.textColor};
         background: \${themeColors.messageBg};
         border: 1px solid \${themeColors.borderColor};
-        border-radius: 9999px;
+        border-radius: 10px;
         cursor: pointer;
         transition: all 0.2s ease;
-        white-space: nowrap;
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        text-align: left;
+        max-width: max-content;
+        flex-shrink: 0;
+        flex-grow: 0;
+        box-sizing: border-box;
+        word-wrap: break-word;
       \`;
       
       button.onmouseover = () => {
@@ -4290,7 +4294,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       chatBox.style.right = '0';
       chatBox.style.top = 'auto';
       chatBox.style.width = '100%';
-      chatBox.style.height = \`\${Math.min(availableHeight, 80)}vh\`; // Max 80% of viewport height
+      chatBox.style.height = '100vh'; // Full-screen mode on mobile
+      chatBox.style.maxHeight = 'none'; // Remove any max-height constraints
       
       historyView.style.borderRadius = '20px 20px 0 0';
       historyView.style.bottom = '0';
@@ -4298,7 +4303,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       historyView.style.right = '0';
       historyView.style.top = 'auto';
       historyView.style.width = '100%';
-      historyView.style.height = \`\${Math.min(availableHeight, 80)}vh\`;
+      historyView.style.height = '100vh'; // Full-screen mode on mobile
+      historyView.style.maxHeight = 'none'; // Remove any max-height constraints
       
       // Bottom sheet handle removed per user request
       
@@ -4426,138 +4432,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   updateMobileStyles();
   updateOnlineIndicatorPosition();
 
-  // Enhanced mobile touch gestures
-  function addTouchGestures() {
-    if (!isMobile()) return;
-    
-    let startY = 0;
-    let startX = 0;
-    let isDragging = false;
-    let dragThreshold = 50;
-    
-    // Add touch event listeners to chat box
-    chatBox.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
-      isDragging = false;
-    }, { passive: true });
-    
-    chatBox.addEventListener('touchmove', (e) => {
-      if (!startY) return;
-      
-      const currentY = e.touches[0].clientY;
-      const currentX = e.touches[0].clientX;
-      const deltaY = currentY - startY;
-      const deltaX = currentX - startX;
-      
-      // Detect swipe direction
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
-        isDragging = true;
-        
-        // Swipe down to close (only if scrolled to top)
-        if (deltaY > 0 && chatBox.scrollTop === 0) {
-          const opacity = Math.max(0.3, 1 - (deltaY / 200));
-          chatBox.style.opacity = opacity;
-          chatBox.style.transform = \`translateY(\${Math.min(deltaY * 0.5, 100)}px)\`;
-        }
-      }
-    }, { passive: true });
-    
-    chatBox.addEventListener('touchend', (e) => {
-      if (!isDragging || !startY) {
-        // Reset styles
-        chatBox.style.opacity = '';
-        chatBox.style.transform = '';
-        return;
-      }
-      
-      const deltaY = e.changedTouches[0].clientY - startY;
-      
-      // Close widget if swiped down enough
-      if (deltaY > dragThreshold && chatBox.scrollTop === 0) {
-        chatBox.style.display = 'none';
-        widgetIsMinimized = true;
-        chatIsOpen = false;
-        
-        // Animate icon back to minimized state
-        animateIconChange(generateWidgetContent());
-        
-        // Show popup after closing (only if not dismissed)
-        setTimeout(() => {
-          if (!popupDismissed) {
-            showPopup();
-          }
-        }, 500);
-      } else {
-        // Reset styles if not enough swipe
-        chatBox.style.opacity = '';
-        chatBox.style.transform = '';
-      }
-      
-      isDragging = false;
-      startY = 0;
-    }, { passive: true });
-    
-    // Add similar gestures to history view
-    historyView.addEventListener('touchstart', (e) => {
-      startY = e.touches[0].clientY;
-      startX = e.touches[0].clientX;
-      isDragging = false;
-    }, { passive: true });
-    
-    historyView.addEventListener('touchmove', (e) => {
-      if (!startY) return;
-      
-      const currentY = e.touches[0].clientY;
-      const currentX = e.touches[0].clientX;
-      const deltaY = currentY - startY;
-      const deltaX = currentX - startX;
-      
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
-        isDragging = true;
-        
-        if (deltaY > 0 && historyView.scrollTop === 0) {
-          const opacity = Math.max(0.3, 1 - (deltaY / 200));
-          historyView.style.opacity = opacity;
-          historyView.style.transform = \`translateY(\${Math.min(deltaY * 0.5, 100)}px)\`;
-        }
-      }
-    }, { passive: true });
-    
-    historyView.addEventListener('touchend', (e) => {
-      if (!isDragging || !startY) {
-        historyView.style.opacity = '';
-        historyView.style.transform = '';
-        return;
-      }
-      
-      const deltaY = e.changedTouches[0].clientY - startY;
-      
-      if (deltaY > dragThreshold && historyView.scrollTop === 0) {
-        historyView.style.display = 'none';
-        widgetIsMinimized = true;
-        historyIsOpen = false;
-        
-        // Animate icon back to minimized state
-        animateIconChange(generateWidgetContent());
-        
-        setTimeout(() => {
-          if (!popupDismissed) {
-            showPopup();
-          }
-        }, 500);
-      } else {
-        historyView.style.opacity = '';
-        historyView.style.transform = '';
-      }
-      
-      isDragging = false;
-      startY = 0;
-    }, { passive: true });
-  }
-  
-  // Initialize touch gestures after a short delay to ensure elements are ready
-  setTimeout(addTouchGestures, 1000);
+  // Touch gestures removed - users can now scroll without accidentally closing the widget
 
   // Initialize online indicator visibility after everything is set up
   setTimeout(() => {

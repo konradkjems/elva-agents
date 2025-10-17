@@ -28,6 +28,7 @@ export default function DemoPage() {
 
   useEffect(() => {
     if (demoId) {
+      console.log('📊 useEffect triggered with demoId:', demoId);
       fetchDemo();
       trackView();
     }
@@ -78,15 +79,18 @@ export default function DemoPage() {
 
   const trackView = async () => {
     try {
-      await fetch(`/api/admin/demos/${demoId}/usage`, {
+      console.log('📊 Tracking view for demo:', demoId);
+      const response = await fetch(`/api/admin/demos/${demoId}/usage`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ type: 'view' }),
       });
+      const data = await response.json();
+      console.log('✅ View tracked:', data);
     } catch (error) {
-      console.error('Failed to track view:', error);
+      console.error('❌ Failed to track view:', error);
     }
   };
 
@@ -175,6 +179,7 @@ export default function DemoPage() {
 
   useEffect(() => {
     if (demo && !loading) {
+      console.log('📊 Loading widget script for demo:', demo._id);
       loadWidgetScript();
     }
   }, [demo, loading]);
