@@ -90,18 +90,32 @@ export default function DemoPage() {
     }
   };
 
+  // Debounce timer to prevent multiple tracking calls
+  let interactionTrackingTimer = null;
+  
   const trackInteraction = async () => {
-    try {
-      await fetch(`/api/admin/demos/${demoId}/usage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ type: 'interaction' }),
-      });
-    } catch (error) {
-      console.error('Failed to track interaction:', error);
+    // Clear any existing timer
+    if (interactionTrackingTimer) {
+      clearTimeout(interactionTrackingTimer);
     }
+    
+    // Debounce the tracking call
+    interactionTrackingTimer = setTimeout(async () => {
+      try {
+        console.log('📊 Tracking interaction for demo:', demoId);
+        const response = await fetch(`/api/admin/demos/${demoId}/usage`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ type: 'interaction' }),
+        });
+        const data = await response.json();
+        console.log('✅ Interaction tracked:', data);
+      } catch (error) {
+        console.error('Failed to track interaction:', error);
+      }
+    }, 100); // 100ms debounce
   };
 
   const loadWidgetScript = () => {
@@ -120,25 +134,40 @@ export default function DemoPage() {
     
     // Track interactions when widget is used
     script.onload = () => {
-      // Wait for widget to initialize and then track interactions
-      const checkForWidget = setInterval(() => {
-        const widget = document.querySelector('[data-widget="chat-widget"]');
-        if (widget) {
-          clearInterval(checkForWidget);
-          
-          // Track when chat opens
-          widget.addEventListener('click', trackInteraction);
-          
-          // Also track when chat opens
-          const chatBtn = document.querySelector('[data-widget="chat-button"]');
-          if (chatBtn) {
-            chatBtn.addEventListener('click', trackInteraction);
+      console.log('📊 Widget script loaded, setting up interaction tracking');
+      
+      // Check if we've already set up tracking (avoid duplicate listeners)
+      if (window.demoInteractionTrackingSetup) {
+        console.log('📊 Interaction tracking already set up, skipping');
+        return;
+      }
+      
+      window.demoInteractionTrackingSetup = true;
+      
+      // Use event delegation to track interactions
+      // Track when user sends a message (Enter key)
+      document.addEventListener('keypress', (e) => {
+        const input = e.target;
+        if (input.tagName === 'INPUT' && input.type === 'text' && e.key === 'Enter') {
+          const widget = input.closest('[data-widget="chat-widget"]');
+          if (widget) {
+            console.log('📊 User sent a message (Enter), tracking interaction');
+            trackInteraction();
           }
         }
-      }, 1000);
+      });
       
-      // Stop checking after 10 seconds
-      setTimeout(() => clearInterval(checkForWidget), 10000);
+      // Track when send button is clicked
+      document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.tagName === 'BUTTON' && target.type === 'submit') {
+          const widget = target.closest('[data-widget="chat-widget"]');
+          if (widget) {
+            console.log('📊 Send button clicked, tracking interaction');
+            trackInteraction();
+          }
+        }
+      });
     };
     
     document.body.appendChild(script);

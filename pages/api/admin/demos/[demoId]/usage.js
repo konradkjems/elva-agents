@@ -2,6 +2,7 @@ import clientPromise from '../../../../../lib/mongodb';
 import { withAdmin } from '../../../../../lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../auth/[...nextauth]';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   // Set CORS headers for public demo access
@@ -17,11 +18,20 @@ export default async function handler(req, res) {
   const client = await clientPromise;
   const db = client.db('elva-agents'); // Use new database
   const { demoId } = req.query;
+  
+  // Convert demoId to ObjectId
+  let demoObjectId;
+  try {
+    demoObjectId = new ObjectId(demoId);
+  } catch (error) {
+    console.error('❌ Invalid demoId format:', demoId);
+    return res.status(400).json({ message: 'Invalid demo ID format' });
+  }
 
   if (req.method === 'GET') {
     // GET is public - anyone can view usage data (no authentication required)
     try {
-      const demo = await db.collection('demos').findOne({ _id: demoId });
+      const demo = await db.collection('demos').findOne({ _id: demoObjectId });
       if (!demo) {
         return res.status(404).json({ message: 'Demo not found' });
       }
@@ -58,6 +68,8 @@ export default async function handler(req, res) {
     try {
       const { type } = req.body; // 'view' or 'interaction'
       
+      console.log('📊 Tracking usage for demo:', demoId, 'type:', type);
+      
       if (!type || !['view', 'interaction'].includes(type)) {
         return res.status(400).json({ message: 'Invalid tracking type' });
       }
@@ -68,30 +80,35 @@ export default async function handler(req, res) {
         : 'demoSettings.usageLimits.currentUsage.interactions';
 
       const result = await db.collection('demos').updateOne(
-        { _id: demoId },
+        { _id: demoObjectId },
         { 
           $inc: { [updateField]: 1 },
           $set: { updatedAt: new Date() }
         }
       );
 
+      console.log('📊 Update result:', result);
+
       if (result.matchedCount === 0) {
+        console.error('❌ Demo not found:', demoId);
         return res.status(404).json({ message: 'Demo not found' });
       }
 
       // Return updated usage data
-      const updatedDemo = await db.collection('demos').findOne({ _id: demoId });
+      const updatedDemo = await db.collection('demos').findOne({ _id: demoObjectId });
       const usage = updatedDemo.demoSettings?.usageLimits?.currentUsage || {
         interactions: 0,
         views: 0
       };
+
+      console.log('✅ Usage tracked successfully:', usage);
 
       return res.status(200).json({
         message: `${type} tracked successfully`,
         currentUsage: usage
       });
     } catch (error) {
-      console.error('Error tracking usage:', error);
+      console.error('❌ Error tracking usage:', error);
       return res.status(500).json({ message: 'Failed to track usage' });
     }
   }
@@ -113,7 +130,7 @@ export default async function handler(req, res) {
     try {
       // Reset usage counters
       const result = await db.collection('demos').updateOne(
-        { _id: demoId },
+        { _id: demoObjectId },
         { 
           $set: { 
             'demoSettings.usageLimits.currentUsage.interactions': 0,
