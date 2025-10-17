@@ -2497,12 +2497,15 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const cardsPerView = Math.floor((availableWidth + gap) / (cardWidthPx + gap));
       const actualCardsPerView = Math.min(cardsPerView, products.length);
       
+      // Determine if navigation buttons are needed
+      const needsNavigation = products.length > actualCardsPerView;
+      
       // Create carousel wrapper
       const wrapper = document.createElement('div');
       wrapper.style.cssText = \`
         position: relative;
         margin-top: 8px;
-        padding: 0 24px 0 0; /* Right padding for arrow button */
+        padding: 0 \${needsNavigation ? '24px' : '0'} 0 0; /* Right padding for arrow button only if needed */
       \`;
       
       // Create carousel container with dynamic width
@@ -2511,7 +2514,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       container.style.cssText = \`
         display: flex;
         gap: 12px;
-        overflow: hidden;
+        overflow: \${needsNavigation ? 'hidden' : 'visible'};
         padding: 8px 0;
         width: calc(\${cardWidthPx}px * \${actualCardsPerView} + \${gap}px * \${actualCardsPerView - 1});
         position: relative;
@@ -2661,9 +2664,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       updateButtonVisibility();
       
       // Add all elements to wrapper
-      wrapper.appendChild(prevButton);
       wrapper.appendChild(container);
-      wrapper.appendChild(nextButton);
+      
+      // Only add navigation buttons if navigation is needed
+      if (needsNavigation) {
+        wrapper.appendChild(prevButton);
+        wrapper.appendChild(nextButton);
+      }
       
       return wrapper;
     } else if (layout === 'grid') {

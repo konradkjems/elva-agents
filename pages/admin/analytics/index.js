@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { useToast } from '@/hooks/use-toast';
 import {
   ChartContainer,
@@ -58,6 +59,8 @@ export default function ModernAnalytics() {
   const [dateRange, setDateRange] = useState('30d');
   const [selectedWidget, setSelectedWidget] = useState('all');
   const [activeChart, setActiveChart] = useState('conversations');
+  const [customDateRange, setCustomDateRange] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Chart data preparation functions
   const prepareDailyTrendsChart = (dailyTrends) => {
@@ -108,7 +111,15 @@ export default function ModernAnalytics() {
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/analytics/metrics?period=${dateRange}&widgetId=${selectedWidget === 'all' ? '' : selectedWidget}`);
+      let url = `/api/analytics/metrics?widgetId=${selectedWidget === 'all' ? '' : selectedWidget}`;
+      
+      if (dateRange === 'custom' && customDateRange?.from && customDateRange?.to) {
+        url += `&period=custom&startDate=${customDateRange.from.toISOString()}&endDate=${customDateRange.to.toISOString()}`;
+      } else {
+        url += `&period=${dateRange}`;
+      }
+      
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         console.log('📊 Frontend received analytics data:', data);
@@ -119,7 +130,7 @@ export default function ModernAnalytics() {
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     }
-  }, [dateRange, selectedWidget]);
+  }, [dateRange, selectedWidget, customDateRange]);
 
   const fetchSatisfactionData = useCallback(async () => {
     if (selectedWidget === 'all') {
@@ -128,7 +139,15 @@ export default function ModernAnalytics() {
     }
     
     try {
-      const response = await fetch(`/api/satisfaction/analytics?widgetId=${selectedWidget}&timeRange=${dateRange}`);
+      let url = `/api/satisfaction/analytics?widgetId=${selectedWidget}`;
+      
+      if (dateRange === 'custom' && customDateRange?.from && customDateRange?.to) {
+        url += `&timeRange=custom&startDate=${customDateRange.from.toISOString()}&endDate=${customDateRange.to.toISOString()}`;
+      } else {
+        url += `&timeRange=${dateRange}`;
+      }
+      
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         console.log('⭐ Frontend received satisfaction data:', data);
@@ -141,7 +160,7 @@ export default function ModernAnalytics() {
       console.error('Failed to fetch satisfaction data:', error);
       setSatisfactionData(null);
     }
-  }, [dateRange, selectedWidget]);
+  }, [dateRange, selectedWidget, customDateRange]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -249,7 +268,18 @@ export default function ModernAnalytics() {
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <Select value={dateRange} onValueChange={setDateRange}>
+            <Select 
+              value={dateRange} 
+              onValueChange={(value) => {
+                setDateRange(value);
+                if (value === 'custom') {
+                  setShowDatePicker(true);
+                } else {
+                  setShowDatePicker(false);
+                  setCustomDateRange(null);
+                }
+              }}
+            >
               <SelectTrigger className="w-40">
                 <Calendar className="h-4 w-4 mr-2" />
                 <SelectValue />
@@ -259,8 +289,20 @@ export default function ModernAnalytics() {
                 <SelectItem value="30d">Last 30 days</SelectItem>
                 <SelectItem value="90d">Last 3 months</SelectItem>
                 <SelectItem value="1y">Last year</SelectItem>
+                <SelectItem value="custom">Custom range...</SelectItem>
               </SelectContent>
             </Select>
+            {showDatePicker && (
+              <DateRangePicker
+                dateRange={customDateRange}
+                onDateRangeChange={(range) => {
+                  setCustomDateRange(range);
+                  if (range?.from && range?.to) {
+                    setShowDatePicker(false);
+                  }
+                }}
+              />
+            )}
             <Select value={selectedWidget} onValueChange={setSelectedWidget}>
               <SelectTrigger className="w-48">
                 <Filter className="h-4 w-4 mr-2" />
@@ -423,6 +465,7 @@ export default function ModernAnalytics() {
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
+                        domain={[0, 'auto']}
                       />
                       <ChartTooltip
                         content={
@@ -451,7 +494,7 @@ export default function ModernAnalytics() {
                       />
                       <Line
                         dataKey={activeChart}
-                        type="natural"
+                        type="monotone"
                         stroke={`var(--color-${activeChart})`}
                         strokeWidth={2}
                         dot={(props) => {
@@ -529,6 +572,7 @@ export default function ModernAnalytics() {
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
+                        domain={[0, 'auto']}
                       />
                       <ChartTooltip
                         cursor={false}
@@ -536,7 +580,7 @@ export default function ModernAnalytics() {
                       />
                       <Line
                         dataKey="conversations"
-                        type="natural"
+                        type="monotone"
                         stroke="var(--color-conversations)"
                         strokeWidth={2}
                         dot={(props) => {
@@ -551,7 +595,7 @@ export default function ModernAnalytics() {
                       />
                       <Line
                         dataKey="messages"
-                        type="natural"
+                        type="monotone"
                         stroke="var(--color-messages)"
                         strokeWidth={2}
                         dot={(props) => {
