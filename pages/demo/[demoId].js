@@ -25,6 +25,7 @@ export default function DemoPage() {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState(false);
   const [clientWebsiteUrl, setClientWebsiteUrl] = useState(null);
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
     if (demoId) {
@@ -392,28 +393,35 @@ export default function DemoPage() {
         )}
         
         {/* Demo info panel - shows on iframe load */}
-        {iframeLoaded && (
-          <div className="absolute top-4 left-4 right-4 z-10">
-            <div className="bg-black bg-opacity-75 text-white p-4 rounded-lg max-w-md">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-lg mb-1">{demo.name}</h3>
-                  <p className="text-sm text-gray-300 mb-2">
-                    {demo.description || `Demo of ${demo.sourceWidgetName}`}
+        {iframeLoaded && !showBanner && (
+          <div className="absolute top-4 left-4 right-4 z-10 animate-in fade-in slide-in-from-top-2 duration-500">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-5 rounded-xl shadow-2xl max-w-2xl mx-auto backdrop-blur-sm border border-white/20">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <h3 className="font-bold text-xl">{demo.name}</h3>
+                  </div>
+                  <p className="text-sm text-blue-100 mb-3 leading-relaxed">
+                    {demo.description || `Demo af ${demo.sourceWidgetName}`}
                   </p>
-                  <div className="flex items-center gap-4 text-xs text-gray-300">
-                    <span>💬 Chat widget active</span>
-                    <span>🔗 Interactive demo</span>
+                  <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4 text-blue-200" />
+                      <span className="text-blue-100">Chat widget aktiv</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-400" />
+                      <span className="text-blue-100">Interaktiv demo</span>
+                    </div>
                   </div>
                 </div>
                 <button 
-                  onClick={() => {
-                    const panel = document.querySelector('.demo-info-panel');
-                    if (panel) panel.style.display = 'none';
-                  }}
-                  className="text-gray-400 hover:text-white ml-2"
+                  onClick={() => setShowBanner(true)}
+                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 hover:rotate-90 transform"
+                  aria-label="Luk banner"
                 >
-                  ×
+                  <span className="text-2xl font-light leading-none">×</span>
                 </button>
               </div>
             </div>

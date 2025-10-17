@@ -32,7 +32,8 @@ export default async function handler(req, res) {
     
     if (cached) {
       console.log('✅ Cache HIT for:', url);
-      return res.status(200).json(cached);
+      // Upstash Redis automatically parses JSON, so we can use it directly
+      return res.status(200).json(typeof cached === 'string' ? JSON.parse(cached) : cached);
     }
     
     console.log('❌ Cache MISS for:', url);
@@ -156,7 +157,8 @@ export default async function handler(req, res) {
     
     // Store in Redis cache with 24-hour TTL
     try {
-      await redis.setex(cacheKey, CACHE_DURATION, JSON.stringify(metadata));
+      // Upstash Redis automatically serializes objects to JSON
+      await redis.setex(cacheKey, CACHE_DURATION, metadata);
       console.log('💾 Cached product for 24 hours:', url);
     } catch (cacheError) {
       // Log cache error but don't fail the request
