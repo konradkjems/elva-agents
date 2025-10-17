@@ -303,7 +303,15 @@ export default function DemoPage() {
       </Head>
       
       {/* Full Screen Demo - Website iframe with widget overlay */}
-      <div className="relative w-full h-screen overflow-hidden">
+      <div className="relative w-full h-screen overflow-hidden" style={{
+        // Fix for mobile Safari where 100vh includes browser UI
+        height: typeof window !== 'undefined' && window.innerWidth <= 768 
+          ? 'calc(100vh - env(safe-area-inset-bottom))' 
+          : '100vh',
+        maxHeight: typeof window !== 'undefined' && window.innerWidth <= 768 
+          ? '95vh' 
+          : '100vh'
+      }}>
         {/* Iframe for the client website */}
         {clientWebsiteUrl && !iframeError ? (
           <iframe
@@ -429,7 +437,7 @@ export default function DemoPage() {
         )}
 
         {/* Subtle demo indicator - always visible */}
-        <div className="absolute bottom-4 right-4 z-10">
+        <div className="absolute bottom-4 left-4 z-10">
           <div className="bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
             Demo Mode
           </div>
