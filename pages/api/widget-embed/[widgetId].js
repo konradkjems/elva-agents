@@ -4310,7 +4310,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       chatBox.style.right = '0';
       chatBox.style.top = 'auto';
       chatBox.style.width = '100%';
-      chatBox.style.height = '95vh'; // Full-screen mode on mobile
+      chatBox.style.height = '90vh'; // Full-screen mode on mobile
       chatBox.style.maxHeight = 'none'; // Remove any max-height constraints
       
       historyView.style.borderRadius = '20px 20px 0 0';
@@ -4319,7 +4319,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       historyView.style.right = '0';
       historyView.style.top = 'auto';
       historyView.style.width = '100%';
-      historyView.style.height = '95vh'; // Full-screen mode on mobile
+      historyView.style.height = '90vh'; // Full-screen mode on mobile
       historyView.style.maxHeight = 'none'; // Remove any max-height constraints
       
       // Bottom sheet handle removed per user request
@@ -4340,11 +4340,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       
       chatBox.style.width = \`\${configuredWidth}px\`;
       chatBox.style.height = \`\${finalHeight}px\`;
-      chatBox.style.maxHeight = \`calc(100vh - 180px)\`; // CSS fallback
+      chatBox.style.maxHeight = \`calc(90vh - 180px)\`; // CSS fallback
       
       historyView.style.width = \`\${configuredWidth}px\`;
       historyView.style.height = \`\${finalHeight}px\`;
-      historyView.style.maxHeight = \`calc(100vh - 180px)\`;
+      historyView.style.maxHeight = \`calc(90vh - 180px)\`;
       
       if (placement === 'bottom-left') {
         chatBox.style.left = '24px';

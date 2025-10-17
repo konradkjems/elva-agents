@@ -1,5 +1,9 @@
 import axios from 'axios';
 import { JSDOM } from 'jsdom';
+import redis from '../../lib/redis';
+
+// Cache duration: 24 hours
+const CACHE_DURATION = 24 * 60 * 60; // in seconds
 
 export default async function handler(req, res) {
   // CORS headers
@@ -22,6 +26,17 @@ export default async function handler(req, res) {
   }
   
   try {
+    // Check Redis cache first
+    const cacheKey = `product:${url}`;
+    const cached = await redis.get(cacheKey);
+    
+    if (cached) {
+      console.log('✅ Cache HIT for:', url);
+      return res.status(200).json(cached);
+    }
+    
+    console.log('❌ Cache MISS for:', url);
+    
     // Fetch HTML
     const response = await axios.get(url, {
       headers: {
@@ -130,14 +145,26 @@ export default async function handler(req, res) {
       }
     }
     
-    // Return metadata
-    return res.status(200).json({
+    // Build metadata object
+    const metadata = {
       url: url,
       image: ogImage || structuredData?.image || null,
       name: ogTitle || structuredData?.name || null,
       price: price,
       description: ogDescription || structuredData?.description || null
-    });
+    };
+    
+    // Store in Redis cache with 24-hour TTL
+    try {
+      await redis.setex(cacheKey, CACHE_DURATION, JSON.stringify(metadata));
+      console.log('💾 Cached product for 24 hours:', url);
+    } catch (cacheError) {
+      // Log cache error but don't fail the request
+      console.error('⚠️ Failed to cache product:', cacheError.message);
+    }
+    
+    // Return metadata
+    return res.status(200).json(metadata);
     
   } catch (error) {
     console.error('Error fetching product metadata:', error.message);
