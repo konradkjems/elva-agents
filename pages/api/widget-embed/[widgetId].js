@@ -445,6 +445,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
 
   // Create chat button with modern design matching LivePreview
   const chatBtn = document.createElement("button");
+  chatBtn.setAttribute('data-widget', 'chat-widget');
   chatBtn.innerHTML = generateWidgetContent(true); // Start minimized
   chatBtn.style.cssText = \`
     position: fixed;
@@ -534,6 +535,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Create chat box with modern design matching LivePreview
   const chatBox = document.createElement("div");
   chatBox.className = 'mobile-chat-box mobile-scroll';
+  chatBox.setAttribute('data-widget', 'chat-widget');
   chatBox.style.cssText = \`
     display: none;
     position: fixed;
@@ -1237,6 +1239,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Create conversation history view
   const historyView = document.createElement("div");
   historyView.className = 'mobile-chat-box mobile-scroll';
+  historyView.setAttribute('data-widget', 'chat-widget');
   historyView.style.cssText = \`
     display: none;
     position: fixed;
@@ -2377,11 +2380,12 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     }
   }
 
-  function createProductCard(product) {
+  function createProductCard(product, cardWidth) {
     const card = document.createElement('a');
     card.href = product.url;
     card.target = '_blank';
     card.className = 'product-card';
+    const width = cardWidth || (isMobile() ? 280 : 175);
     card.style.cssText = \`
       display: flex;
       flex-direction: column;
@@ -2392,10 +2396,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       transition: all 0.3s ease;
       text-decoration: none;
       color: inherit;
-      min-width: 175px;
-      max-width: 175px;
-      width: 175px;
-      margin: 4px;
+      min-width: \${width}px;
+      max-width: \${width}px;
+      width: \${width}px;
+      margin: 0;
       flex-shrink: 0;
     \`;
     
@@ -2403,9 +2407,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     const img = document.createElement('img');
     img.src = \`/api/image-proxy?url=\${encodeURIComponent(product.image)}\`;
     img.alt = product.name;
+    const imageHeight = isMobile() ? '240px' : '200px';
     img.style.cssText = \`
       width: 100%;
-      height: 180px;
+      height: \${imageHeight};
       object-fit: cover;
       background: #f3f4f6;
     \`;
@@ -2418,7 +2423,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const placeholder = document.createElement('div');
       placeholder.style.cssText = \`
         width: 100%;
-        height: 180px;
+        height: \${imageHeight};
         background: #f3f4f6;
         display: flex;
         align-items: center;
@@ -2494,22 +2499,24 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const widgetWidth = chatBox.offsetWidth || 450; // Fallback to 450px
       
       // Calculate optimal cards per view based on widget width
-      const cardWidthPx = 175;
+      const cardWidthPx = isMobile() ? 280 : 175; // Wider cards on mobile
       const gap = 12;
-      const arrowButtonSpace = 40; // Space for arrow button + padding
-      const availableWidth = widgetWidth - arrowButtonSpace;
-      const cardsPerView = Math.floor((availableWidth + gap) / (cardWidthPx + gap));
-      const actualCardsPerView = Math.min(cardsPerView, products.length);
+      // On mobile, always show only 1 card at a time
+      const actualCardsPerView = isMobile() ? 1 : Math.min(
+        Math.floor((widgetWidth - 40 + gap) / (cardWidthPx + gap)),
+        products.length
+      );
       
       // Determine if navigation buttons are needed
       const needsNavigation = products.length > actualCardsPerView;
       
       // Create carousel wrapper
       const wrapper = document.createElement('div');
+      const rightPadding = isMobile() ? '0px' : '24px';
       wrapper.style.cssText = \`
         position: relative;
         margin-top: 8px;
-        padding: 0 \${needsNavigation ? '24px' : '0'} 0 0; /* Right padding for arrow button only if needed */
+        padding: 0 \${needsNavigation ? rightPadding : '0'} 0 0; /* Right padding for arrow button only if needed */
       \`;
       
       // Create carousel container with dynamic width
@@ -2522,6 +2529,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         padding: 8px 0;
         width: calc(\${cardWidthPx}px * \${actualCardsPerView} + \${gap}px * \${actualCardsPerView - 1});
         position: relative;
+        margin: 0 auto;
       \`;
       
       // Create inner container for smooth transform animation
@@ -2535,7 +2543,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       
       // Add products to inner container
       products.forEach(product => {
-        innerContainer.appendChild(createProductCard(product));
+        innerContainer.appendChild(createProductCard(product, cardWidthPx));
       });
       
       container.appendChild(innerContainer);
@@ -2543,84 +2551,92 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       // Create navigation buttons
       const prevButton = document.createElement('button');
       prevButton.innerHTML = '‹';
+      const buttonSize = isMobile() ? '40px' : '44px';
+      const buttonFontSize = isMobile() ? '28px' : '32px';
+      const buttonLeft = isMobile() ? '-16px' : '-20px';
       prevButton.style.cssText = \`
         position: absolute;
-        left: -16px;
+        left: \${buttonLeft};
         top: 50%;
         transform: translateY(-50%);
-        width: 32px;
-        height: 32px;
+        width: \${buttonSize};
+        height: \${buttonSize};
         border-radius: 50%;
         border: none;
         background: white;
         color: #1f2937;
-        font-size: 24px;
+        font-size: \${buttonFontSize};
         font-weight: bold;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08);
         z-index: 10;
-        transition: all 0.2s ease;
-        opacity: 0.9;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0.95;
       \`;
       
       const nextButton = document.createElement('button');
       nextButton.innerHTML = '›';
+      const buttonRight = isMobile() ? '-8px' : '-12px';
       nextButton.style.cssText = \`
         position: absolute;
-        right: -8px;
+        right: \${buttonRight};
         top: 50%;
         transform: translateY(-50%);
-        width: 32px;
-        height: 32px;
+        width: \${buttonSize};
+        height: \${buttonSize};
         border-radius: 50%;
         border: none;
         background: white;
         color: #1f2937;
-        font-size: 24px;
+        font-size: \${buttonFontSize};
         font-weight: bold;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08);
         z-index: 10;
-        transition: all 0.2s ease;
-        opacity: 0.9;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0.95;
       \`;
       
       // Button hover effects
       prevButton.onmouseover = () => {
         prevButton.style.opacity = '1';
-        prevButton.style.transform = 'translateY(-50%) scale(1.1)';
+        prevButton.style.transform = 'translateY(-50%) scale(1.15)';
         prevButton.style.background = \`\${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'}\`;
         prevButton.style.color = 'white';
+        prevButton.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.12)';
       };
       prevButton.onmouseout = () => {
-        prevButton.style.opacity = '0.9';
+        prevButton.style.opacity = '0.95';
         prevButton.style.transform = 'translateY(-50%) scale(1)';
         prevButton.style.background = 'white';
         prevButton.style.color = '#1f2937';
+        prevButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08)';
       };
       
       nextButton.onmouseover = () => {
         nextButton.style.opacity = '1';
-        nextButton.style.transform = 'translateY(-50%) scale(1.1)';
+        nextButton.style.transform = 'translateY(-50%) scale(1.15)';
         nextButton.style.background = \`\${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'}\`;
         nextButton.style.color = 'white';
+        nextButton.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.12)';
       };
       nextButton.onmouseout = () => {
-        nextButton.style.opacity = '0.9';
+        nextButton.style.opacity = '0.95';
         nextButton.style.transform = 'translateY(-50%) scale(1)';
         nextButton.style.background = 'white';
         nextButton.style.color = '#1f2937';
+        nextButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08)';
       };
       
       // Robust navigation logic with dynamic cards per view
       let currentIndex = 0;
-      const cardWidth = 187; // Width of card (175px) + gap (12px)
+      const cardWidth = cardWidthPx + gap; // Width of card + gap (dynamic based on mobile/desktop)
       let isAnimating = false;
       
       const updateButtonVisibility = () => {
@@ -4294,7 +4310,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       chatBox.style.right = '0';
       chatBox.style.top = 'auto';
       chatBox.style.width = '100%';
-      chatBox.style.height = '100vh'; // Full-screen mode on mobile
+      chatBox.style.height = '95vh'; // Full-screen mode on mobile
       chatBox.style.maxHeight = 'none'; // Remove any max-height constraints
       
       historyView.style.borderRadius = '20px 20px 0 0';
@@ -4303,7 +4319,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       historyView.style.right = '0';
       historyView.style.top = 'auto';
       historyView.style.width = '100%';
-      historyView.style.height = '100vh'; // Full-screen mode on mobile
+      historyView.style.height = '95vh'; // Full-screen mode on mobile
       historyView.style.maxHeight = 'none'; // Remove any max-height constraints
       
       // Bottom sheet handle removed per user request
