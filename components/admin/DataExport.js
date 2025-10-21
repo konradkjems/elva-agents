@@ -48,12 +48,12 @@ export default function DataExport() {
   };
 
   return (
-    <div className="border rounded-lg p-6 bg-white">
+    <div className="border rounded-lg p-6 bg-white dark:bg-slate-950">
       <div className="flex items-start gap-3 mb-3">
         <Download className="h-5 w-5 text-blue-600 mt-0.5" />
         <div className="flex-1">
           <h3 className="text-lg font-semibold mb-1">Download dine data</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Download alle dine personlige data i JSON format. Dette inkluderer din profil,
             organisationer, widgets, samtaler og analytics.
           </p>
@@ -61,13 +61,13 @@ export default function DataExport() {
       </div>
       
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-4 text-sm">
           <strong>Fejl:</strong> {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4 text-sm flex items-center gap-2">
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-200 px-4 py-3 rounded mb-4 text-sm flex items-center gap-2">
           <CheckCircle className="h-4 w-4" />
           <span>Dine data er blevet downloadet successfully!</span>
         </div>
@@ -91,8 +91,8 @@ export default function DataExport() {
         )}
       </Button>
 
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500">
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           <strong>GDPR Rettigheder:</strong> Dette er din ret under GDPR Artikel 15 (Ret til indsigt) 
           og Artikel 20 (Dataportabilitet). Data eksporteres i maskinlæsbart JSON format.
         </p>

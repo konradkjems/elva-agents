@@ -129,7 +129,7 @@ export default function AuditLog() {
             {logs.map((log) => (
               <div
                 key={log._id}
-                className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-start gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex-shrink-0 mt-1">
                   {getActionIcon(log.action)}
@@ -146,17 +146,17 @@ export default function AuditLog() {
                   </div>
 
                   {log.userId && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       User ID: {log.userId.toString()}
                     </p>
                   )}
 
                   {log.metadata && Object.keys(log.metadata).length > 0 && (
                     <details className="mt-2">
-                      <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                      <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                         View details
                       </summary>
-                      <pre className="text-xs bg-gray-100 p-2 rounded mt-2 overflow-auto">
+                      <pre className="text-xs bg-muted text-muted-foreground p-3 rounded mt-2 overflow-auto border">
                         {JSON.stringify(log.metadata, null, 2)}
                       </pre>
                     </details>
@@ -194,8 +194,8 @@ export default function AuditLog() {
           </div>
         )}
 
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded text-sm">
-          <p className="text-blue-900">
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded text-sm">
+          <p className="text-blue-900 dark:text-blue-100">
             <strong>ℹ️ GDPR Compliance:</strong> Audit logs er gemt i 2 år for at overholde 
             accountability krav under GDPR Artikel 5(2). Logs indeholder ingen personlige 
             data udover bruger ID'er.

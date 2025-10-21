@@ -63,12 +63,12 @@ export default function AccountDeletion() {
   };
 
   return (
-    <div className="border border-red-200 rounded-lg p-6 bg-red-50">
+    <div className="border border-red-200 dark:border-red-800 rounded-lg p-6 bg-red-50 dark:bg-red-950/30">
       <div className="flex items-start gap-3 mb-4">
         <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-red-900 mb-1">Fareområde</h3>
-          <p className="text-sm text-red-700">
+          <h3 className="text-lg font-semibold text-red-900 dark:text-red-200 mb-1">Fareområde</h3>
+          <p className="text-sm text-red-700 dark:text-red-300">
             Sletning af din konto er permanent og kan ikke fortrydes efter grace perioden på 30 dage.
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function AccountDeletion() {
         
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
               <AlertTriangle className="h-5 w-5" />
               Er du absolut sikker?
             </AlertDialogTitle>
@@ -102,9 +102,9 @@ export default function AccountDeletion() {
                 <li>Manuel review anmodninger</li>
               </ul>
               
-              <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
-                <p className="font-semibold text-yellow-900 mb-1">⏰ Grace Period</p>
-                <p className="text-yellow-800">
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded p-3 text-sm">
+                <p className="font-semibold text-yellow-900 dark:text-yellow-200 mb-1">⏰ Grace Period</p>
+                <p className="text-yellow-800 dark:text-yellow-300">
                   Du har 30 dage til at fortryde beslutningen. Log blot ind igen for at annullere sletningen.
                 </p>
               </div>
@@ -139,7 +139,7 @@ export default function AccountDeletion() {
                 </div>
 
                 {error && (
-                  <div className="bg-red-100 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                  <div className="bg-red-100 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 px-3 py-2 rounded text-sm">
                     <strong>Fejl:</strong> {error}
                   </div>
                 )}
@@ -176,8 +176,8 @@ export default function AccountDeletion() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="mt-4 pt-4 border-t border-red-200">
-        <p className="text-xs text-gray-600">
+      <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-800">
+        <p className="text-xs text-gray-600 dark:text-gray-400">
           <strong>GDPR Ret:</strong> Dette er din ret under GDPR Artikel 17 (Retten til at blive glemt). 
           Dine data vil blive permanent slettet efter grace perioden.
         </p>

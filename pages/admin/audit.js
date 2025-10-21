@@ -1,8 +1,10 @@
 import ModernLayout from '../../components/admin/ModernLayout';
 import AuditLog from '../../components/admin/AuditLog';
+import { Button } from '../../components/ui/button';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 
 export default function AuditPage() {
   const { data: session, status } = useSession();
@@ -32,8 +34,20 @@ export default function AuditPage() {
   return (
     <ModernLayout>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header with Back Navigation */}
         <div>
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/admin/settings')}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Settings
+            </Button>
+          </div>
+          
           <h1 className="text-3xl font-bold tracking-tight">Audit Log</h1>
           <p className="text-muted-foreground">
             GDPR compliance audit trail - Track all sensitive actions
