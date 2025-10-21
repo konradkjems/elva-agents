@@ -68,25 +68,31 @@ async function testQuotaSystem() {
       shouldBlock: shouldBlock
     });
     
-    // Check if needs reset
-    const lastResetForTest2 = new Date(usage.lastReset);
+    // Check if needs reset (null-safe)
+    const lastResetForTest2 = usage.lastReset ? new Date(usage.lastReset) : null;
     const monthStartForTest2 = new Date();
     monthStartForTest2.setDate(1);
     monthStartForTest2.setHours(0, 0, 0, 0);
-    const needsResetForTest2 = lastResetForTest2 < monthStartForTest2;
+    const needsResetForTest2 = !lastResetForTest2 || lastResetForTest2 < monthStartForTest2;
     
     console.log('   Reset status:', {
       needsReset: needsResetForTest2,
-      lastReset: lastResetForTest2.toLocaleDateString('da-DK')
+      lastReset: lastResetForTest2 ? lastResetForTest2.toLocaleDateString('da-DK') : 'n/a'
     });
     console.log('');
 
-    // Test 3: Test conversation count
+    // Test 3: Test conversation count (monthly only)
     console.log('📝 Test 3: Checking conversation count...');
+    const monthStartForTest3 = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const conversationCount = await db.collection('conversations').countDocuments({
+      organizationId: org._id,
+      createdAt: { $gte: monthStartForTest3 }
+    });
+    const allTimeCount = await db.collection('conversations').countDocuments({
       organizationId: org._id
     });
-    console.log(`   Total conversations in DB: ${conversationCount}`);
+    console.log(`   Conversations this month: ${conversationCount}`);
+    console.log(`   Conversations all-time: ${allTimeCount}`);
     console.log(`   Tracked in usage: ${org.usage.conversations.current}`);
     
     if (conversationCount !== org.usage.conversations.current) {
@@ -113,17 +119,17 @@ async function testQuotaSystem() {
     console.log(`   Should send 110% notification: ${shouldNotify110}`);
     console.log('');
 
-    // Test 5: Check monthly reset logic
+    // Test 5: Check monthly reset logic (null-safe)
     console.log('📝 Test 5: Checking monthly reset logic...');
-    const lastReset = new Date(org.usage.conversations.lastReset);
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
+    const lastResetForTest5 = org.usage.conversations.lastReset ? new Date(org.usage.conversations.lastReset) : null;
+    const monthStartForTest5 = new Date();
+    monthStartForTest5.setDate(1);
+    monthStartForTest5.setHours(0, 0, 0, 0);
     
-    const needsReset = lastReset < monthStart;
-    console.log(`   Last reset: ${lastReset.toLocaleDateString('da-DK')}`);
-    console.log(`   Current month start: ${monthStart.toLocaleDateString('da-DK')}`);
-    console.log(`   Needs reset: ${needsReset}`);
+    const needsResetForTest5 = !lastResetForTest5 || lastResetForTest5 < monthStartForTest5;
+    console.log(`   Last reset: ${lastResetForTest5 ? lastResetForTest5.toLocaleDateString('da-DK') : 'n/a'}`);
+    console.log(`   Current month start: ${monthStartForTest5.toLocaleDateString('da-DK')}`);
+    console.log(`   Needs reset: ${needsResetForTest5}`);
     console.log('');
 
     // Test 6: Test plan limits
