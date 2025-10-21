@@ -46,8 +46,10 @@ async function migrateConversationQuotas() {
     const organizations = db.collection('organizations');
     const conversations = db.collection('conversations');
 
-    // Get all organizations
-    const allOrgs = await organizations.find({}).toArray();
+    // Get all organizations (excluding soft-deleted ones)
+    const allOrgs = await organizations.find({ 
+      deletedAt: { $exists: false }
+    }).toArray();
     console.log(`\n📊 Found ${allOrgs.length} organizations to migrate`);
 
     let migratedCount = 0;

@@ -67,7 +67,9 @@ export default async function handler(req, res) {
     // Check quota before allowing new conversations
     if (!conversationId && widget.organizationId) {
       const { checkQuota } = await import('../../lib/quota.js');
-      const quotaCheck = await checkQuota(widget.organizationId);
+      // Convert organizationId to string to avoid ObjectId errors
+      const orgIdString = String(widget.organizationId);
+      const quotaCheck = await checkQuota(orgIdString);
       
       if (quotaCheck.blocked) {
         return res.status(403).json({ 
@@ -130,7 +132,9 @@ export default async function handler(req, res) {
       if (widget.organizationId) {
         try {
           const { incrementConversationCount } = await import('../../lib/quota.js');
-          await incrementConversationCount(widget.organizationId);
+          // Convert organizationId to string to avoid ObjectId errors
+          const orgIdString = String(widget.organizationId);
+          await incrementConversationCount(orgIdString);
         } catch (quotaError) {
           console.error('❌ Error incrementing quota:', quotaError);
           // Don't fail the conversation if quota increment fails

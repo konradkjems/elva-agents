@@ -27,9 +27,10 @@ export default async function handler(req, res) {
 
     // Try to get widget from database
     let widget;
+    let db; // Hoist db declaration for quota check below
     try {
       const client = await clientPromise;
-      const db = client.db('elva-agents');
+      db = client.db('elva-agents');
       
       // Convert string ID to ObjectId if it's a valid ObjectId string
       let queryId = widgetId;
@@ -87,7 +88,7 @@ export default async function handler(req, res) {
     // Check if widget should be blocked due to quota
     let isBlocked = false;
     let blockReason = '';
-    if (widget.organizationId) {
+    if (db && widget.organizationId) {
       try {
         const organization = await db.collection('organizations').findOne({
           _id: new ObjectId(widget.organizationId)

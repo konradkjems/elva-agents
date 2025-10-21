@@ -151,10 +151,14 @@ export default function OrganizationSettings() {
     if (!session?.user?.currentOrganizationId) return;
     
     try {
+      setUsageStats(null); // Clear stale data
       const response = await fetch(`/api/organizations/${session.user.currentOrganizationId}/usage`);
       if (response.ok) {
         const stats = await response.json();
         setUsageStats(stats);
+      } else {
+        console.error('Usage fetch failed:', response.status);
+        // Optionally set an error state for UI feedback
       }
     } catch (err) {
       console.error('Error fetching usage stats:', err);
@@ -991,9 +995,10 @@ export default function OrganizationSettings() {
                         </p>
                         <Badge variant={
                           usageStats.status === 'exceeded' ? 'destructive' :
-                          usageStats.status === 'warning' ? 'warning' :
                           'secondary'
-                        } className="mt-1 capitalize">
+                        } className={`mt-1 capitalize ${
+                          usageStats.status === 'warning' ? 'bg-yellow-500 text-white' : ''
+                        }`}>
                           {usageStats.status === 'exceeded' ? 'Exceeded' :
                            usageStats.status === 'warning' ? 'Warning' :
                            'Ok'}
