@@ -35,6 +35,21 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
     plan: 'free'
   });
 
+  const getPlanDisplayName = (plan) => {
+    switch (plan) {
+      case 'free':
+        return 'Gratis';
+      case 'basic':
+        return 'Basis';
+      case 'growth':
+        return 'Vækst';
+      case 'pro':
+        return 'Pro';
+      default:
+        return plan;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -151,7 +166,9 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
                 disabled={loading}
               >
                 <SelectTrigger id="org-plan">
-                  <SelectValue />
+                  <SelectValue>
+                    {getPlanDisplayName(formData.plan)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="free">

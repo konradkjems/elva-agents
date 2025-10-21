@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
-export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave, widgetName, brandingTitle, avatarUrl, logoUrl, themeColor }) {
+export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave, widgetName, brandingTitle, avatarUrl, logoUrl }) {
   const [activeTab, setActiveTab] = useState('avatar');
   const [localSettings, setLocalSettings] = useState({
     avatarZoom: 1.0,
@@ -131,15 +131,8 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                 {/* Avatar Preview Canvas */}
                 <div className="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
                   <div 
-                    className="relative rounded-full shadow-lg overflow-hidden"
-                    style={{ 
-                      width: '120px', 
-                      height: '120px',
-                      backgroundImage: 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)',
-                      backgroundSize: '12px 12px',
-                      backgroundPosition: '0 0, 6px 6px',
-                      backgroundColor: '#f9fafb'
-                    }}
+                    className="relative bg-white rounded-full shadow-lg overflow-hidden"
+                    style={{ width: '120px', height: '120px' }}
                   >
                     {avatarUrl ? (
                       <img 
@@ -168,15 +161,8 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Live Chat Preview</h4>
                   <div className="flex items-start space-x-3">
                     <div 
-                      className="rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
-                      style={{ 
-                        width: '32px', 
-                        height: '32px',
-                        backgroundImage: avatarUrl ? 'none' : 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)',
-                        backgroundSize: '8px 8px',
-                        backgroundPosition: '0 0, 4px 4px',
-                        backgroundColor: avatarUrl ? 'transparent' : (themeColor || '#4f46e5')
-                      }}
+                      className="bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
+                      style={{ width: '32px', height: '32px' }}
                     >
                       {avatarUrl ? (
                         <img 
@@ -190,14 +176,9 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                           }}
                         />
                       ) : (
-                        <div 
-                          className="w-full h-full flex items-center justify-center"
-                          style={{ backgroundColor: themeColor || '#4f46e5' }}
-                        >
-                          <span className="text-white text-xs font-semibold">
-                            {generateAIIcon(widgetName, brandingTitle)}
-                          </span>
-                        </div>
+                        <span className="text-white text-xs font-semibold">
+                          {generateAIIcon(widgetName, brandingTitle)}
+                        </span>
                       )}
                     </div>
                     <div className="bg-gray-50 text-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs shadow-sm border border-gray-100">
@@ -256,14 +237,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                     <div 
                       className="flex-shrink-0 overflow-hidden rounded-lg"
-                      style={{ 
-                        width: '40px', 
-                        height: '24px',
-                        backgroundImage: 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)',
-                        backgroundSize: '8px 8px',
-                        backgroundPosition: '0 0, 4px 4px',
-                        backgroundColor: '#f9fafb'
-                      }}
+                      style={{ width: '40px', height: '24px' }}
                     >
                       {logoUrl ? (
                         <img 
@@ -301,23 +275,13 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                 </div>
                 
                 {/* Complete Widget Preview */}
-                <div className="bg-transparent rounded-lg p-4 shadow-sm border border-gray-200">
+                <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Widget Header with Logo</h4>
-                  <div 
-                    className="flex items-center justify-between p-3 rounded-t-lg"
-                    style={{ backgroundColor: themeColor || '#4f46e5' }}
-                  >
+                  <div className="flex items-center justify-between p-3 bg-blue-600 rounded-t-lg">
                     <div className="flex items-center space-x-3">
                       <div 
                         className="flex-shrink-0 overflow-hidden rounded-lg"
-                        style={{ 
-                          width: '32px', 
-                          height: '20px',
-                          backgroundImage: logoUrl ? 'none' : 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)',
-                          backgroundSize: '8px 8px',
-                          backgroundPosition: '0 0, 4px 4px',
-                          backgroundColor: logoUrl ? 'transparent' : '#f9fafb'
-                        }}
+                        style={{ width: '32px', height: '20px' }}
                       >
                         {logoUrl ? (
                           <img 
@@ -336,51 +300,39 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                         )}
                       </div>
                       <div>
-                      <div className="text-sm font-medium text-white">{brandingTitle || 'AI Assistant'}</div>
-                      <div className="text-xs text-white opacity-80">• Tilgængelig nu</div>
+                        <div className="text-sm font-medium text-white">{brandingTitle || 'AI Assistant'}</div>
+                        <div className="text-xs text-blue-100">• Tilgængelig nu</div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                      <span className="text-xs text-white opacity-80">Online</span>
+                      <span className="text-xs text-blue-100">Online</span>
                     </div>
                   </div>
                   
-                  <div className="bg-transparent p-3 border-t">
+                  <div className="bg-gray-50 p-3 border-t">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Chat with Avatar</h4>
                     <div className="flex items-start space-x-3">
-                        <div 
-                          className="rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
-                          style={{ 
-                            width: '28px', 
-                            height: '28px',
-                            backgroundImage: avatarUrl ? 'none' : 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)',
-                            backgroundSize: '8px 8px',
-                            backgroundPosition: '0 0, 4px 4px',
-                            backgroundColor: themeColor || '#4f46e5'
-                          }}
-                        >
-                          {avatarUrl ? (
-                            <img 
-                              src={avatarUrl}
-                              alt="Avatar"
-                              className="w-full h-full object-cover"
-                              style={{
-                                transform: `scale(${localSettings.avatarZoom}) translate(${localSettings.avatarOffsetX}px, ${localSettings.avatarOffsetY}px)`,
-                                transformOrigin: 'center center',
-                                borderRadius: '50%'
-                              }}
-                            />
-                          ) : (
-                            <div 
-                              className="w-full h-full flex items-center justify-center"
-                              style={{ backgroundColor: themeColor || '#4f46e5' }}
-                            >
-                              <span className="text-white text-xs font-semibold">
-                                {generateAIIcon(widgetName, brandingTitle)}
-                              </span>
-                            </div>
-                          )}
+                      <div 
+                        className="bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
+                        style={{ width: '28px', height: '28px' }}
+                      >
+                        {avatarUrl ? (
+                          <img 
+                            src={avatarUrl}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
+                            style={{
+                              transform: `scale(${localSettings.avatarZoom}) translate(${localSettings.avatarOffsetX}px, ${localSettings.avatarOffsetY}px)`,
+                              transformOrigin: 'center center',
+                              borderRadius: '50%'
+                            }}
+                          />
+                        ) : (
+                          <span className="text-white text-xs font-semibold">
+                            {generateAIIcon(widgetName, brandingTitle)}
+                          </span>
+                        )}
                       </div>
                       <div className="bg-white text-gray-800 px-3 py-2 rounded-2xl text-sm max-w-xs shadow-sm border border-gray-100">
                         Hej! Hvordan kan jeg hjælpe dig i dag?

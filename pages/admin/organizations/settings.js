@@ -53,7 +53,11 @@ import {
   X,
   MoreVertical,
   UserCog,
-  UserMinus
+  UserMinus,
+  BarChart3,
+  Calendar,
+  TrendingUp,
+  RotateCcw
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -78,12 +82,15 @@ export default function OrganizationSettings() {
   const [organization, setOrganization] = useState(null);
   const [members, setMembers] = useState([]);
   const [invitations, setInvitations] = useState([]);
+  const [usageStats, setUsageStats] = useState(null);
+  const [resettingQuota, setResettingQuota] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [processingInvitation, setProcessingInvitation] = useState(null);
   const [processingMember, setProcessingMember] = useState(null);
   const [memberToRemove, setMemberToRemove] = useState(null);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [resetQuotaDialogOpen, setResetQuotaDialogOpen] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -121,6 +128,13 @@ export default function OrganizationSettings() {
           primaryColor: data.organization.primaryColor || '#1E40AF',
           plan: data.organization.plan || 'free'
         });
+        
+        // Fetch usage stats
+        if (data.organization.usageStats) {
+          setUsageStats(data.organization.usageStats);
+        } else {
+          fetchUsageStats();
+        }
       } else {
         setError('Failed to load organization');
       }
@@ -130,6 +144,75 @@ export default function OrganizationSettings() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchUsageStats = async () => {
+    if (!session?.user?.currentOrganizationId) return;
+    
+    try {
+      const response = await fetch(`/api/organizations/${session.user.currentOrganizationId}/usage`);
+      if (response.ok) {
+        const stats = await response.json();
+        setUsageStats(stats);
+      }
+    } catch (err) {
+      console.error('Error fetching usage stats:', err);
+    }
+  };
+
+  const handleResetQuota = async () => {
+    if (!session?.user?.currentOrganizationId || session.user.platformRole !== 'platform_admin') {
+      toast({
+        variant: "destructive",
+        title: "Unauthorized",
+        description: "Only platform admins can reset quotas.",
+      });
+      return;
+    }
+    
+    setResettingQuota(true);
+    try {
+      const response = await fetch(
+        `/api/admin/organizations/${session.user.currentOrganizationId}/reset-quota`,
+        { method: 'POST' }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUsageStats(data.usage);
+        toast({
+          title: "Quota Reset",
+          description: data.message || "Conversation quota has been reset successfully.",
+        });
+        setResetQuotaDialogOpen(false);
+      } else {
+        const error = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.error || "An error occurred while resetting the quota.",
+        });
+      }
+    } catch (err) {
+      console.error('Error resetting quota:', err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An error occurred while resetting the quota.",
+      });
+    } finally {
+      setResettingQuota(false);
+    }
+  };
+
+  const handleNameChange = (name) => {
+    // Auto-generate slug from name (always update as user types)
+    const autoSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    
+    setFormData({ ...formData, name, slug: autoSlug });
   };
 
   const handleSave = async (e) => {
@@ -382,6 +465,21 @@ export default function OrganizationSettings() {
     }
   };
 
+  const getPlanDisplayName = (plan) => {
+    switch (plan) {
+      case 'free':
+        return 'Gratis';
+      case 'basic':
+        return 'Basis';
+      case 'growth':
+        return 'Vækst';
+      case 'pro':
+        return 'Pro';
+      default:
+        return plan;
+    }
+  };
+
   if (loading) {
     return (
       <ModernLayout>
@@ -450,6 +548,10 @@ export default function OrganizationSettings() {
               <Users className="h-4 w-4" />
               Team Members ({members.length})
             </TabsTrigger>
+            <TabsTrigger value="usage" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Usage
+            </TabsTrigger>
           </TabsList>
 
           {/* General Settings Tab */}
@@ -469,7 +571,7 @@ export default function OrganizationSettings() {
                     <Input
                       id="org-name"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) => handleNameChange(e.target.value)}
                       disabled={!canEdit || saving}
                       required
                     />
@@ -486,7 +588,7 @@ export default function OrganizationSettings() {
                       pattern="[a-z0-9-]+"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Used in URLs. Only lowercase letters, numbers, and hyphens.
+                      Auto-generated from name. Use only lowercase letters, numbers, and hyphens.
                     </p>
                   </div>
 
@@ -520,7 +622,9 @@ export default function OrganizationSettings() {
                       disabled={!canEdit || saving}
                     >
                       <SelectTrigger id="org-plan">
-                        <SelectValue />
+                        <SelectValue>
+                          {getPlanDisplayName(formData.plan)}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="free">
@@ -828,6 +932,165 @@ export default function OrganizationSettings() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Usage Tab */}
+          <TabsContent value="usage" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversation Usage</CardTitle>
+                <CardDescription>
+                  View your monthly conversation usage and quota status
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {usageStats ? (
+                  <>
+                    {/* Usage Progress */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Current Usage</p>
+                          <p className="text-3xl font-bold">{usageStats.current.toLocaleString('en-US')}</p>
+                          <p className="text-sm text-muted-foreground mt-1">of {usageStats.limit.toLocaleString('en-US')} conversations</p>
+                        </div>
+                        <div className={`text-4xl font-bold ${
+                          usageStats.percentage >= 100 ? 'text-red-600' :
+                          usageStats.percentage >= 80 ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`}>
+                          {usageStats.percentage}%
+                        </div>
+                      </div>
+
+                      <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`absolute top-0 left-0 h-full transition-all duration-500 ${
+                            usageStats.percentage >= 100 ? 'bg-red-600' :
+                            usageStats.percentage >= 80 ? 'bg-yellow-600' :
+                            'bg-green-600'
+                          }`}
+                          style={{ width: `${Math.min(usageStats.percentage, 100)}%` }}
+                        />
+                      </div>
+
+                      {usageStats.overage > 0 && (
+                        <Alert variant="destructive">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            You have exceeded your quota by {usageStats.overage.toLocaleString('en-US')} conversations.
+                            {organization?.plan === 'free' 
+                              ? ' Your widgets are disabled. Upgrade to continue.'
+                              : ' This will be billed separately.'
+                            }
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Usage Details */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Days Remaining
+                        </p>
+                        <p className="text-2xl font-bold mt-1">{usageStats.daysRemaining}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Status
+                        </p>
+                        <Badge variant={
+                          usageStats.status === 'exceeded' ? 'destructive' :
+                          usageStats.status === 'warning' ? 'warning' :
+                          'secondary'
+                        } className="mt-1 capitalize">
+                          {usageStats.status === 'exceeded' ? 'Exceeded' :
+                           usageStats.status === 'warning' ? 'Warning' :
+                           'Ok'}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          Plan
+                        </p>
+                        <p className="text-lg font-bold mt-1 capitalize">{organization?.plan || 'free'}</p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Reset Dates */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Reset Information</p>
+                      <div className="grid gap-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Last reset:</span>
+                          <span className="font-medium">
+                            {new Date(usageStats.lastReset).toLocaleDateString('en-US')}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Next automatic reset:</span>
+                          <span className="font-medium">
+                            {new Date(usageStats.nextReset).toLocaleDateString('en-US')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Platform Admin Actions */}
+                    {session?.user?.platformRole === 'platform_admin' && (
+                      <>
+                        <Separator />
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="gap-1">
+                              <Crown className="h-3 w-3" />
+                              Platform Admin
+                            </Badge>
+                          </div>
+                          <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertDescription>
+                              As a platform admin, you can manually reset the quota for this organization.
+                            </AlertDescription>
+                          </Alert>
+                          <Button 
+                            variant="destructive" 
+                            onClick={() => setResetQuotaDialogOpen(true)}
+                            disabled={resettingQuota}
+                            className="gap-2"
+                          >
+                            {resettingQuota ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Resetting...
+                              </>
+                            ) : (
+                              <>
+                                <RotateCcw className="h-4 w-4" />
+                                Reset Quota
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">Loading usage data...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -871,6 +1134,49 @@ export default function OrganizationSettings() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove Member
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Quota Dialog */}
+      <AlertDialog open={resetQuotaDialogOpen} onOpenChange={setResetQuotaDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-yellow-600" />
+              Reset Conversation Quota
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset the quota for <strong>{organization?.name}</strong>? 
+              This will reset the conversation counter to 0 and clear all notifications.
+              <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  ⚠️ This action is only available to platform administrators and should be used with caution.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resettingQuota}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetQuota}
+              disabled={resettingQuota}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {resettingQuota ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Resetting...
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Reset Quota
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

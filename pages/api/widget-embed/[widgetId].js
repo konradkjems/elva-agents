@@ -84,9 +84,32 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Widget not found' });
     }
 
+    // Check if widget should be blocked due to quota
+    let isBlocked = false;
+    let blockReason = '';
+    if (widget.organizationId) {
+      try {
+        const organization = await db.collection('organizations').findOne({
+          _id: new ObjectId(widget.organizationId)
+        });
+        
+        if (organization) {
+          const { shouldBlockWidget } = await import('../../../lib/quota.js');
+          const blockCheck = shouldBlockWidget(organization);
+          isBlocked = blockCheck.blocked;
+          blockReason = blockCheck.message || blockCheck.reason || '';
+        }
+      } catch (quotaError) {
+        console.error('Error checking quota:', quotaError);
+        // Don't block on error
+      }
+    }
+
     // DEBUG: Log widget settings
     console.log('🔍 Widget Settings Debug:', {
       widgetId: widget._id,
+      isBlocked: isBlocked,
+      blockReason: blockReason,
       hasSettings: !!widget.settings,
       settings: widget.settings,
       imageUpload: widget.settings?.imageUpload,
@@ -125,11 +148,13 @@ export default async function handler(req, res) {
   const WIDGET_CONFIG = ${JSON.stringify({
     widgetId: widgetId,
     name: widget.name || 'AI Assistant',
+    isBlocked: isBlocked,
+    blockReason: blockReason,
     theme: {
       buttonColor: widget.appearance?.themeColor || widget.theme?.buttonColor || '#4f46e5',
       chatBg: widget.appearance?.chatBg || widget.theme?.chatBg || '#ffffff',
       width: widget.appearance?.width || widget.theme?.width || 450,
-      height: widget.appearance?.height || widget.theme?.height || 600,
+      height: widget.appearance?.height || widget.theme?.height || 700,
       borderRadius: widget.appearance?.borderRadius || widget.theme?.borderRadius || 20,
       shadow: widget.appearance?.shadow || widget.theme?.shadow || '0 20px 60px rgba(0,0,0,0.15)',
       backdropBlur: widget.appearance?.backdropBlur || widget.theme?.backdropBlur || false,
@@ -172,7 +197,7 @@ export default async function handler(req, res) {
       imageSettings: widget.branding?.imageSettings || null,
       iconSizes: widget.branding?.iconSizes || null
     },
-    apiUrl: 'https://elva-agents.vercel.app',
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 'https://elva-agents.vercel.app',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
     openai: useResponsesAPI ? {
       promptId: widget.openai.promptId,
@@ -445,7 +470,6 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
 
   // Create chat button with modern design matching LivePreview
   const chatBtn = document.createElement("button");
-  chatBtn.setAttribute('data-widget', 'chat-widget');
   chatBtn.innerHTML = generateWidgetContent(true); // Start minimized
   chatBtn.style.cssText = \`
     position: fixed;
@@ -528,30 +552,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     transform: translateY(20px);
     transition: all 0.3s ease;
     pointer-events: none;
-    cursor: pointer;
   \`;
-  
-  // Add hover effects to popup message
-  popupMessage.onmouseover = () => {
-    if (popupMessage.style.opacity === '1') {
-      popupMessage.style.transform = 'translateY(-2px)';
-      popupMessage.style.boxShadow = '0 12px 40px rgba(0,0,0,0.2), 0 6px 20px rgba(0,0,0,0.15)';
-    }
-  };
-  
-  popupMessage.onmouseout = () => {
-    if (popupMessage.style.opacity === '1') {
-      popupMessage.style.transform = 'translateY(0)';
-      popupMessage.style.boxShadow = '0 8px 32px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.1)';
-    }
-  };
   
   document.body.appendChild(popupMessage);
 
   // Create chat box with modern design matching LivePreview
   const chatBox = document.createElement("div");
   chatBox.className = 'mobile-chat-box mobile-scroll';
-  chatBox.setAttribute('data-widget', 'chat-widget');
   chatBox.style.cssText = \`
     display: none;
     position: fixed;
@@ -560,7 +567,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 80px; left: 24px;' :
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
-    height: \${WIDGET_CONFIG.theme.height || 600}px;
+    height: \${WIDGET_CONFIG.theme.height || 700}px;
+    max-height: calc(100vh - 180px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -834,6 +842,15 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
 
+  // Disable input if widget is blocked
+  if (WIDGET_CONFIG.isBlocked) {
+    input.disabled = true;
+    input.style.opacity = '0.5';
+    input.style.cursor = 'not-allowed';
+    inputLabel.textContent = WIDGET_CONFIG.blockReason || 'Chat deaktiveret';
+    inputLabel.style.opacity = '0.8';
+  }
+
   // Tilføj elementer i korrekt rækkefølge
   if (WIDGET_CONFIG.messages.voiceInput.enabled) {
     inputFieldWrapper.appendChild(voiceButton);
@@ -1052,6 +1069,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
   \`;
 
+  // Disable send button if widget is blocked
+  if (WIDGET_CONFIG.isBlocked) {
+    sendButton.disabled = true;
+    sendButton.style.opacity = '0.5';
+    sendButton.style.cursor = 'not-allowed';
+  }
+
   // Add focus effects for input container and label animation
   const updateLabelPosition = () => {
     if (input.value || document.activeElement === input) {
@@ -1255,7 +1279,6 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Create conversation history view
   const historyView = document.createElement("div");
   historyView.className = 'mobile-chat-box mobile-scroll';
-  historyView.setAttribute('data-widget', 'chat-widget');
   historyView.style.cssText = \`
     display: none;
     position: fixed;
@@ -1264,7 +1287,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 80px; left: 24px;' :
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
-    height: \${WIDGET_CONFIG.theme.height || 600}px;
+    height: \${WIDGET_CONFIG.theme.height || 700}px;
+    max-height: calc(100vh - 180px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -1677,6 +1701,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           font-weight: 500;
           color: \${themeColors.textColor};
           margin-bottom: 4px;
+          white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         ">\${conversation.title}</div>
@@ -1852,27 +1877,12 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     if (WIDGET_CONFIG.messages?.popupMessage) {
       popupMessage.innerHTML = \`
-        <button id="popupCloseBtn_\${WIDGET_CONFIG.widgetId}" style="position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border: none; background: none; color: #6b7280; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s ease; z-index: 1;">×</button>
-        <div style="padding-right: 24px; cursor: pointer;">\${WIDGET_CONFIG.messages.popupMessage}</div>
+        <button id="popupCloseBtn_\${WIDGET_CONFIG.widgetId}" style="position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border: none; background: none; color: #6b7280; cursor: pointer; font-size: 18px; line-height: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s ease;">×</button>
+        <div style="padding-right: 24px;">\${WIDGET_CONFIG.messages.popupMessage}</div>
       \`;
       popupMessage.style.opacity = '1';
       popupMessage.style.transform = 'translateY(0)';
       popupMessage.style.pointerEvents = 'auto';
-      popupMessage.style.cursor = 'pointer';
-      
-      // Add click handler to popup message to open chat
-      popupMessage.onclick = (e) => {
-        // Check if click is not on close button
-        const closeBtn = document.getElementById(\`popupCloseBtn_\${WIDGET_CONFIG.widgetId}\`);
-        if (e.target !== closeBtn && !closeBtn?.contains(e.target)) {
-          // Hide popup
-          hidePopup();
-          // Open chat
-          if (chatBox.style.display !== "flex") {
-            chatBtn.click();
-          }
-        }
-      };
       
       // Add event listener to close button
       const closeBtn = document.getElementById(\`popupCloseBtn_\${WIDGET_CONFIG.widgetId}\`);
@@ -1885,8 +1895,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           closeBtn.style.backgroundColor = 'transparent';
           closeBtn.style.color = '#6b7280';
         };
-        closeBtn.onclick = (e) => {
-          e.stopPropagation(); // Prevent popup click handler
+        closeBtn.onclick = () => {
           hidePopup();
         };
       }
@@ -2166,30 +2175,23 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       flex-wrap: wrap;
       gap: 8px;
       justify-content: flex-end;
-      align-items: flex-start;
     \`;
     
     validResponses.forEach((response, index) => {
       const button = document.createElement('button');
       button.textContent = response;
-      const horizontalPadding = isMobile() ? '6px' : '10px';
       button.style.cssText = \`
-        padding: 3px \${horizontalPadding};
-        font-size: 14px;
+        padding: 6px 12px;
+        font-size: 12px;
         color: \${themeColors.textColor};
         background: \${themeColors.messageBg};
         border: 1px solid \${themeColors.borderColor};
-        border-radius: 10px;
+        border-radius: 9999px;
         cursor: pointer;
         transition: all 0.2s ease;
-        display: flex;
+        white-space: nowrap;
+        display: inline-flex;
         align-items: center;
-        text-align: left;
-        max-width: max-content;
-        flex-shrink: 0;
-        flex-grow: 0;
-        box-sizing: border-box;
-        word-wrap: break-word;
       \`;
       
       button.onmouseover = () => {
@@ -2412,12 +2414,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     }
   }
 
-  function createProductCard(product, cardWidth) {
+  function createProductCard(product) {
     const card = document.createElement('a');
     card.href = product.url;
     card.target = '_blank';
     card.className = 'product-card';
-    const width = cardWidth || (isMobile() ? 280 : 175);
     card.style.cssText = \`
       display: flex;
       flex-direction: column;
@@ -2428,10 +2429,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       transition: all 0.3s ease;
       text-decoration: none;
       color: inherit;
-      min-width: \${width}px;
-      max-width: \${width}px;
-      width: \${width}px;
-      margin: 0;
+      min-width: 175px;
+      max-width: 175px;
+      width: 175px;
+      margin: 4px;
       flex-shrink: 0;
     \`;
     
@@ -2439,10 +2440,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     const img = document.createElement('img');
     img.src = \`/api/image-proxy?url=\${encodeURIComponent(product.image)}\`;
     img.alt = product.name;
-    const imageHeight = isMobile() ? '240px' : '200px';
     img.style.cssText = \`
       width: 100%;
-      height: \${imageHeight};
+      height: 180px;
       object-fit: cover;
       background: #f3f4f6;
     \`;
@@ -2455,7 +2455,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const placeholder = document.createElement('div');
       placeholder.style.cssText = \`
         width: 100%;
-        height: \${imageHeight};
+        height: 180px;
         background: #f3f4f6;
         display: flex;
         align-items: center;
@@ -2531,24 +2531,19 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const widgetWidth = chatBox.offsetWidth || 450; // Fallback to 450px
       
       // Calculate optimal cards per view based on widget width
-      const cardWidthPx = isMobile() ? 280 : 175; // Wider cards on mobile
+      const cardWidthPx = 175;
       const gap = 12;
-      // On mobile, always show only 1 card at a time
-      const actualCardsPerView = isMobile() ? 1 : Math.min(
-        Math.floor((widgetWidth - 40 + gap) / (cardWidthPx + gap)),
-        products.length
-      );
-      
-      // Determine if navigation buttons are needed
-      const needsNavigation = products.length > actualCardsPerView;
+      const arrowButtonSpace = 40; // Space for arrow button + padding
+      const availableWidth = widgetWidth - arrowButtonSpace;
+      const cardsPerView = Math.floor((availableWidth + gap) / (cardWidthPx + gap));
+      const actualCardsPerView = Math.min(cardsPerView, products.length);
       
       // Create carousel wrapper
       const wrapper = document.createElement('div');
-      const rightPadding = isMobile() ? '0px' : '24px';
       wrapper.style.cssText = \`
         position: relative;
         margin-top: 8px;
-        padding: 0 \${needsNavigation ? rightPadding : '0'} 0 0; /* Right padding for arrow button only if needed */
+        padding: 0 24px 0 0; /* Right padding for arrow button */
       \`;
       
       // Create carousel container with dynamic width
@@ -2557,11 +2552,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       container.style.cssText = \`
         display: flex;
         gap: 12px;
-        overflow: \${needsNavigation ? 'hidden' : 'visible'};
+        overflow: hidden;
         padding: 8px 0;
         width: calc(\${cardWidthPx}px * \${actualCardsPerView} + \${gap}px * \${actualCardsPerView - 1});
         position: relative;
-        margin: 0 auto;
       \`;
       
       // Create inner container for smooth transform animation
@@ -2575,7 +2569,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       
       // Add products to inner container
       products.forEach(product => {
-        innerContainer.appendChild(createProductCard(product, cardWidthPx));
+        innerContainer.appendChild(createProductCard(product));
       });
       
       container.appendChild(innerContainer);
@@ -2583,92 +2577,84 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       // Create navigation buttons
       const prevButton = document.createElement('button');
       prevButton.innerHTML = '‹';
-      const buttonSize = isMobile() ? '40px' : '44px';
-      const buttonFontSize = isMobile() ? '28px' : '32px';
-      const buttonLeft = isMobile() ? '-16px' : '-20px';
       prevButton.style.cssText = \`
         position: absolute;
-        left: \${buttonLeft};
+        left: -16px;
         top: 50%;
         transform: translateY(-50%);
-        width: \${buttonSize};
-        height: \${buttonSize};
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         border: none;
         background: white;
         color: #1f2937;
-        font-size: \${buttonFontSize};
+        font-size: 24px;
         font-weight: bold;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         z-index: 10;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        opacity: 0.95;
+        transition: all 0.2s ease;
+        opacity: 0.9;
       \`;
       
       const nextButton = document.createElement('button');
       nextButton.innerHTML = '›';
-      const buttonRight = isMobile() ? '-8px' : '-12px';
       nextButton.style.cssText = \`
         position: absolute;
-        right: \${buttonRight};
+        right: -8px;
         top: 50%;
         transform: translateY(-50%);
-        width: \${buttonSize};
-        height: \${buttonSize};
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         border: none;
         background: white;
         color: #1f2937;
-        font-size: \${buttonFontSize};
+        font-size: 24px;
         font-weight: bold;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         z-index: 10;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        opacity: 0.95;
+        transition: all 0.2s ease;
+        opacity: 0.9;
       \`;
       
       // Button hover effects
       prevButton.onmouseover = () => {
         prevButton.style.opacity = '1';
-        prevButton.style.transform = 'translateY(-50%) scale(1.15)';
+        prevButton.style.transform = 'translateY(-50%) scale(1.1)';
         prevButton.style.background = \`\${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'}\`;
         prevButton.style.color = 'white';
-        prevButton.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.12)';
       };
       prevButton.onmouseout = () => {
-        prevButton.style.opacity = '0.95';
+        prevButton.style.opacity = '0.9';
         prevButton.style.transform = 'translateY(-50%) scale(1)';
         prevButton.style.background = 'white';
         prevButton.style.color = '#1f2937';
-        prevButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08)';
       };
       
       nextButton.onmouseover = () => {
         nextButton.style.opacity = '1';
-        nextButton.style.transform = 'translateY(-50%) scale(1.15)';
+        nextButton.style.transform = 'translateY(-50%) scale(1.1)';
         nextButton.style.background = \`\${WIDGET_CONFIG.theme.buttonColor || '#3b82f6'}\`;
         nextButton.style.color = 'white';
-        nextButton.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.12)';
       };
       nextButton.onmouseout = () => {
-        nextButton.style.opacity = '0.95';
+        nextButton.style.opacity = '0.9';
         nextButton.style.transform = 'translateY(-50%) scale(1)';
         nextButton.style.background = 'white';
         nextButton.style.color = '#1f2937';
-        nextButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.08)';
       };
       
       // Robust navigation logic with dynamic cards per view
       let currentIndex = 0;
-      const cardWidth = cardWidthPx + gap; // Width of card + gap (dynamic based on mobile/desktop)
+      const cardWidth = 187; // Width of card (175px) + gap (12px)
       let isAnimating = false;
       
       const updateButtonVisibility = () => {
@@ -2715,83 +2701,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       // Initial button visibility
       updateButtonVisibility();
       
-      // Add touch/swipe gestures for mobile
-      if (isMobile() && needsNavigation) {
-        let touchStartX = 0;
-        let touchEndX = 0;
-        let touchStartY = 0;
-        let touchEndY = 0;
-        const minSwipeDistance = 50; // Minimum distance for a swipe
-        
-        container.addEventListener('touchstart', (e) => {
-          touchStartX = e.touches[0].clientX;
-          touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-        
-        container.addEventListener('touchmove', (e) => {
-          // Prevent default only if horizontal swipe is detected
-          const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-          const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-          
-          if (deltaX > deltaY) {
-            e.preventDefault();
-            // Add visual feedback during swipe
-            const swipeDistance = e.touches[0].clientX - touchStartX;
-            const currentTranslateX = -currentIndex * cardWidth;
-            // Limit drag distance to prevent over-scrolling
-            const maxDrag = cardWidth * 0.3; // 30% of card width
-            const limitedDrag = Math.max(-maxDrag, Math.min(maxDrag, swipeDistance * 0.5));
-            innerContainer.style.transform = \`translateX(\${currentTranslateX + limitedDrag}px)\`;
-            innerContainer.style.transition = 'none'; // Disable transition during drag
-          }
-        }, { passive: false });
-        
-        container.addEventListener('touchend', (e) => {
-          touchEndX = e.changedTouches[0].clientX;
-          touchEndY = e.changedTouches[0].clientY;
-          
-          // Restore transition
-          innerContainer.style.transition = 'transform 0.3s ease-in-out';
-          
-          const deltaX = touchStartX - touchEndX;
-          const deltaY = Math.abs(touchStartY - touchEndY);
-          
-          // Only process horizontal swipes (not vertical scrolls)
-          if (Math.abs(deltaX) > minSwipeDistance && Math.abs(deltaX) > deltaY) {
-            if (deltaX > 0) {
-              // Swipe left - next
-              if (currentIndex < products.length - actualCardsPerView && !isAnimating) {
-                const newIndex = Math.min(products.length - actualCardsPerView, currentIndex + actualCardsPerView);
-                navigateToIndex(newIndex);
-              } else {
-                // Snap back to current position
-                innerContainer.style.transform = \`translateX(\${-currentIndex * cardWidth}px)\`;
-              }
-            } else {
-              // Swipe right - previous
-              if (currentIndex > 0 && !isAnimating) {
-                const newIndex = Math.max(0, currentIndex - actualCardsPerView);
-                navigateToIndex(newIndex);
-              } else {
-                // Snap back to current position
-                innerContainer.style.transform = \`translateX(\${-currentIndex * cardWidth}px)\`;
-              }
-            }
-          } else {
-            // Not a valid swipe - snap back to current position
-            innerContainer.style.transform = \`translateX(\${-currentIndex * cardWidth}px)\`;
-          }
-        }, { passive: true });
-      }
-      
       // Add all elements to wrapper
+      wrapper.appendChild(prevButton);
       wrapper.appendChild(container);
-      
-      // Only add navigation buttons if navigation is needed
-      if (needsNavigation) {
-        wrapper.appendChild(prevButton);
-        wrapper.appendChild(nextButton);
-      }
+      wrapper.appendChild(nextButton);
       
       return wrapper;
     } else if (layout === 'grid') {
@@ -3694,7 +3607,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       border: 1px solid #bae6fd;
       text-align: center;
     \`;
-    thankYouBubble.innerHTML = 'Tak for din feedback! 🙏';
+    thankYouBubble.innerHTML = 'Thank you for your feedback! 🙏';
     
     // Assemble the message
     assistantContainer.appendChild(assistantNameLabel);
@@ -3711,7 +3624,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       if (messageDiv.parentNode) {
         messageDiv.remove();
       }
-    }, 6000);
+    }, 3000);
   }
   
   function showErrorMessage(message) {
@@ -3743,6 +3656,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Handle message sending
   let isSending = false;
   async function sendMessage() {
+    // Check if widget is blocked
+    if (WIDGET_CONFIG.isBlocked) {
+      const blockMessage = WIDGET_CONFIG.blockReason || 'This chat is temporarily unavailable.';
+      addMessage('assistant', blockMessage + ' Please contact support for assistance.');
+      return;
+    }
+    
     const msg = input.value.trim();
     if (msg === "" || isSending) return;
     
@@ -4400,9 +4320,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       
       // Set responsive dimensions
       chatBox.style.width = \`\${Math.min(availableWidth, 400)}px\`;
-      chatBox.style.height = \`\${Math.min(availableHeight, 600)}px\`;
+      chatBox.style.height = \`\${Math.min(availableHeight, 700)}px\`;
       historyView.style.width = \`\${Math.min(availableWidth, 400)}px\`;
-      historyView.style.height = \`\${Math.min(availableHeight, 600)}px\`;
+      historyView.style.height = \`\${Math.min(availableHeight, 700)}px\`;
       
       // Mobile bottom sheet positioning (always at bottom for mobile)
       chatBox.style.borderRadius = '20px 20px 0 0'; // Bottom sheet style
@@ -4411,8 +4331,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       chatBox.style.right = '0';
       chatBox.style.top = 'auto';
       chatBox.style.width = '100%';
-      chatBox.style.height = '90vh'; // Full-screen mode on mobile
-      chatBox.style.maxHeight = 'none'; // Remove any max-height constraints
+      chatBox.style.height = \`\${Math.min(availableHeight, 80)}vh\`; // Max 80% of viewport height
       
       historyView.style.borderRadius = '20px 20px 0 0';
       historyView.style.bottom = '0';
@@ -4420,15 +4339,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       historyView.style.right = '0';
       historyView.style.top = 'auto';
       historyView.style.width = '100%';
-      historyView.style.height = '90vh'; // Full-screen mode on mobile
-      historyView.style.maxHeight = 'none'; // Remove any max-height constraints
+      historyView.style.height = \`\${Math.min(availableHeight, 80)}vh\`;
       
       // Bottom sheet handle removed per user request
       
     } else {
       // Desktop positioning with intelligent height scaling
       const configuredWidth = WIDGET_CONFIG.theme.width || 400;
-      const configuredHeight = WIDGET_CONFIG.theme.height || 600;
+      const configuredHeight = WIDGET_CONFIG.theme.height || 700;
       
       // Calculate available height accounting for margins and button
       const availableHeight = vh - 180; // 90px top/bottom margins + button space
@@ -4441,11 +4359,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       
       chatBox.style.width = \`\${configuredWidth}px\`;
       chatBox.style.height = \`\${finalHeight}px\`;
-      chatBox.style.maxHeight = \`calc(90vh - 180px)\`; // CSS fallback
+      chatBox.style.maxHeight = \`calc(100vh - 180px)\`; // CSS fallback
       
       historyView.style.width = \`\${configuredWidth}px\`;
       historyView.style.height = \`\${finalHeight}px\`;
-      historyView.style.maxHeight = \`calc(90vh - 180px)\`;
+      historyView.style.maxHeight = \`calc(100vh - 180px)\`;
       
       if (placement === 'bottom-left') {
         chatBox.style.left = '24px';
@@ -4549,7 +4467,138 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   updateMobileStyles();
   updateOnlineIndicatorPosition();
 
-  // Touch gestures removed - users can now scroll without accidentally closing the widget
+  // Enhanced mobile touch gestures
+  function addTouchGestures() {
+    if (!isMobile()) return;
+    
+    let startY = 0;
+    let startX = 0;
+    let isDragging = false;
+    let dragThreshold = 50;
+    
+    // Add touch event listeners to chat box
+    chatBox.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      isDragging = false;
+    }, { passive: true });
+    
+    chatBox.addEventListener('touchmove', (e) => {
+      if (!startY) return;
+      
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const deltaY = currentY - startY;
+      const deltaX = currentX - startX;
+      
+      // Detect swipe direction
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+        isDragging = true;
+        
+        // Swipe down to close (only if scrolled to top)
+        if (deltaY > 0 && chatBox.scrollTop === 0) {
+          const opacity = Math.max(0.3, 1 - (deltaY / 200));
+          chatBox.style.opacity = opacity;
+          chatBox.style.transform = \`translateY(\${Math.min(deltaY * 0.5, 100)}px)\`;
+        }
+      }
+    }, { passive: true });
+    
+    chatBox.addEventListener('touchend', (e) => {
+      if (!isDragging || !startY) {
+        // Reset styles
+        chatBox.style.opacity = '';
+        chatBox.style.transform = '';
+        return;
+      }
+      
+      const deltaY = e.changedTouches[0].clientY - startY;
+      
+      // Close widget if swiped down enough
+      if (deltaY > dragThreshold && chatBox.scrollTop === 0) {
+        chatBox.style.display = 'none';
+        widgetIsMinimized = true;
+        chatIsOpen = false;
+        
+        // Animate icon back to minimized state
+        animateIconChange(generateWidgetContent());
+        
+        // Show popup after closing (only if not dismissed)
+        setTimeout(() => {
+          if (!popupDismissed) {
+            showPopup();
+          }
+        }, 500);
+      } else {
+        // Reset styles if not enough swipe
+        chatBox.style.opacity = '';
+        chatBox.style.transform = '';
+      }
+      
+      isDragging = false;
+      startY = 0;
+    }, { passive: true });
+    
+    // Add similar gestures to history view
+    historyView.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      startX = e.touches[0].clientX;
+      isDragging = false;
+    }, { passive: true });
+    
+    historyView.addEventListener('touchmove', (e) => {
+      if (!startY) return;
+      
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const deltaY = currentY - startY;
+      const deltaX = currentX - startX;
+      
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
+        isDragging = true;
+        
+        if (deltaY > 0 && historyView.scrollTop === 0) {
+          const opacity = Math.max(0.3, 1 - (deltaY / 200));
+          historyView.style.opacity = opacity;
+          historyView.style.transform = \`translateY(\${Math.min(deltaY * 0.5, 100)}px)\`;
+        }
+      }
+    }, { passive: true });
+    
+    historyView.addEventListener('touchend', (e) => {
+      if (!isDragging || !startY) {
+        historyView.style.opacity = '';
+        historyView.style.transform = '';
+        return;
+      }
+      
+      const deltaY = e.changedTouches[0].clientY - startY;
+      
+      if (deltaY > dragThreshold && historyView.scrollTop === 0) {
+        historyView.style.display = 'none';
+        widgetIsMinimized = true;
+        historyIsOpen = false;
+        
+        // Animate icon back to minimized state
+        animateIconChange(generateWidgetContent());
+        
+        setTimeout(() => {
+          if (!popupDismissed) {
+            showPopup();
+          }
+        }, 500);
+      } else {
+        historyView.style.opacity = '';
+        historyView.style.transform = '';
+      }
+      
+      isDragging = false;
+      startY = 0;
+    }, { passive: true });
+  }
+  
+  // Initialize touch gestures after a short delay to ensure elements are ready
+  setTimeout(addTouchGestures, 1000);
 
   // Initialize online indicator visibility after everything is set up
   setTimeout(() => {

@@ -42,7 +42,7 @@ const getNavigationForRole = (session) => {
       href: '/admin/widgets', 
       icon: MessageCircle,
       description: teamRole === 'member' ? 'View chat widgets' : 'Manage chat widgets',
-      badge: teamRole === 'member' ? 'View Only' : 'New'
+      badge: teamRole === 'member' ? undefined : null
     },
     { 
       name: 'Analytics', 

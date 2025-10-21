@@ -128,6 +128,21 @@ export default function OrganizationSwitcher({ onCreateClick }) {
     }
   };
 
+  const getPlanDisplayName = (plan) => {
+    switch (plan) {
+      case 'free':
+        return 'Gratis';
+      case 'basic':
+        return 'Basis';
+      case 'growth':
+        return 'Vækst';
+      case 'pro':
+        return 'Pro';
+      default:
+        return plan;
+    }
+  };
+
   if (loading) {
     return (
       <Button variant="outline" disabled className="gap-2">
@@ -226,7 +241,7 @@ export default function OrganizationSwitcher({ onCreateClick }) {
                     </Badge>
                     {org.plan && (
                       <span className="text-xs text-muted-foreground">
-                        · {org.plan}
+                        · {getPlanDisplayName(org.plan)}
                       </span>
                     )}
                   </div>

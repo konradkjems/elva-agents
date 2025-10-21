@@ -17,27 +17,14 @@ export default async function handler(req, res) {
   const client = await clientPromise;
   const db = client.db('elva-agents'); // Use new database
   const { demoId } = req.query;
-  
-  // Demo IDs are strings, not ObjectIds
-  console.log('📊 Demo ID:', demoId);
 
   if (req.method === 'GET') {
     // GET is public - anyone can view usage data (no authentication required)
     try {
-      console.log('📊 GET usage for demo:', demoId);
       const demo = await db.collection('demos').findOne({ _id: demoId });
-      console.log('📊 Demo found:', demo ? 'Yes' : 'No');
-      
       if (!demo) {
-        console.error('❌ Demo not found for ID:', demoId);
         return res.status(404).json({ message: 'Demo not found' });
       }
-
-      console.log('📊 Demo data:', {
-        _id: demo._id,
-        name: demo.name,
-        demoSettings: demo.demoSettings
-      });
 
       const usage = demo.demoSettings?.usageLimits?.currentUsage || {
         interactions: 0,
@@ -50,7 +37,7 @@ export default async function handler(req, res) {
         views: usage.views >= (limits.maxViews || 0)
       };
 
-      const responseData = {
+      return res.status(200).json({
         currentUsage: usage,
         limits: {
           maxInteractions: limits.maxInteractions || 0,
@@ -59,13 +46,9 @@ export default async function handler(req, res) {
         },
         isLimitReached,
         isExpired: limits.expiresAt ? new Date(limits.expiresAt) < new Date() : false
-      };
-
-      console.log('✅ Returning usage data:', responseData);
-
-      return res.status(200).json(responseData);
+      });
     } catch (error) {
-      console.error('❌ Error fetching demo usage:', error);
+      console.error('Error fetching demo usage:', error);
       return res.status(500).json({ message: 'Failed to fetch demo usage' });
     }
   }
@@ -74,8 +57,6 @@ export default async function handler(req, res) {
     // POST for tracking views/interactions (public access)
     try {
       const { type } = req.body; // 'view' or 'interaction'
-      
-      console.log('📊 Tracking usage for demo:', demoId, 'type:', type);
       
       if (!type || !['view', 'interaction'].includes(type)) {
         return res.status(400).json({ message: 'Invalid tracking type' });
@@ -94,10 +75,7 @@ export default async function handler(req, res) {
         }
       );
 
-      console.log('📊 Update result:', result);
-
       if (result.matchedCount === 0) {
-        console.error('❌ Demo not found:', demoId);
         return res.status(404).json({ message: 'Demo not found' });
       }
 
@@ -108,14 +86,12 @@ export default async function handler(req, res) {
         views: 0
       };
 
-      console.log('✅ Usage tracked successfully:', usage);
-
       return res.status(200).json({
         message: `${type} tracked successfully`,
         currentUsage: usage
       });
     } catch (error) {
-      console.error('❌ Error tracking usage:', error);
+      console.error('Error tracking usage:', error);
       return res.status(500).json({ message: 'Failed to track usage' });
     }
   }

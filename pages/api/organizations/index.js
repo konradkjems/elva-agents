@@ -100,19 +100,40 @@ export default async function handler(req, res) {
       }
 
       // Create organization
+      const selectedPlan = plan || 'free';
+      
+      // Helper function to get conversation limits
+      const getConversationLimit = (plan) => {
+        switch(plan) {
+          case 'pro': return 750;
+          case 'growth': return 300;
+          case 'basic': return 100;
+          case 'free': return 100;
+          default: return 100;
+        }
+      };
+      
       const newOrg = {
         name: name.trim(),
         slug: finalSlug,
         ownerId: userId,
-        plan: plan || 'free',
+        plan: selectedPlan,
         limits: {
-          maxWidgets: plan === 'pro' ? 50 : plan === 'growth' ? 25 : 10,
-          maxTeamMembers: plan === 'pro' ? 30 : plan === 'growth' ? 15 : 5,
-          maxConversations: plan === 'pro' ? 100000 : plan === 'growth' ? 50000 : 10000,
+          maxWidgets: selectedPlan === 'pro' ? 50 : selectedPlan === 'growth' ? 25 : selectedPlan === 'basic' ? 10 : 10,
+          maxTeamMembers: selectedPlan === 'pro' ? 30 : selectedPlan === 'growth' ? 15 : selectedPlan === 'basic' ? 5 : 5,
+          maxConversations: selectedPlan === 'pro' ? 100000 : selectedPlan === 'growth' ? 50000 : selectedPlan === 'basic' ? 10000 : 10000,
           maxDemos: 0 // Regular users can't create demos
         },
-        subscriptionStatus: plan === 'free' ? 'trial' : 'active',
-        trialEndsAt: plan === 'free' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null, // 30 days for free plan
+        usage: {
+          conversations: {
+            current: 0,
+            limit: getConversationLimit(selectedPlan),
+            lastReset: new Date(),
+            overage: 0,
+            notificationsSent: []
+          }
+        },
+        subscriptionStatus: selectedPlan === 'free' ? 'trial' : 'active',
         settings: {
           allowDemoCreation: false,
           requireEmailVerification: false,
@@ -121,6 +142,11 @@ export default async function handler(req, res) {
         createdAt: new Date(),
         updatedAt: new Date()
       };
+      
+      // Only set trialEndsAt if on free plan
+      if (selectedPlan === 'free') {
+        newOrg.trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      }
 
       const orgResult = await db.collection('organizations').insertOne(newOrg);
 
