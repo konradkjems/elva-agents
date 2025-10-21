@@ -550,10 +550,11 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                   <div className="flex justify-start">
                     <div className="flex items-start space-x-3">
                       <div 
-                        className="bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
+                        className="rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
                         style={{ 
                           width: `${settings.branding?.iconSizes?.messageAvatar || 32}px`, 
-                          height: `${settings.branding?.iconSizes?.messageAvatar || 32}px` 
+                          height: `${settings.branding?.iconSizes?.messageAvatar || 32}px`,
+                          backgroundColor: themeColor || '#4f46e5'
                         }}
                       >
                         {settings.branding?.avatarUrl ? (
@@ -576,9 +577,9 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                           className="px-4 py-3 rounded-2xl text-sm max-w-xs shadow-sm border" 
                           style={{ 
                             borderRadius: '18px 18px 18px 4px',
-                            backgroundColor: themeColors.messageBg,
-                            color: themeColors.textColor,
-                            borderColor: themeColors.borderColor
+                            backgroundColor: '#f3f4f6',
+                            color: '#374151',
+                            borderColor: '#e5e7eb'
                           }}
                         >
                           {settings.messages?.welcomeMessage || 'Hej! 👋 Jeg er kundeservice agent for Elva Solutions. Du kan spørge mig om hvad som helst.'}
@@ -599,10 +600,11 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                       {message.sender === 'assistant' ? (
                         <div className="flex items-start space-x-3">
                           <div 
-                            className="bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
+                            className="rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
                             style={{ 
                               width: `${settings.branding?.iconSizes?.messageAvatar || 32}px`, 
-                              height: `${settings.branding?.iconSizes?.messageAvatar || 32}px` 
+                              height: `${settings.branding?.iconSizes?.messageAvatar || 32}px`,
+                              backgroundColor: themeColor || '#4f46e5'
                             }}
                           >
                             {settings.branding?.avatarUrl ? (
@@ -621,13 +623,28 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                           </div>
                           <div className="flex flex-col">
                             <div className="text-xs text-gray-500 mb-2 font-medium">{settings.branding?.title || 'AI Assistant'}</div>
-                            <div className="bg-gray-50 text-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs shadow-sm border border-gray-100" style={{ borderRadius: '18px 18px 18px 4px' }}>
+                            <div 
+                              className="px-4 py-3 rounded-2xl text-sm max-w-xs shadow-sm border" 
+                              style={{ 
+                                borderRadius: '18px 18px 18px 4px',
+                                backgroundColor: '#f3f4f6',
+                                color: '#374151',
+                                borderColor: '#e5e7eb'
+                              }}
+                            >
                               {message.text}
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="bg-blue-500 text-white px-4 py-3 rounded-2xl text-sm max-w-xs shadow-sm" style={{ borderRadius: '18px 18px 4px 18px' }}>
+                        <div 
+                          className="px-4 py-3 rounded-2xl text-sm max-w-xs shadow-sm" 
+                          style={{ 
+                            borderRadius: '18px 18px 4px 18px',
+                            backgroundColor: themeColor || '#4f46e5',
+                            color: '#ffffff'
+                          }}
+                        >
                           {message.text}
                         </div>
                       )}
@@ -637,10 +654,11 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                     <div className="flex justify-start">
                       <div className="flex items-start space-x-3">
                         <div 
-                          className="bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
+                          className="rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
                           style={{ 
                             width: `${settings.branding?.iconSizes?.messageAvatar || 32}px`, 
-                            height: `${settings.branding?.iconSizes?.messageAvatar || 32}px` 
+                            height: `${settings.branding?.iconSizes?.messageAvatar || 32}px`,
+                            backgroundColor: themeColor || '#4f46e5'
                           }}
                         >
                           {settings.branding?.avatarUrl ? (

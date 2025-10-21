@@ -25,11 +25,9 @@ export default function DemoPage() {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState(false);
   const [clientWebsiteUrl, setClientWebsiteUrl] = useState(null);
-  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
     if (demoId) {
-      console.log('📊 useEffect triggered with demoId:', demoId);
       fetchDemo();
       trackView();
     }
@@ -80,47 +78,30 @@ export default function DemoPage() {
 
   const trackView = async () => {
     try {
-      console.log('📊 Tracking view for demo:', demoId);
-      const response = await fetch(`/api/admin/demos/${demoId}/usage`, {
+      await fetch(`/api/admin/demos/${demoId}/usage`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ type: 'view' }),
       });
-      const data = await response.json();
-      console.log('✅ View tracked:', data);
     } catch (error) {
-      console.error('❌ Failed to track view:', error);
+      console.error('Failed to track view:', error);
     }
   };
 
-  // Debounce timer to prevent multiple tracking calls
-  let interactionTrackingTimer = null;
-  
   const trackInteraction = async () => {
-    // Clear any existing timer
-    if (interactionTrackingTimer) {
-      clearTimeout(interactionTrackingTimer);
+    try {
+      await fetch(`/api/admin/demos/${demoId}/usage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'interaction' }),
+      });
+    } catch (error) {
+      console.error('Failed to track interaction:', error);
     }
-    
-    // Debounce the tracking call
-    interactionTrackingTimer = setTimeout(async () => {
-      try {
-        console.log('📊 Tracking interaction for demo:', demoId);
-        const response = await fetch(`/api/admin/demos/${demoId}/usage`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ type: 'interaction' }),
-        });
-        const data = await response.json();
-        console.log('✅ Interaction tracked:', data);
-      } catch (error) {
-        console.error('Failed to track interaction:', error);
-      }
-    }, 100); // 100ms debounce
   };
 
   const loadWidgetScript = () => {
@@ -139,40 +120,25 @@ export default function DemoPage() {
     
     // Track interactions when widget is used
     script.onload = () => {
-      console.log('📊 Widget script loaded, setting up interaction tracking');
-      
-      // Check if we've already set up tracking (avoid duplicate listeners)
-      if (window.demoInteractionTrackingSetup) {
-        console.log('📊 Interaction tracking already set up, skipping');
-        return;
-      }
-      
-      window.demoInteractionTrackingSetup = true;
-      
-      // Use event delegation to track interactions
-      // Track when user sends a message (Enter key)
-      document.addEventListener('keypress', (e) => {
-        const input = e.target;
-        if (input.tagName === 'INPUT' && input.type === 'text' && e.key === 'Enter') {
-          const widget = input.closest('[data-widget="chat-widget"]');
-          if (widget) {
-            console.log('📊 User sent a message (Enter), tracking interaction');
-            trackInteraction();
+      // Wait for widget to initialize and then track interactions
+      const checkForWidget = setInterval(() => {
+        const widget = document.querySelector('[data-widget="chat-widget"]');
+        if (widget) {
+          clearInterval(checkForWidget);
+          
+          // Track when chat opens
+          widget.addEventListener('click', trackInteraction);
+          
+          // Also track when chat opens
+          const chatBtn = document.querySelector('[data-widget="chat-button"]');
+          if (chatBtn) {
+            chatBtn.addEventListener('click', trackInteraction);
           }
         }
-      });
+      }, 1000);
       
-      // Track when send button is clicked
-      document.addEventListener('click', (e) => {
-        const target = e.target;
-        if (target.tagName === 'BUTTON' && target.type === 'submit') {
-          const widget = target.closest('[data-widget="chat-widget"]');
-          if (widget) {
-            console.log('📊 Send button clicked, tracking interaction');
-            trackInteraction();
-          }
-        }
-      });
+      // Stop checking after 10 seconds
+      setTimeout(() => clearInterval(checkForWidget), 10000);
     };
     
     document.body.appendChild(script);
@@ -180,7 +146,6 @@ export default function DemoPage() {
 
   useEffect(() => {
     if (demo && !loading) {
-      console.log('📊 Loading widget script for demo:', demo._id);
       loadWidgetScript();
     }
   }, [demo, loading]);
@@ -303,15 +268,7 @@ export default function DemoPage() {
       </Head>
       
       {/* Full Screen Demo - Website iframe with widget overlay */}
-      <div className="relative w-full h-screen overflow-hidden" style={{
-        // Fix for mobile Safari where 100vh includes browser UI
-        height: typeof window !== 'undefined' && window.innerWidth <= 768 
-          ? 'calc(100vh - env(safe-area-inset-bottom))' 
-          : '100vh',
-        maxHeight: typeof window !== 'undefined' && window.innerWidth <= 768 
-          ? '95vh' 
-          : '100vh'
-      }}>
+      <div className="relative w-full h-screen overflow-hidden">
         {/* Iframe for the client website */}
         {clientWebsiteUrl && !iframeError ? (
           <iframe
@@ -401,35 +358,28 @@ export default function DemoPage() {
         )}
         
         {/* Demo info panel - shows on iframe load */}
-        {iframeLoaded && !showBanner && (
-          <div className="absolute top-4 left-4 right-4 z-10 animate-in fade-in slide-in-from-top-2 duration-500">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-5 rounded-xl shadow-2xl max-w-2xl mx-auto backdrop-blur-sm border border-white/20">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <h3 className="font-bold text-xl">{demo.name}</h3>
-                  </div>
-                  <p className="text-sm text-blue-100 mb-3 leading-relaxed">
-                    {demo.description || `Demo af ${demo.sourceWidgetName}`}
+        {iframeLoaded && (
+          <div className="absolute top-4 left-4 right-4 z-10">
+            <div className="bg-black bg-opacity-75 text-white p-4 rounded-lg max-w-md">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">{demo.name}</h3>
+                  <p className="text-sm text-gray-300 mb-2">
+                    {demo.description || `Demo of ${demo.sourceWidgetName}`}
                   </p>
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4 text-blue-200" />
-                      <span className="text-blue-100">Chat widget aktiv</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-green-400" />
-                      <span className="text-blue-100">Interaktiv demo</span>
-                    </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-300">
+                    <span>💬 Chat widget active</span>
+                    <span>🔗 Interactive demo</span>
                   </div>
                 </div>
                 <button 
-                  onClick={() => setShowBanner(true)}
-                  className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 hover:rotate-90 transform"
-                  aria-label="Luk banner"
+                  onClick={() => {
+                    const panel = document.querySelector('.demo-info-panel');
+                    if (panel) panel.style.display = 'none';
+                  }}
+                  className="text-gray-400 hover:text-white ml-2"
                 >
-                  <span className="text-2xl font-light leading-none">×</span>
+                  ×
                 </button>
               </div>
             </div>
@@ -437,7 +387,7 @@ export default function DemoPage() {
         )}
 
         {/* Subtle demo indicator - always visible */}
-        <div className="absolute bottom-4 left-4 z-10">
+        <div className="absolute bottom-4 right-4 z-10">
           <div className="bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
             Demo Mode
           </div>

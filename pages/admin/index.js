@@ -26,6 +26,7 @@ import {
   Info
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import QuotaUsageCard from '../../components/admin/QuotaUsageCard';
 
 const StatCard = ({ title, value, icon: Icon, subtitle }) => (
   <Card className="hover:shadow-md transition-shadow">
@@ -288,39 +289,52 @@ export default function ModernAdminDashboard() {
           </div>
         </div>
 
-        {/* Organization Management */}
-        {!isReadOnly && currentOrganization && currentOrganization.stats && (
-          <Card className="bg-gradient-to-br from-blue-200/50 to-purple-200/50 border-blue-200/70 dark:from-blue-900/40 dark:to-purple-900/40 dark:border-blue-700/40">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Organization Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Team Members</p>
-                  <p className="text-2xl font-bold">{currentOrganization.stats.members || 0}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Active users</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Pending Invites</p>
-                  <p className="text-2xl font-bold">{currentOrganization.stats.pendingInvitations || 0}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Awaiting response</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Plan</p>
-                  <p className="text-lg font-bold">
-                    {currentOrganization.plan 
-                      ? currentOrganization.plan.charAt(0).toUpperCase() + currentOrganization.plan.slice(1)
-                      : 'Free'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Current subscription</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Organization Management & Quota */}
+        {!isReadOnly && currentOrganization && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Organization Info Card */}
+            {currentOrganization.stats && (
+              <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200 dark:from-blue-900/20 dark:to-purple-900/20 dark:border-blue-700/40">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Organization Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Team Members</p>
+                      <p className="text-2xl font-bold">{currentOrganization.stats.members || 0}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Active users</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Plan</p>
+                      <p className="text-lg font-bold">
+                        {currentOrganization.plan 
+                          ? currentOrganization.plan.charAt(0).toUpperCase() + currentOrganization.plan.slice(1)
+                          : 'Free'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Current subscription</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Conversation Quota Usage */}
+            {currentOrganization.usageStats && (
+              <QuotaUsageCard
+                current={currentOrganization.usageStats.current || 0}
+                limit={currentOrganization.usageStats.limit || 100}
+                percentage={currentOrganization.usageStats.percentage || 0}
+                daysRemaining={currentOrganization.usageStats.daysRemaining || 0}
+                plan={currentOrganization.plan || 'free'}
+                onUpgrade={() => router.push('/admin/organizations/settings')}
+                onViewDetails={() => router.push('/admin/organizations/settings')}
+              />
+            )}
+          </div>
         )}
 
         {/* Performance Metrics */}

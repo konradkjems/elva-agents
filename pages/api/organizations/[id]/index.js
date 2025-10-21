@@ -126,6 +126,17 @@ export default async function handler(req, res) {
         expiresAt: { $gt: new Date() }
       }).toArray();
 
+      // Get usage stats for quota tracking
+      let usageStats = null;
+      if (organization.usage?.conversations) {
+        const { getUsageStats } = await import('../../../../lib/quota.js');
+        try {
+          usageStats = await getUsageStats(new ObjectId(orgId));
+        } catch (error) {
+          console.error('Error getting usage stats:', error);
+        }
+      }
+
       return res.status(200).json({
         organization: {
           ...organization,
@@ -135,7 +146,8 @@ export default async function handler(req, res) {
             widgets: widgetCount,
             conversations: conversationCount,
             pendingInvitations: invitations.length
-          }
+          },
+          usageStats: usageStats
         },
         members,
         invitations
@@ -154,6 +166,8 @@ export default async function handler(req, res) {
       const { name, slug, logo, primaryColor, domain, plan, settings } = req.body;
 
       const updates = {};
+      const unsetFields = {};
+      
       if (name !== undefined) updates.name = name.trim();
       if (slug !== undefined) updates.slug = slug.trim();
       if (logo !== undefined) updates.logo = logo;
@@ -162,13 +176,29 @@ export default async function handler(req, res) {
       if (plan !== undefined) {
         updates.plan = plan;
         
+        // Helper function to get conversation limits
+        const getConversationLimit = (planType) => {
+          switch(planType) {
+            case 'pro': return 750;
+            case 'growth': return 300;
+            case 'basic': return 100;
+            case 'free': return 100;
+            default: return 100;
+          }
+        };
+        
         // Update limits based on new plan
         updates.limits = {
-          maxWidgets: plan === 'pro' ? 50 : plan === 'growth' ? 25 : 10,
-          maxTeamMembers: plan === 'pro' ? 30 : plan === 'growth' ? 15 : 5,
-          maxConversations: plan === 'pro' ? 100000 : plan === 'growth' ? 50000 : 10000,
+          maxWidgets: plan === 'pro' ? 50 : plan === 'growth' ? 25 : plan === 'basic' ? 10 : 10,
+          maxTeamMembers: plan === 'pro' ? 30 : plan === 'growth' ? 15 : plan === 'basic' ? 5 : 5,
+          maxConversations: plan === 'pro' ? 100000 : plan === 'growth' ? 50000 : plan === 'basic' ? 10000 : 10000,
           maxDemos: organization.limits?.maxDemos || 0 // Preserve existing maxDemos
         };
+        
+        // Update conversation quota limit based on new plan
+        if (organization.usage?.conversations) {
+          updates['usage.conversations.limit'] = getConversationLimit(plan);
+        }
         
         // Update subscription status
         if (plan === 'free' && organization.plan !== 'free') {
@@ -178,7 +208,8 @@ export default async function handler(req, res) {
         } else if (plan !== 'free' && organization.plan === 'free') {
           // Upgrading from free - set active
           updates.subscriptionStatus = 'active';
-          updates.trialEndsAt = null;
+          // Remove trialEndsAt field instead of setting to null
+          unsetFields.trialEndsAt = '';
         }
       }
       if (settings !== undefined) {
@@ -187,9 +218,14 @@ export default async function handler(req, res) {
       }
       updates.updatedAt = new Date();
 
+      const updateOperation = { $set: updates };
+      if (Object.keys(unsetFields).length > 0) {
+        updateOperation.$unset = unsetFields;
+      }
+
       await db.collection('organizations').updateOne(
         { _id: new ObjectId(orgId) },
-        { $set: updates }
+        updateOperation
       );
 
       const updatedOrg = await db.collection('organizations').findOne({

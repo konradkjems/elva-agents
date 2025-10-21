@@ -1706,6 +1706,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
         brandingTitle={settings.branding?.title}
         avatarUrl={settings.branding?.avatarUrl}
         logoUrl={settings.branding?.logoUrl}
+        themeColor={settings.appearance?.themeColor || settings.theme?.buttonColor}
       />
     </div>
   );

@@ -66,20 +66,15 @@ export default function DemoWidgetsPage() {
       const response = await fetch('/api/admin/demos');
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Fetched demos:', data);
         setDemos(data);
         
         // Fetch usage stats for each demo
         const statsPromises = data.map(async (demo) => {
           try {
-            console.log('📊 Fetching usage for demo:', demo._id);
             const usageResponse = await fetch(`/api/admin/demos/${demo._id}/usage`);
             if (usageResponse.ok) {
               const usageData = await usageResponse.json();
-              console.log('✅ Usage data for', demo._id, ':', usageData);
               return { demoId: demo._id, usage: usageData };
-            } else {
-              console.error('❌ Failed to fetch usage for', demo._id, ':', usageResponse.status);
             }
           } catch (error) {
             console.error(`Failed to fetch usage for ${demo._id}:`, error);
@@ -88,14 +83,12 @@ export default function DemoWidgetsPage() {
         });
         
         const stats = await Promise.all(statsPromises);
-        console.log('📊 All stats:', stats);
         const statsMap = {};
         stats.forEach(stat => {
           if (stat.usage) {
             statsMap[stat.demoId] = stat.usage;
           }
         });
-        console.log('📊 Stats map:', statsMap);
         setUsageStats(statsMap);
       }
     } catch (error) {

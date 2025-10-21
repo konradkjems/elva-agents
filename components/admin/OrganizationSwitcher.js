@@ -29,6 +29,7 @@ import {
   Crown,
   Users
 } from 'lucide-react';
+import { getPlanDisplayName } from '@/lib/planUtils';
 
 export default function OrganizationSwitcher({ onCreateClick }) {
   const { data: session, update } = useSession();
@@ -226,7 +227,7 @@ export default function OrganizationSwitcher({ onCreateClick }) {
                     </Badge>
                     {org.plan && (
                       <span className="text-xs text-muted-foreground">
-                        · {org.plan}
+                        · {getPlanDisplayName(org.plan)}
                       </span>
                     )}
                   </div>

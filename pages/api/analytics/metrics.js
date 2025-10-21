@@ -154,11 +154,11 @@ export default async function handler(req, res) {
       }
       
       const widgetAnalyticsData = await analytics.find(widgetAnalyticsQuery).toArray();
-      const totalConversations = widgetAnalyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.conversations || 0), 0);
-      const totalMessages = widgetAnalyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.messages || 0), 0);
-      const totalResponseTime = widgetAnalyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.responseTime || 0), 0);
+      const totalConversations = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
+      const totalMessages = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
+      const totalResponseTime = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.responseTime || 0), 0);
       const avgResponseTime = widgetAnalyticsData.length > 0 ? totalResponseTime / widgetAnalyticsData.length : 0;
-      const uniqueUsers = widgetAnalyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.uniqueUsers || 0), 0);
+      const uniqueUsers = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
       
       return {
         _id: widget._id,
@@ -203,12 +203,12 @@ function calculateAggregatedMetrics(analyticsData, period) {
     };
   }
 
-  // Aggregate metrics from analytics data (ensure no negative values)
-  const totalConversations = analyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.conversations || 0), 0);
-  const totalMessages = analyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.messages || 0), 0);
-  const totalResponseTime = analyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.avgResponseTime || 0), 0);
-  const totalSatisfaction = analyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.satisfaction || 0), 0);
-  const uniqueUsers = analyticsData.reduce((sum, data) => sum + Math.max(0, data.metrics?.uniqueUsers || 0), 0);
+  // Aggregate metrics from analytics data
+  const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
+  const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
+  const totalResponseTime = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
+  const totalSatisfaction = analyticsData.reduce((sum, data) => sum + (data.metrics?.satisfaction || 0), 0);
+  const uniqueUsers = analyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
   
   const avgResponseTime = analyticsData.length > 0 ? totalResponseTime / analyticsData.length : 0;
   const avgConversationLength = totalConversations > 0 ? totalMessages / totalConversations : 0;
@@ -258,7 +258,7 @@ function calculateHourlyDistributionFromAnalytics(analyticsData) {
 
   return hourly.map((count, hour) => ({
     hour: `${hour}:00`,
-    count: Math.max(0, count)
+    count: count
   }));
 }
 
@@ -281,22 +281,18 @@ function calculateDailyTrendsFromAnalytics(analyticsData, period) {
     const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
-    // Find ALL analytics data for this day (could be multiple widgets)
-    const dayDataArray = analyticsData.filter(data => {
+    // Find analytics data for this day
+    const dayData = analyticsData.find(data => {
       const dataDate = new Date(data.date);
       return dataDate.getFullYear() === dayStart.getFullYear() &&
              dataDate.getMonth() === dayStart.getMonth() &&
              dataDate.getDate() === dayStart.getDate();
     });
 
-    // Sum up all conversations and messages for this day across all widgets
-    const conversations = dayDataArray.reduce((sum, data) => sum + Math.max(0, data.metrics?.conversations || 0), 0);
-    const messages = dayDataArray.reduce((sum, data) => sum + Math.max(0, data.metrics?.messages || 0), 0);
-
     days.push({
       date: dayStart.toISOString().split('T')[0],
-      conversations,
-      messages
+      conversations: dayData?.metrics?.conversations || 0,
+      messages: dayData?.metrics?.messages || 0
     });
   }
 

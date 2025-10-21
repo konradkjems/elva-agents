@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Building2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { getPlanDisplayName } from '@/lib/planUtils';
 
 export default function CreateOrganizationModal({ open, onOpenChange, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -151,7 +152,9 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
                 disabled={loading}
               >
                 <SelectTrigger id="org-plan">
-                  <SelectValue />
+                  <SelectValue>
+                    {getPlanDisplayName(formData.plan)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="free">

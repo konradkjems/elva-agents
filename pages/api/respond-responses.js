@@ -98,6 +98,21 @@ export default async function handler(req, res) {
       });
     }
 
+    // Check quota before allowing new conversations
+    if (!conversationId && widget.organizationId) {
+      const { checkQuota } = await import('../../lib/quota.js');
+      const quotaCheck = await checkQuota(widget.organizationId);
+      
+      if (quotaCheck.blocked) {
+        return res.status(403).json({ 
+          error: 'Quota exceeded',
+          message: quotaCheck.message || (quotaCheck.reason === 'trial_expired' 
+            ? 'Gratis prøveperiode udløbet. Opgrader for at fortsætte.'
+            : 'Månedlig samtalekvote nået. Opgrader for at fortsætte.')
+        });
+      }
+    }
+
     // Get or create conversation
     let conversation;
     if (conversationId) {
@@ -122,6 +137,7 @@ export default async function handler(req, res) {
       // Create new conversation with proper schema
       const newConversation = {
         widgetId,
+        organizationId: widget.organizationId || null,
         sessionId: `session_${Date.now()}`,
         userId: userId || null,
         startTime: new Date(),
@@ -147,6 +163,17 @@ export default async function handler(req, res) {
       const result = await db.collection("conversations").insertOne(newConversation);
       conversation = { ...newConversation, _id: result.insertedId };
       console.log('✅ New conversation created (Responses API):', conversation._id, 'Consent:', analyticsConsent);
+      
+      // Increment conversation quota count
+      if (widget.organizationId) {
+        try {
+          const { incrementConversationCount } = await import('../../lib/quota.js');
+          await incrementConversationCount(widget.organizationId);
+        } catch (quotaError) {
+          console.error('❌ Error incrementing quota:', quotaError);
+          // Don't fail the conversation if quota increment fails
+        }
+      }
     }
 
     // Prepare the Responses API call
@@ -188,7 +215,10 @@ export default async function handler(req, res) {
     const response = await openai.responses.create(responsePayload);
     const responseTime = Date.now() - startTime;
 
-    console.log('🔍 Raw OpenAI response structure:', JSON.stringify(response, null, 2));
+    // Only log full responses in development (contains user content/PII)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Raw OpenAI response (dev):', JSON.stringify(response, null, 2));
+    }
 
     // Extract response data from Responses API structure
     let aiReply, responseId, usage;
@@ -293,8 +323,7 @@ export default async function handler(req, res) {
       message: error.message,
       stack: error.stack,
       widgetId: req.body.widgetId,
-      hasImage: !!req.body.imageUrl,
-      promptId: widget?.openai?.promptId
+      hasImage: !!req.body.imageUrl
     });
     
     // Provide more specific error messages for common issues

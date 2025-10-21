@@ -56,10 +56,11 @@ async function initializeSchema() {
               domain: { bsonType: 'string' },
               plan: {
                 bsonType: 'string',
-                enum: ['free', 'starter', 'pro', 'enterprise'],
-                description: 'Must be one of: free, starter, pro, enterprise'
+                enum: ['free', 'basic', 'growth', 'pro'],
+                description: 'Must be one of: free, basic, growth, pro'
               },
               limits: { bsonType: 'object' },
+              usage: { bsonType: 'object' },
               billingEmail: { bsonType: 'string' },
               subscriptionStatus: {
                 bsonType: 'string',

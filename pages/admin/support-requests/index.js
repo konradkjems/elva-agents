@@ -41,8 +41,6 @@ export default function ManualReviews() {
   const [loading, setLoading] = useState(true);
   const [selectedReview, setSelectedReview] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [widgetFilter, setWidgetFilter] = useState('all');
-  const [widgets, setWidgets] = useState([]);
   const [notes, setNotes] = useState('');
   const [updating, setUpdating] = useState(false);
   const [conversationKey, setConversationKey] = useState(0);
@@ -52,8 +50,7 @@ export default function ManualReviews() {
   useEffect(() => {
     fetchReviews();
     fetchSupportEmail();
-    fetchWidgets();
-  }, [statusFilter, widgetFilter]);
+  }, [statusFilter]);
 
   // Reset notes when selecting a new review
   useEffect(() => {
@@ -68,19 +65,6 @@ export default function ManualReviews() {
       setConversationKey(prev => prev + 1); // Force re-render
     }
   }, [selectedReview]);
-
-  const fetchWidgets = async () => {
-    try {
-      const response = await fetch('/api/admin/widgets');
-      if (!response.ok) {
-        throw new Error('Failed to fetch widgets');
-      }
-      const data = await response.json();
-      setWidgets(data.widgets || []);
-    } catch (error) {
-      console.error('Failed to fetch widgets:', error);
-    }
-  };
 
   const fetchReviews = async () => {
     try {
@@ -97,17 +81,11 @@ export default function ManualReviews() {
         filteredReviews = filteredReviews.filter(review => review.status === statusFilter);
       }
       
-      // Filter by widget if not 'all'
-      if (widgetFilter !== 'all') {
-        filteredReviews = filteredReviews.filter(review => review.widgetId === widgetFilter);
-      }
-      
       console.log('📊 Fetched reviews:', filteredReviews.map(r => ({
         id: r._id,
         conversationId: r.conversation?._id,
         messageCount: r.conversation?.messages?.length || 0,
-        hasMessages: !!r.conversation?.messages,
-        widgetId: r.widgetId
+        hasMessages: !!r.conversation?.messages
       })));
       
       setReviews(filteredReviews);
@@ -319,33 +297,18 @@ export default function ManualReviews() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Review Requests</CardTitle>
-                  <div className="flex gap-2">
-                    <Select value={widgetFilter} onValueChange={setWidgetFilter}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Filter by widget" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Widgets</SelectItem>
-                        {widgets.map(widget => (
-                          <SelectItem key={widget._id} value={widget._id}>
-                            {widget.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="in_review">In Review</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_review">In Review</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               <CardContent>
