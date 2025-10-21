@@ -37,8 +37,12 @@ async function syncQuotaCounts() {
     console.log('📝 Step 1: Fixing conversations missing organizationId...\n');
     
     // Use cursor instead of toArray() to avoid loading all into memory
+    // Include both missing and null organizationId
     const cursor = db.collection('conversations').find({
-      organizationId: { $exists: false }
+      $or: [
+        { organizationId: { $exists: false } },
+        { organizationId: null }
+      ]
     });
 
     let fixed = 0;

@@ -306,16 +306,20 @@ async function handler(req, res) {
           conversations: a.metrics?.conversations 
         })));
         
-        // Fetch analytics data for each widget
+        // Fetch analytics data for each widget (last 30 days to match dashboard)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
         const widgetsWithStats = await Promise.all(widgets.map(async (widget) => {
           try {
             // IMPORTANT: Analytics always stores agentId as string
             // Convert widget._id to string for consistent lookup
             const widgetIdString = typeof widget._id === 'object' ? widget._id.toString() : String(widget._id);
             
-            // Simple query - analytics uses string agentId
+            // Query analytics for last 30 days to match dashboard
             const analyticsData = await analytics.find({ 
-              agentId: widgetIdString 
+              agentId: widgetIdString,
+              date: { $gte: thirtyDaysAgo }
             }).toArray();
             
             console.log(`📊 Widget ${widget.name} (${widgetIdString}): Found ${analyticsData.length} analytics records`);
@@ -323,7 +327,7 @@ async function handler(req, res) {
               console.log(`📊 Sample analytics data:`, analyticsData[0]);
             }
             
-            // Calculate stats
+            // Calculate stats for last 30 days (matching dashboard)
             const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
             const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
             const totalResponseTimes = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
