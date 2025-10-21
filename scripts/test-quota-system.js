@@ -160,14 +160,17 @@ async function testQuotaSystem() {
     // Test 7: Test index exists
     console.log('📝 Test 7: Checking database indexes...');
     const indexes = await db.collection('conversations').indexes();
-    const hasOrgIndex = indexes.some(idx => 
-      idx.key.organizationId === 1 || 
-      (idx.key.organizationId === 1 && idx.key.createdAt === -1)
+    const hasOrgOnly = indexes.some(idx => 
+      idx.key && Object.keys(idx.key).length === 1 && idx.key.organizationId === 1
+    );
+    const hasCompound = indexes.some(idx => 
+      idx.key && idx.key.organizationId === 1 && idx.key.createdAt === -1
     );
     
-    console.log(`   organizationId index exists: ${hasOrgIndex ? '✅' : '❌'}`);
-    if (!hasOrgIndex) {
-      console.log('   Run: await db.collection("conversations").createIndex({ organizationId: 1, createdAt: -1 })');
+    console.log(`   organizationId index exists: ${hasOrgOnly ? '✅' : '❌'}`);
+    console.log(`   compound (organizationId, createdAt:-1) exists: ${hasCompound ? '✅' : '❌'}`);
+    if (!hasCompound) {
+      console.log('   Create with: db.conversations.createIndex({ organizationId: 1, createdAt: -1 })  // mongosh');
     }
     console.log('');
 
@@ -181,7 +184,8 @@ async function testQuotaSystem() {
 
   } catch (error) {
     console.error('❌ Test error:', error);
-    process.exit(1);
+    // Set exit code but allow finally block to run
+    process.exitCode = 1;
   } finally {
     await client.close();
     console.log('\n🔒 MongoDB connection closed');

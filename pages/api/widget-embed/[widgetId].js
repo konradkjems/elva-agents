@@ -2382,16 +2382,17 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Add fetch product metadata function
   async function fetchProductMetadata(url) {
     try {
-      // Use full URL to avoid CORS issues
-      const apiUrl = window.location.origin + '/api/product-metadata';
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ url: url })
-      });
+      // Use platform API URL to work when embedded on customer sites
+      const response = await fetch(
+        \`\${WIDGET_CONFIG.apiUrl}/api/product-metadata\`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ url: url })
+        }
+      );
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -2535,8 +2536,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const gap = 12;
       const arrowButtonSpace = 40; // Space for arrow button + padding
       const availableWidth = widgetWidth - arrowButtonSpace;
-      const cardsPerView = Math.floor((availableWidth + gap) / (cardWidthPx + gap));
-      const actualCardsPerView = Math.min(cardsPerView, products.length);
+      const cardsPerView = Math.max(
+        1,
+        Math.floor((availableWidth + gap) / (cardWidthPx + gap))
+      );
+      const actualCardsPerView = Math.max(
+        1,
+        Math.min(cardsPerView, products.length)
+      );
       
       // Create carousel wrapper
       const wrapper = document.createElement('div');

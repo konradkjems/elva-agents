@@ -215,7 +215,10 @@ export default async function handler(req, res) {
     const response = await openai.responses.create(responsePayload);
     const responseTime = Date.now() - startTime;
 
-    console.log('🔍 Raw OpenAI response structure:', JSON.stringify(response, null, 2));
+    // Only log full responses in development (contains user content/PII)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Raw OpenAI response (dev):', JSON.stringify(response, null, 2));
+    }
 
     // Extract response data from Responses API structure
     let aiReply, responseId, usage;
@@ -320,8 +323,7 @@ export default async function handler(req, res) {
       message: error.message,
       stack: error.stack,
       widgetId: req.body.widgetId,
-      hasImage: !!req.body.imageUrl,
-      promptId: widget?.openai?.promptId
+      hasImage: !!req.body.imageUrl
     });
     
     // Provide more specific error messages for common issues

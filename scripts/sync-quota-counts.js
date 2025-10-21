@@ -36,60 +36,82 @@ async function syncQuotaCounts() {
     // STEP 1: Fix conversations missing organizationId
     console.log('📝 Step 1: Fixing conversations missing organizationId...\n');
     
-    const conversationsWithoutOrgId = await db.collection('conversations').find({
+    // Use cursor instead of toArray() to avoid loading all into memory
+    const cursor = db.collection('conversations').find({
       organizationId: { $exists: false }
-    }).toArray();
-
-    console.log(`Found ${conversationsWithoutOrgId.length} conversations without organizationId\n`);
+    });
 
     let fixed = 0;
     let skipped = 0;
+    let bulkOps = [];
+    const BATCH_SIZE = 500;
 
-    for (const conv of conversationsWithoutOrgId) {
-      try {
-        // Get the widget for this conversation
-        let widget = null;
-        
-        if (ObjectId.isValid(conv.widgetId)) {
-          widget = await db.collection('widgets').findOne({ 
-            _id: new ObjectId(conv.widgetId) 
-          });
-        } else {
-          widget = await db.collection('widgets').findOne({ 
-            _id: conv.widgetId 
-          });
-        }
-
-        if (!widget) {
-          console.log(`   ⚠️  Widget not found for conversation ${conv._id}, skipping...`);
-          skipped++;
-          continue;
-        }
-
-        if (!widget.organizationId) {
-          console.log(`   ⚠️  Widget ${widget.name} has no organizationId, skipping...`);
-          skipped++;
-          continue;
-        }
-
-        // Update conversation with organizationId
-        await db.collection('conversations').updateOne(
-          { _id: conv._id },
-          {
-            $set: {
-              organizationId: widget.organizationId,
-              updatedAt: new Date()
-            }
+    try {
+      for await (const conv of cursor) {
+        try {
+          // Get the widget for this conversation
+          let widget = null;
+          
+          if (ObjectId.isValid(conv.widgetId)) {
+            widget = await db.collection('widgets').findOne({ 
+              _id: new ObjectId(conv.widgetId) 
+            });
+          } else {
+            widget = await db.collection('widgets').findOne({ 
+              _id: conv.widgetId 
+            });
           }
-        );
 
-        console.log(`   ✅ Fixed conversation ${conv._id} -> org ${widget.organizationId}`);
-        fixed++;
+          if (!widget) {
+            console.log(`   ⚠️  Widget not found for conversation ${conv._id}, skipping...`);
+            skipped++;
+            continue;
+          }
 
-      } catch (error) {
-        console.error(`   ❌ Error fixing conversation ${conv._id}:`, error.message);
-        skipped++;
+          if (!widget.organizationId) {
+            console.log(`   ⚠️  Widget ${widget.name} has no organizationId, skipping...`);
+            skipped++;
+            continue;
+          }
+
+          // Add to bulk operations
+          bulkOps.push({
+            updateOne: {
+              filter: { _id: conv._id },
+              update: {
+                $set: {
+                  organizationId: widget.organizationId,
+                  updatedAt: new Date()
+                }
+              }
+            }
+          });
+
+          console.log(`   ✅ Queued conversation ${conv._id} -> org ${widget.organizationId}`);
+
+          // Execute bulk write when batch size is reached
+          if (bulkOps.length >= BATCH_SIZE) {
+            const result = await db.collection('conversations').bulkWrite(bulkOps);
+            fixed += result.modifiedCount;
+            console.log(`   💾 Batch write: ${result.modifiedCount} conversations updated`);
+            bulkOps = [];
+          }
+
+        } catch (error) {
+          console.error(`   ❌ Error processing conversation ${conv._id}:`, error.message);
+          skipped++;
+        }
       }
+
+      // Execute remaining bulk operations
+      if (bulkOps.length > 0) {
+        const result = await db.collection('conversations').bulkWrite(bulkOps);
+        fixed += result.modifiedCount;
+        console.log(`   💾 Final batch write: ${result.modifiedCount} conversations updated`);
+      }
+
+    } finally {
+      await cursor.close();
     }
 
     console.log(`\n✅ Fixed ${fixed} conversations`);
@@ -114,11 +136,13 @@ async function syncQuotaCounts() {
           createdAt: { $gte: monthStart }
         });
 
-        const currentTracked = org.usage.conversations.current;
+        // Use safe defaults to prevent NaN or undefined issues
+        const currentTracked = Number(org?.usage?.conversations?.current || 0);
+        const limit = Number(org?.usage?.conversations?.limit || 0);
 
         if (conversationCount !== currentTracked) {
           // Sync the count
-          const overage = Math.max(0, conversationCount - org.usage.conversations.limit);
+          const overage = Math.max(0, conversationCount - limit);
           
           await db.collection('organizations').updateOne(
             { _id: org._id },

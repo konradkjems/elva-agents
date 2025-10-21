@@ -39,7 +39,7 @@ export default function QuotaUsageCard({
         progressColor: 'bg-yellow-600',
         icon: AlertCircle,
         message: 'Approaching Quota',
-        badge: 'warning'
+        badge: 'secondary'
       };
     } else {
       return {

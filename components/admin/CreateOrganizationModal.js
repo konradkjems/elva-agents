@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Building2, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { getPlanDisplayName } from '@/lib/planUtils';
 
 export default function CreateOrganizationModal({ open, onOpenChange, onSuccess }) {
   const [loading, setLoading] = useState(false);
@@ -34,21 +35,6 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
     slug: '',
     plan: 'free'
   });
-
-  const getPlanDisplayName = (plan) => {
-    switch (plan) {
-      case 'free':
-        return 'Gratis';
-      case 'basic':
-        return 'Basis';
-      case 'growth':
-        return 'Vækst';
-      case 'pro':
-        return 'Pro';
-      default:
-        return plan;
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();

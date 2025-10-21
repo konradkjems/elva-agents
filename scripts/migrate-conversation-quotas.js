@@ -75,20 +75,16 @@ async function migrateConversationQuotas() {
       // Calculate overage (if any)
       const overage = Math.max(0, conversationCount - limit);
 
-      // Add usage tracking
+      // Add usage tracking (using dotted paths to preserve other usage fields)
       const result = await organizations.updateOne(
         { _id: org._id },
         {
           $set: {
-            usage: {
-              conversations: {
-                current: conversationCount,
-                limit: limit,
-                lastReset: monthStart,
-                overage: overage,
-                notificationsSent: []
-              }
-            },
+            'usage.conversations.current': conversationCount,
+            'usage.conversations.limit': limit,
+            'usage.conversations.lastReset': monthStart,
+            'usage.conversations.overage': overage,
+            'usage.conversations.notificationsSent': [],
             updatedAt: new Date()
           }
         }

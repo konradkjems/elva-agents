@@ -29,6 +29,7 @@ import {
   Crown,
   Users
 } from 'lucide-react';
+import { getPlanDisplayName } from '@/lib/planUtils';
 
 export default function OrganizationSwitcher({ onCreateClick }) {
   const { data: session, update } = useSession();
@@ -125,21 +126,6 @@ export default function OrganizationSwitcher({ onCreateClick }) {
         return <Users className="h-3 w-3" />;
       default:
         return null;
-    }
-  };
-
-  const getPlanDisplayName = (plan) => {
-    switch (plan) {
-      case 'free':
-        return 'Gratis';
-      case 'basic':
-        return 'Basis';
-      case 'growth':
-        return 'Vækst';
-      case 'pro':
-        return 'Pro';
-      default:
-        return plan;
     }
   };
 

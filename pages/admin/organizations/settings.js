@@ -71,6 +71,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { getPlanDisplayName } from '@/lib/planUtils';
 
 export default function OrganizationSettings() {
   const { data: session } = useSession();
@@ -462,21 +463,6 @@ export default function OrganizationSettings() {
         return 'Member (view only)';
       default:
         return role;
-    }
-  };
-
-  const getPlanDisplayName = (plan) => {
-    switch (plan) {
-      case 'free':
-        return 'Gratis';
-      case 'basic':
-        return 'Basis';
-      case 'growth':
-        return 'Vækst';
-      case 'pro':
-        return 'Pro';
-      default:
-        return plan;
     }
   };
 

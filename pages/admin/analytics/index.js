@@ -108,7 +108,11 @@ export default function ModernAnalytics() {
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/analytics/metrics?period=${dateRange}&widgetId=${selectedWidget === 'all' ? '' : selectedWidget}`);
+      const params = new URLSearchParams({ period: dateRange });
+      if (selectedWidget !== 'all') {
+        params.set('widgetId', selectedWidget);
+      }
+      const response = await fetch(`/api/analytics/metrics?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         console.log('📊 Frontend received analytics data:', data);
