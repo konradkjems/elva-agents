@@ -260,11 +260,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     userId = \`session_\${Math.random().toString(36).substr(2, 9)}_\${Date.now()}\`;
   }
   
-  // Current conversation ID - only from localStorage if consent given
+  // Current conversation ID - kept only in memory (not persisted)
+  // This ensures each page load/refresh starts a fresh conversation
+  // Conversation persists only while widget is open on the same page load
   let currentConversationId = null;
-  if (consent && consent.functional) {
-    currentConversationId = localStorage.getItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`) || null;
-  }
   
   // Store raw messages for history (before formatting)
   let currentConversationMessages = [];
@@ -1546,9 +1545,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
 
   // Menu action handlers
   function handleNewConversation() {
-    // Clear current conversation
+    // Clear current conversation (only in memory - no storage to clear)
     currentConversationId = null;
-    localStorage.removeItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`);
     
     // Clear messages
     messages.innerHTML = '';
@@ -1765,9 +1763,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   }
 
   function loadConversation(conversation) {
-    // Set current conversation ID
+    // Set current conversation ID (only in memory - not persisted)
     currentConversationId = conversation.id;
-    localStorage.setItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`, currentConversationId);
     
     // Clear current messages
     messages.innerHTML = '';
@@ -1820,7 +1817,6 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     // If this was the current conversation, clear it
     if (currentConversationId === conversationId) {
       currentConversationId = null;
-      localStorage.removeItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`);
       messages.innerHTML = '';
     }
     
@@ -3117,68 +3113,41 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   }
 
   function startTypewriterEffect(element, text, cursor, products = []) {
-    let currentText = '';
-    const speed = 5; // milliseconds per character
+    const speed = 2; // milliseconds per character - faster typing speed
     
-    // Add cursor initially
-    element.appendChild(cursor);
+    // NEW STRATEGY: Format everything first, then reveal character by character
+    // This ensures all formatting is present from the start - no "jumps"!
     
-    // Helper function to format text while preserving incomplete links
-    function formatTextSafely(text) {
-      // Temporarily replace incomplete markdown links with placeholders
-      let workingText = text;
-      const incompleteLinkRegex = /\\[([^\\]]*?)(?:\\](?:\\(([^)]*?))?)?$/;
-      const incompleteMatch = workingText.match(incompleteLinkRegex);
-      let placeholder = null;
-      let placeholderText = '';
-      
-      if (incompleteMatch && incompleteMatch[0]) {
-        // Found incomplete link at end
-        placeholderText = incompleteMatch[0];
-        placeholder = '___INCOMPLETE_LINK___';
-        workingText = workingText.slice(0, -placeholderText.length) + placeholder;
-      }
-      
-      // Format the text with complete links
-      let formatted = formatMessage(workingText);
-      
-      // Restore incomplete link as plain text
-      if (placeholder && placeholderText) {
-        formatted = formatted.replace(placeholder, placeholderText);
-      }
-      
-      return formatted;
-    }
+    // Step 1: Format the entire message to HTML
+    const fullHTML = formatMessage(text);
+    
+    // Step 2: Extract plain text from the HTML (for counting characters to type)
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = fullHTML;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Step 3: Type character by character by progressively revealing the HTML
+    let charCount = 0;
     
     function typeNextCharacter() {
-      if (currentText.length < text.length) {
-        // Add next character
-        currentText += text[currentText.length];
+      if (charCount < plainText.length) {
+        charCount++;
         
-        // Format the text safely (avoiding incomplete links)
-        try {
-          const formatted = formatTextSafely(currentText);
-          const cursorHTML = '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
-          element.innerHTML = formatted + cursorHTML;
-        } catch (error) {
-          // Fallback to plain text if formatting fails
-          const cursorHTML = '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
-          element.textContent = currentText;
-          element.innerHTML += cursorHTML;
-        }
+        // Create a version of the HTML that only shows first N characters
+        const partialHTML = getPartialHTML(fullHTML, charCount);
         
-        // Scroll to bottom to keep up with typing
+        // Add cursor and update display
+        const cursorHTML = '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+        element.innerHTML = partialHTML + cursorHTML;
+        
+        // Scroll to bottom
         messages.scrollTop = messages.scrollHeight;
         
         // Schedule next character
         setTimeout(typeNextCharacter, speed);
       } else {
-        // Remove cursor and apply final formatting
-        try {
-          element.innerHTML = formatMessage(text);
-        } catch (error) {
-          element.textContent = text;
-        }
+        // Typing complete - show full HTML without cursor
+        element.innerHTML = fullHTML;
         
         // Add product cards after typewriter effect completes
         if (products.length > 0) {
@@ -3225,6 +3194,63 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           }
         }
       }
+    }
+    
+    // Helper function to get partial HTML showing only first N characters
+    function getPartialHTML(html, maxChars) {
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      
+      let charsSoFar = 0;
+      
+      function truncateNode(node) {
+        if (charsSoFar >= maxChars) {
+          return null;
+        }
+        
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent;
+          const charsAvailable = maxChars - charsSoFar;
+          
+          if (text.length <= charsAvailable) {
+            charsSoFar += text.length;
+            return node.cloneNode(true);
+          } else {
+            charsSoFar += charsAvailable;
+            const truncated = document.createTextNode(text.substring(0, charsAvailable));
+            return truncated;
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const clone = node.cloneNode(false);
+          
+          for (let i = 0; i < node.childNodes.length; i++) {
+            const childResult = truncateNode(node.childNodes[i]);
+            if (childResult) {
+              clone.appendChild(childResult);
+            }
+            if (charsSoFar >= maxChars) {
+              break;
+            }
+          }
+          
+          return clone;
+        }
+        
+        return null;
+      }
+      
+      const result = document.createElement('div');
+      for (let i = 0; i < div.childNodes.length; i++) {
+        const nodeResult = truncateNode(div.childNodes[i]);
+        if (nodeResult) {
+          result.appendChild(nodeResult);
+        }
+        if (charsSoFar >= maxChars) {
+          break;
+        }
+      }
+      
+      return result.innerHTML;
     }
     
     // Start typing after a short delay
@@ -3835,8 +3861,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         if (data.conversationId && data.conversationId !== currentConversationId) {
           console.log('🆕 New conversation created, updating ID from', currentConversationId, 'to', data.conversationId);
           currentConversationId = data.conversationId;
-          localStorage.setItem(\`conversationId_\${WIDGET_CONFIG.widgetId}\`, currentConversationId);
-          console.log('💾 Saved conversation ID to localStorage');
+          console.log('💾 Conversation ID stored in memory only (clears on page refresh)');
           
           // Reset satisfaction rating state for new conversation
           console.log('🔄 Resetting satisfaction rating state for new conversation');

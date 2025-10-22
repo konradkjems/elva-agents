@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { JSDOM } from 'jsdom';
+import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -52,33 +52,31 @@ export default async function handler(req, res) {
     }
     
     const html = response.data;
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    const $ = cheerio.load(html);
     
     // Extract Open Graph data
-    const ogImage = document.querySelector('meta[property="og:image"]')?.content;
-    const ogTitle = document.querySelector('meta[property="og:title"]')?.content;
-    const ogDescription = document.querySelector('meta[property="og:description"]')?.content;
+    const ogImage = $('meta[property="og:image"]').attr('content');
+    const ogTitle = $('meta[property="og:title"]').attr('content');
+    const ogDescription = $('meta[property="og:description"]').attr('content');
     
     // Extract structured data (JSON-LD)
-    const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+    const jsonLdScripts = $('script[type="application/ld+json"]');
     let structuredData = null;
     
-    for (const script of jsonLdScripts) {
+    jsonLdScripts.each((i, script) => {
       try {
-        const jsonText = script.textContent.trim();
-        if (!jsonText) continue;
+        const jsonText = $(script).html()?.trim();
+        if (!jsonText) return;
         
         const data = JSON.parse(jsonText);
         if (data['@type'] === 'Product') {
           structuredData = data;
-          break;
+          return false; // break
         }
       } catch (e) {
         console.log('Failed to parse JSON-LD:', e.message);
-        continue;
       }
-    }
+    });
     
     // Extract price
     let price = null;
@@ -86,9 +84,9 @@ export default async function handler(req, res) {
       price = `${structuredData.offers.price} ${structuredData.offers.priceCurrency || 'kr.'}`;
     } else {
       // Fallback: try to find price in meta tags
-      const priceElement = document.querySelector('[itemprop="price"]');
-      if (priceElement) {
-        price = priceElement.content || priceElement.textContent;
+      const priceElement = $('[itemprop="price"]').first();
+      if (priceElement.length) {
+        price = priceElement.attr('content') || priceElement.text()?.trim();
       }
       
       // Additional fallback: look for price in various selectors
@@ -102,9 +100,9 @@ export default async function handler(req, res) {
         ];
         
         for (const selector of priceSelectors) {
-          const element = document.querySelector(selector);
-          if (element) {
-            price = element.textContent?.trim();
+          const element = $(selector).first();
+          if (element.length) {
+            price = element.text()?.trim();
             if (price) break;
           }
         }
@@ -112,7 +110,7 @@ export default async function handler(req, res) {
       
       // Try to extract price from text content
       if (!price) {
-        const bodyText = document.body.textContent;
+        const bodyText = $('body').text();
         const priceMatch = bodyText.match(/(\d+(?:[.,]\d+)?)\s*(?:kr\.?|DKK|dkk)/i);
         if (priceMatch) {
           price = `${priceMatch[1]} kr.`;
