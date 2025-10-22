@@ -4364,7 +4364,6 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       chatBox.style.right = '0';
       chatBox.style.top = 'auto';
       chatBox.style.width = '100%';
-      chatBox.style.height = \`\${Math.min(availableHeight, 80)}vh\`; // Max 80% of viewport height
       
       historyView.style.borderRadius = '20px 20px 0 0';
       historyView.style.bottom = '0';
@@ -4372,7 +4371,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       historyView.style.right = '0';
       historyView.style.top = 'auto';
       historyView.style.width = '100%';
-      historyView.style.height = \`\${Math.min(availableHeight, 80)}vh\`;
+      
+      // Use dvh for dynamic viewport height when supported, fallback to vh
+      const heightUnit = CSS.supports('height', '1dvh') ? 'dvh' : 'vh';
+      chatBox.style.height = \`\${Math.min(availableHeight, 80)}\${heightUnit}\`;
+      historyView.style.height = \`\${Math.min(availableHeight, 80)}\${heightUnit}\`;
       
       // Bottom sheet handle removed per user request
       

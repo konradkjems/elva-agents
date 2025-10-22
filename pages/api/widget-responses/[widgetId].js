@@ -771,6 +771,8 @@ export default async function handler(req, res) {
       chatBox.style.width = 'calc(100vw - 40px)';
       chatBox.style.height = 'calc(100vh - 140px)';
       chatBox.style.maxHeight = 'calc(100vh - 140px)';
+      chatBox.style.height = 'calc(100dvh - 140px)';
+      chatBox.style.maxHeight = 'calc(100dvh - 140px)';
       chatBox.style.right = '20px';
       chatBox.style.bottom = '70px';
     } else if (window.innerWidth <= 768) {
