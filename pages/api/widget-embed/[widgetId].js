@@ -4351,11 +4351,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const availableWidth = vw - (margin * 2);
       const availableHeight = vh - (topMargin + bottomMargin + buttonSize + 20);
       
+      // For mobile, use viewport height units for true responsive height
+      const mobileHeightVh = 90; // Use 90% of viewport height
+      
       // Set responsive dimensions
       chatBox.style.width = \`\${Math.min(availableWidth, 400)}px\`;
-      chatBox.style.height = \`\${Math.min(availableHeight, 700)}px\`;
+      // Height will be set later for mobile bottom sheet
       historyView.style.width = \`\${Math.min(availableWidth, 400)}px\`;
-      historyView.style.height = \`\${Math.min(availableHeight, 700)}px\`;
+      // Height will be set later for mobile bottom sheet
       
       // Mobile bottom sheet positioning (always at bottom for mobile)
       chatBox.style.borderRadius = '20px 20px 0 0'; // Bottom sheet style
@@ -4364,7 +4367,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       chatBox.style.right = '0';
       chatBox.style.top = 'auto';
       chatBox.style.width = '100%';
-      chatBox.style.height = \`\${Math.min(availableHeight, 80)}vh\`; // Max 80% of viewport height
+      chatBox.style.height = \`\${mobileHeightVh}vh\`; // Use viewport height units
+      chatBox.style.maxHeight = 'none'; // Remove max-height constraint for mobile
       
       historyView.style.borderRadius = '20px 20px 0 0';
       historyView.style.bottom = '0';
@@ -4372,7 +4376,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       historyView.style.right = '0';
       historyView.style.top = 'auto';
       historyView.style.width = '100%';
-      historyView.style.height = \`\${Math.min(availableHeight, 80)}vh\`;
+      historyView.style.height = \`\${mobileHeightVh}vh\`;
+      historyView.style.maxHeight = 'none'; // Remove max-height constraint for mobile
       
       // Bottom sheet handle removed per user request
       
@@ -4631,7 +4636,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   }
   
   // Initialize touch gestures after a short delay to ensure elements are ready
-  setTimeout(addTouchGestures, 1000);
+  // setTimeout(addTouchGestures, 1000); // Disabled swipe up for close functionality
 
   // Initialize online indicator visibility after everything is set up
   setTimeout(() => {

@@ -415,7 +415,7 @@ export default async function handler(req, res) {
   function updateMobileStyles() {
     if (window.innerWidth <= 480) {
       chatBox.style.width = 'calc(100vw - 40px)';
-      chatBox.style.height = 'calc(100vh - 120px)';
+      chatBox.style.height = 'calc(100vh - 80px)';
       chatBox.style.right = '20px';
       chatBox.style.bottom = '70px';
     } else {
