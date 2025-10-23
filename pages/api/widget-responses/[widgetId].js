@@ -179,7 +179,7 @@ export default async function handler(req, res) {
     right: 24px;
     width: 450px;
     height: 600px;
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 100px);
     background: \${WIDGET_CONFIG.theme.chatBg || '#ffffff'};
     border: none;
     border-radius: 20px;
@@ -783,12 +783,12 @@ export default async function handler(req, res) {
       // Desktop: Intelligent height scaling
       const viewportHeight = window.innerHeight;
       const configuredHeight = 600;
-      const availableHeight = viewportHeight - 180; // Margins + button space
+      const availableHeight = viewportHeight - 100; // Margins + button space
       const finalHeight = Math.max(Math.min(configuredHeight, availableHeight), 300);
       
       chatBox.style.width = '450px';
       chatBox.style.height = finalHeight + 'px';
-      chatBox.style.maxHeight = 'calc(100vh - 180px)';
+      chatBox.style.maxHeight = 'calc(100vh - 100px)';
       chatBox.style.right = '24px';
       chatBox.style.bottom = '100px';
     }

@@ -568,7 +568,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 700}px;
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 100px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -1288,7 +1288,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       'bottom: 80px; right: 24px;'}
     width: \${WIDGET_CONFIG.theme.width || 450}px;
     height: \${WIDGET_CONFIG.theme.height || 700}px;
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 100px);
     background: \${themeColors.chatBg};
     border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px;
     flex-direction: column;
@@ -4352,7 +4352,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const availableHeight = vh - (topMargin + bottomMargin + buttonSize + 20);
       
       // For mobile, use viewport height units for true responsive height
-      const mobileHeightVh = 90; // Use 90% of viewport height
+      const mobileHeightVh = 95; // Use 95% of viewport height
       
       // Set responsive dimensions
       chatBox.style.width = \`\${Math.min(availableWidth, 400)}px\`;
@@ -4387,7 +4387,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const configuredHeight = WIDGET_CONFIG.theme.height || 700;
       
       // Calculate available height accounting for margins and button
-      const availableHeight = vh - 180; // 90px top/bottom margins + button space
+      const availableHeight = vh - 100; // 50px top/bottom margins + button space
       
       // Use the smaller of configured height or available height
       const actualHeight = Math.min(configuredHeight, availableHeight);
@@ -4397,11 +4397,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       
       chatBox.style.width = \`\${configuredWidth}px\`;
       chatBox.style.height = \`\${finalHeight}px\`;
-      chatBox.style.maxHeight = \`calc(100vh - 180px)\`; // CSS fallback
+      chatBox.style.maxHeight = \`calc(100vh - 100px)\`; // CSS fallback
       
       historyView.style.width = \`\${configuredWidth}px\`;
       historyView.style.height = \`\${finalHeight}px\`;
-      historyView.style.maxHeight = \`calc(100vh - 180px)\`;
+      historyView.style.maxHeight = \`calc(100vh - 100px)\`;
       
       if (placement === 'bottom-left') {
         chatBox.style.left = '24px';
