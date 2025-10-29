@@ -891,38 +891,31 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                   </div>
                 </div>
                 {/* Footer Text */}
-                <div
-                  className="px-4 pb-3 text-xs flex items-center justify-center gap-1.5"
+                <a
+                  href="https://elva-solutions.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 pb-3 text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-opacity hover:opacity-80"
                   style={{ 
                     color: themeColors.textColor,
-                    opacity: 0.5
+                    opacity: 0.5,
+                    textDecoration: 'none'
                   }}
                 >
                   <img 
                     src="/images/elva-logo-icon-grey.svg" 
                     alt="Elva Solutions" 
-                    className="w-4 h-4 opacity-80 flex-shrink-0"
+                    className="w-4 h-4 opacity-80 flex-shrink-0 pointer-events-none"
                   />
                   {settings.branding?.poweredByText ? (
                     <>
                       {settings.branding.poweredByText}{' '}
-                      <a 
-                        href="https://elva-solutions.com" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        style={{ 
-                          color: themeColors.textColor, 
-                          textDecoration: 'none', 
-                          opacity: 0.8 
-                        }}
-                      >
-                        elva-solutions.com
-                      </a>
+                      <span style={{ opacity: 0.8 }}>elva-solutions.com</span>
                     </>
                   ) : (
-                    'Drevet af elva-solutions.com'
+                    <>Drevet af <span style={{ opacity: 0.8 }}>elva-solutions.com</span></>
                   )}
-                </div>
+                </a>
               </div>
             </div>
           </div>

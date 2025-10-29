@@ -192,11 +192,13 @@ export default async function handler(req, res) {
         {
           role: "user",
           content: [
-            { type: "text", text: message },
-            { type: "image_url", image_url: { url: imageUrl } }
+            { type: "input_text", text: message },
+            { type: "input_image", image_url: imageUrl }
           ]
         }
-      ] : message
+      ] : message,
+      // Enable streaming for image support
+      stream: !!imageUrl || false
     };
 
     // Add version if specified in widget configuration
@@ -214,39 +216,160 @@ export default async function handler(req, res) {
       version: responsePayload.prompt.version || 'latest',
       hasContext: !!responsePayload.previous_response_id,
       hasImage: !!imageUrl,
+      streaming: responsePayload.stream,
       messageLength: message.length
     });
 
     // Call OpenAI Responses API with timing
     const startTime = Date.now();
-    const response = await openai.responses.create(responsePayload);
-    const responseTime = Date.now() - startTime;
-
-    // Only log full responses in development (contains user content/PII)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 Raw OpenAI response (dev):', JSON.stringify(response, null, 2));
-    }
-
-    // Extract response data from Responses API structure
+    
+    // Handle streaming response if images are present
     let aiReply, responseId, usage;
     
-    // The Responses API has a direct output_text field for the final response
-    if (response.output_text) {
-      aiReply = response.output_text;
-    } else if (response.output && Array.isArray(response.output)) {
-      // Find the message output (type: 'message')
-      const messageOutput = response.output.find(output => output.type === 'message');
-      if (messageOutput && messageOutput.content && messageOutput.content[0]) {
-        aiReply = messageOutput.content[0].text;
-      } else {
-        throw new Error('No message output found in Responses API response');
+    if (responsePayload.stream) {
+      // Collect streamed chunks
+      const stream = await openai.responses.create(responsePayload);
+      let fullResponse = null;
+      let accumulatedText = '';
+      let lastCompletedResponse = null;
+      
+      for await (const chunk of stream) {
+        // Handle different event types from streaming Responses API
+        if (chunk.type === 'response.created' && chunk.response) {
+          // Initial response created event
+          fullResponse = chunk.response;
+          // If this already has output_text, use it
+          if (chunk.response.output_text) {
+            lastCompletedResponse = chunk.response;
+          }
+        } else if (chunk.type === 'response.delta' && chunk.response) {
+          // Delta updates - accumulate text
+          if (chunk.response.output_text) {
+            accumulatedText += chunk.response.output_text;
+          }
+          // Merge any new fields from delta
+          if (fullResponse && chunk.response) {
+            Object.assign(fullResponse, chunk.response);
+          }
+        } else if (chunk.type === 'response.done' && chunk.response) {
+          // Final response - use this as the complete response
+          fullResponse = chunk.response;
+          lastCompletedResponse = chunk.response;
+        } else if (chunk.response) {
+          // Fallback: use response object directly and merge
+          if (!fullResponse) {
+            fullResponse = chunk.response;
+          } else {
+            // Merge additional data
+            Object.assign(fullResponse, chunk.response);
+          }
+          // If this response has output_text or completed output, use it
+          if (chunk.response.output_text || 
+              (chunk.response.status === 'completed' && chunk.response.output && chunk.response.output.length > 0) ||
+              (chunk.response.status === 'done')) {
+            lastCompletedResponse = chunk.response;
+          }
+        }
       }
+      
+      // Use the last completed response if we have one, otherwise use fullResponse
+      const finalResponse = lastCompletedResponse || fullResponse;
+      
+      // If we accumulated text separately, add it to response
+      if (accumulatedText) {
+        if (!finalResponse.output_text) {
+          finalResponse.output_text = accumulatedText;
+        } else {
+          // Combine if both exist
+          finalResponse.output_text = finalResponse.output_text + accumulatedText;
+        }
+      }
+      
+      const response = finalResponse;
+      
+      // Only log full responses in development (contains user content/PII)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Raw OpenAI streaming response (dev):', JSON.stringify(response, null, 2));
+      }
+
+      // Extract response data from Responses API structure
+      if (!response) {
+        throw new Error('No response received from streaming API');
+      }
+      
+      // If response is still in progress, we might need to wait or retrieve it
+      if (response.status === 'in_progress' && !response.output_text && (!response.output || response.output.length === 0)) {
+        // Response is still processing - try to retrieve it using the response ID
+        try {
+          const retrievedResponse = await openai.responses.retrieve(response.id);
+          if (retrievedResponse && (retrievedResponse.output_text || (retrievedResponse.output && retrievedResponse.output.length > 0))) {
+            Object.assign(response, retrievedResponse);
+          }
+        } catch (retrieveError) {
+          console.error('Error retrieving response:', retrieveError);
+          // Continue with original response
+        }
+      }
+      
+      if (response.output_text) {
+        aiReply = response.output_text;
+      } else if (response.output && Array.isArray(response.output) && response.output.length > 0) {
+        // Find the message output (type: 'message')
+        const messageOutput = response.output.find(output => output.type === 'message');
+        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
+          // Find output_text content item
+          const textContent = messageOutput.content.find(c => c.type === 'output_text');
+          if (textContent && textContent.text) {
+            aiReply = textContent.text;
+          }
+        }
+        
+        // Fallback: if no message output found, try to find any output_text type directly
+        if (!aiReply) {
+          const outputTextOutput = response.output.find(output => output.type === 'output_text');
+          if (outputTextOutput && outputTextOutput.text) {
+            aiReply = outputTextOutput.text;
+          }
+        }
+        
+        if (!aiReply) {
+          throw new Error(`No message output found in Responses API response. Output array: ${JSON.stringify(response.output)}`);
+        }
+      } else {
+        throw new Error(`Unexpected response structure from OpenAI Responses API. Status: ${response.status}, Has output_text: ${!!response.output_text}, Output length: ${response.output?.length || 0}`);
+      }
+      
+      responseId = (response && response.id) || `resp_${Date.now()}`;
+      usage = (response && response.usage) || { total_tokens: 0 };
     } else {
-      throw new Error('Unexpected response structure from OpenAI Responses API');
+      // Non-streaming response (no images)
+      const response = await openai.responses.create(responsePayload);
+
+      // Only log full responses in development (contains user content/PII)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Raw OpenAI response (dev):', JSON.stringify(response, null, 2));
+      }
+
+      // Extract response data from Responses API structure
+      if (response.output_text) {
+        aiReply = response.output_text;
+      } else if (response.output && Array.isArray(response.output)) {
+        // Find the message output (type: 'message')
+        const messageOutput = response.output.find(output => output.type === 'message');
+        if (messageOutput && messageOutput.content && messageOutput.content[0]) {
+          aiReply = messageOutput.content[0].text;
+        } else {
+          throw new Error('No message output found in Responses API response');
+        }
+      } else {
+        throw new Error('Unexpected response structure from OpenAI Responses API');
+      }
+      
+      responseId = response.id || `resp_${Date.now()}`;
+      usage = response.usage || { total_tokens: 0 };
     }
     
-    responseId = response.id || `resp_${Date.now()}`;
-    usage = response.usage || { total_tokens: 0 };
+    const responseTime = Date.now() - startTime;
 
     console.log('✅ OpenAI Responses API success:', {
       responseId: responseId,

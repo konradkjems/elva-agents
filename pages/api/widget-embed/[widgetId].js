@@ -1252,7 +1252,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   inputWrapper.appendChild(sendButton);
   inputContainer.appendChild(inputWrapper);
   // Create powered by text
-  const poweredBy = document.createElement("div");
+  const poweredBy = document.createElement("a");
+  poweredBy.href = "https://elva-solutions.com";
+  poweredBy.target = "_blank";
   poweredBy.style.cssText = \`
     display: flex;
     align-items: center;
@@ -1263,7 +1265,16 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     color: \${themeColors.textColor};
     opacity: 0.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
   \`;
+  poweredBy.onmouseenter = () => {
+    poweredBy.style.opacity = '0.8';
+  };
+  poweredBy.onmouseleave = () => {
+    poweredBy.style.opacity = '0.6';
+  };
   const poweredByText = WIDGET_CONFIG.branding.poweredByText;
   const logoImg = document.createElement("img");
   logoImg.src = "https://www.elva-agents.com/images/elva-logo-icon-grey.svg";
@@ -1273,11 +1284,12 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     height: 16px;
     opacity: 0.8;
     flex-shrink: 0;
+    pointer-events: none;
   \`;
   const poweredByTextEl = document.createElement("span");
   poweredByTextEl.innerHTML = (poweredByText !== null && poweredByText !== undefined && poweredByText !== '')
-    ? \`\${poweredByText} <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`
-    : \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`;
+    ? \`\${poweredByText} <span style="opacity: 0.8; font-style: italic;">elva-solutions.com</span>\`
+    : \`Drevet af <span style="opacity: 0.8; font-style: italic;">elva-solutions.com</span>\`;
   poweredBy.appendChild(logoImg);
   poweredBy.appendChild(poweredByTextEl);
   // Create banner (if bannerText is provided)
@@ -1375,7 +1387,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   \`;
 
   // Create powered by text for history view
-  const historyPoweredBy = document.createElement("div");
+  const historyPoweredBy = document.createElement("a");
+  historyPoweredBy.href = "https://elva-solutions.com";
+  historyPoweredBy.target = "_blank";
   historyPoweredBy.style.cssText = \`
     display: flex;
     align-items: center;
@@ -1386,7 +1400,16 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     color: \${themeColors.textColor};
     opacity: 0.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
   \`;
+  historyPoweredBy.onmouseenter = () => {
+    historyPoweredBy.style.opacity = '0.8';
+  };
+  historyPoweredBy.onmouseleave = () => {
+    historyPoweredBy.style.opacity = '0.6';
+  };
   const historyPoweredByText = WIDGET_CONFIG.branding.poweredByText;
   const historyLogoImg = document.createElement("img");
   historyLogoImg.src = "https://www.elva-agents.com/images/elva-logo-icon-grey.svg";
@@ -1396,11 +1419,12 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     height: 16px;
     opacity: 0.8;
     flex-shrink: 0;
+    pointer-events: none;
   \`;
   const historyPoweredByTextEl = document.createElement("span");
   historyPoweredByTextEl.innerHTML = (historyPoweredByText !== null && historyPoweredByText !== undefined && historyPoweredByText !== '')
-    ? \`\${historyPoweredByText} <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`
-    : \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`;
+    ? \`\${historyPoweredByText} <span style="opacity: 0.8;">elva-solutions.com</span>\`
+    : \`Drevet af <span style="opacity: 0.8;">elva-solutions.com</span>\`;
   historyPoweredBy.appendChild(historyLogoImg);
   historyPoweredBy.appendChild(historyPoweredByTextEl);
 
@@ -1418,11 +1442,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   function updateOnlineIndicatorVisibility() {
     const isMobile = window.innerWidth <= 768;
     
-    if (isMobile && chatIsOpen) {
-      // Hide on mobile when chat is open to prevent covering send button
+    if (isMobile && (chatIsOpen || historyIsOpen)) {
+      // Hide on mobile when chat or history is open to prevent covering buttons
       onlineIndicator.style.display = 'none';
     } else {
-      // Show in all other cases (desktop always, mobile when chat is closed)
+      // Show in all other cases (desktop always, mobile when chat/history is closed)
       onlineIndicator.style.display = 'block';
     }
   }
@@ -1512,6 +1536,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     chatBox.style.display = "none";
     chatIsOpen = false; // Update state
+    
+    // Update online indicator visibility when chat closes
+    updateOnlineIndicatorVisibility();
+    
     // Show popup after closing chat (only if not dismissed)
     setTimeout(() => {
       if (!popupDismissed) {
@@ -1532,6 +1560,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     historyView.style.display = "none";
     historyIsOpen = false;
+    
+    // Update online indicator visibility when history closes
+    updateOnlineIndicatorVisibility();
+    
     // Show popup after closing history (only if not dismissed)
     setTimeout(() => {
       if (!popupDismissed) {
@@ -1647,6 +1679,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     historyIsOpen = true;
     updatePositioning(); // Update positioning when opening history
     
+    // Update online indicator visibility when history opens
+    updateOnlineIndicatorVisibility();
+    
     // Animate icon to chevron down when history is open
     animateIconChange(\`
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
@@ -1666,6 +1701,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     chatBox.style.display = 'flex';
     chatIsOpen = true;
     updatePositioning(); // Update positioning when returning to chat
+    
+    // Update online indicator visibility when history closes
+    updateOnlineIndicatorVisibility();
     
     // Keep chevron down icon when chat is open (no animation needed as it's the same icon)
     // No need to animate since we're already showing chevron down
@@ -4752,6 +4790,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         widgetIsMinimized = true;
         chatIsOpen = false;
         
+        // Update online indicator visibility when chat closes via swipe
+        updateOnlineIndicatorVisibility();
+        
         // Animate icon back to minimized state
         animateIconChange(generateWidgetContent());
         
@@ -4810,6 +4851,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         historyView.style.display = 'none';
         widgetIsMinimized = true;
         historyIsOpen = false;
+        
+        // Update online indicator visibility when history closes via swipe
+        updateOnlineIndicatorVisibility();
         
         // Animate icon back to minimized state
         animateIconChange(generateWidgetContent());
