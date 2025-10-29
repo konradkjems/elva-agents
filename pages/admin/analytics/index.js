@@ -424,6 +424,7 @@ export default function ModernAnalytics() {
                         tick={{ fontSize: 12 }}
                       />
                       <YAxis 
+                        domain={[0, 'auto']}
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
@@ -455,7 +456,7 @@ export default function ModernAnalytics() {
                       />
                       <Line
                         dataKey={activeChart}
-                        type="natural"
+                        type="monotone"
                         stroke={`var(--color-${activeChart})`}
                         strokeWidth={2}
                         dot={(props) => {
@@ -530,6 +531,7 @@ export default function ModernAnalytics() {
                         tick={{ fontSize: 12 }}
                       />
                       <YAxis 
+                        domain={[0, 'auto']}
                         tick={{ fontSize: 12 }}
                         tickLine={false}
                         axisLine={false}
@@ -540,7 +542,7 @@ export default function ModernAnalytics() {
                       />
                       <Line
                         dataKey="conversations"
-                        type="natural"
+                        type="monotone"
                         stroke="var(--color-conversations)"
                         strokeWidth={2}
                         dot={(props) => {
@@ -555,7 +557,7 @@ export default function ModernAnalytics() {
                       />
                       <Line
                         dataKey="messages"
-                        type="natural"
+                        type="monotone"
                         stroke="var(--color-messages)"
                         strokeWidth={2}
                         dot={(props) => {

@@ -891,13 +891,18 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                   </div>
                 </div>
                 {/* Footer Text */}
-                <div 
-                  className="px-4 pb-3 text-xs text-center"
+                <div
+                  className="px-4 pb-3 text-xs flex items-center justify-center gap-1.5"
                   style={{ 
                     color: themeColors.textColor,
                     opacity: 0.5
                   }}
                 >
+                  <img 
+                    src="/images/elva-logo-icon-grey.svg" 
+                    alt="Elva Solutions" 
+                    className="w-4 h-4 opacity-80 flex-shrink-0"
+                  />
                   {settings.branding?.poweredByText ? (
                     <>
                       {settings.branding.poweredByText}{' '}

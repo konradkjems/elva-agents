@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import Head from 'next/head';
 import { SessionProvider } from 'next-auth/react';
 import { Toaster } from '@/components/ui/toaster';
 import '../styles/globals.css';
@@ -10,6 +11,9 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   return (
     <SessionProvider session={session}>
+      <Head>
+        <title>Elva Agents - AI Chat Platform</title>
+      </Head>
       <Component {...pageProps} />
       <Toaster />
     </SessionProvider>

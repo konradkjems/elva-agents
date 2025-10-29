@@ -1254,7 +1254,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Create powered by text
   const poweredBy = document.createElement("div");
   poweredBy.style.cssText = \`
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 0px 20px 8px 16px;
     font-size: 11px;
     color: \${themeColors.textColor};
@@ -1262,9 +1265,21 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
   const poweredByText = WIDGET_CONFIG.branding.poweredByText;
-  poweredBy.innerHTML = (poweredByText !== null && poweredByText !== undefined && poweredByText !== '')
+  const logoImg = document.createElement("img");
+  logoImg.src = "https://www.elva-agents.com/images/elva-logo-icon-grey.svg";
+  logoImg.alt = "Elva Solutions";
+  logoImg.style.cssText = \`
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+    flex-shrink: 0;
+  \`;
+  const poweredByTextEl = document.createElement("span");
+  poweredByTextEl.innerHTML = (poweredByText !== null && poweredByText !== undefined && poweredByText !== '')
     ? \`\${poweredByText} <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`
     : \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`;
+  poweredBy.appendChild(logoImg);
+  poweredBy.appendChild(poweredByTextEl);
   // Create banner (if bannerText is provided)
   let banner = null;
   if (WIDGET_CONFIG.messages.bannerText) {
@@ -1362,7 +1377,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Create powered by text for history view
   const historyPoweredBy = document.createElement("div");
   historyPoweredBy.style.cssText = \`
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 8px 16px;
     font-size: 11px;
     color: \${themeColors.textColor};
@@ -1370,9 +1388,21 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
   const historyPoweredByText = WIDGET_CONFIG.branding.poweredByText;
-  historyPoweredBy.innerHTML = (historyPoweredByText !== null && historyPoweredByText !== undefined && historyPoweredByText !== '')
+  const historyLogoImg = document.createElement("img");
+  historyLogoImg.src = "https://www.elva-agents.com/images/elva-logo-icon-grey.svg";
+  historyLogoImg.alt = "Elva Solutions";
+  historyLogoImg.style.cssText = \`
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
+    flex-shrink: 0;
+  \`;
+  const historyPoweredByTextEl = document.createElement("span");
+  historyPoweredByTextEl.innerHTML = (historyPoweredByText !== null && historyPoweredByText !== undefined && historyPoweredByText !== '')
     ? \`\${historyPoweredByText} <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`
     : \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`;
+  historyPoweredBy.appendChild(historyLogoImg);
+  historyPoweredBy.appendChild(historyPoweredByTextEl);
 
   historyView.appendChild(historyHeader);
   historyView.appendChild(historyContent);
