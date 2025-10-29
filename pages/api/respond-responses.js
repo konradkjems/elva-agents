@@ -178,6 +178,9 @@ export default async function handler(req, res) {
           // Don't fail the conversation if quota increment fails
         }
       }
+      
+      // Track that this is a new conversation for analytics
+      conversation.isNew = true;
     }
 
     // Prepare the Responses API call
@@ -302,9 +305,9 @@ export default async function handler(req, res) {
     );
     console.log('📝 Conversation updated (Responses API):', conversation._id, 'Messages:', conversation.messages.length, 'Response time:', responseTime + 'ms');
 
-    // Update analytics after successful conversation
+    // Update analytics after successful conversation - pass isNewConversation flag
     try {
-      await updateAnalytics(db, widgetId, conversation);
+      await updateAnalytics(db, widgetId, conversation, conversation.isNew);
     } catch (analyticsError) {
       console.error('Analytics update error:', analyticsError);
       // Don't fail the response if analytics update fails
@@ -356,7 +359,7 @@ export default async function handler(req, res) {
 }
 
 // Helper function to update analytics
-async function updateAnalytics(db, widgetId, conversation) {
+async function updateAnalytics(db, widgetId, conversation, isNewConversation = false) {
   const analytics = db.collection('analytics');
   const date = new Date(conversation.startTime);
   const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -392,7 +395,7 @@ async function updateAnalytics(db, widgetId, conversation) {
       { _id: existingDoc._id },
       {
         $inc: {
-          'metrics.conversations': 1,
+          'metrics.conversations': isNewConversation ? 1 : 0,
           'metrics.messages': messageCount
         },
         $set: {
@@ -411,7 +414,7 @@ async function updateAnalytics(db, widgetId, conversation) {
       agentId: agentIdString,
       date: new Date(dateKey),
       metrics: {
-        conversations: 1,
+        conversations: isNewConversation ? 1 : 0,
         messages: messageCount,
         uniqueUsers: uniqueUsersToday.length, // Use actual count
         responseRate: 100,

@@ -306,28 +306,41 @@ async function handler(req, res) {
           conversations: a.metrics?.conversations 
         })));
         
-        // Fetch analytics data for each widget (last 30 days to match dashboard)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        
         const widgetsWithStats = await Promise.all(widgets.map(async (widget) => {
           try {
             // IMPORTANT: Analytics always stores agentId as string
             // Convert widget._id to string for consistent lookup
             const widgetIdString = typeof widget._id === 'object' ? widget._id.toString() : String(widget._id);
             
-            // Query analytics for last 30 days to match dashboard
+            // Get organization's billing period from quota system
+            // This ensures we use the SAME period as the Quota Widget
+            const organization = widget.organizationId ? 
+              await db.collection('organizations').findOne({ _id: new ObjectId(widget.organizationId) }) : 
+              null;
+            
+            // Use organization's quota period dates if available, otherwise use calendar month
+            let monthStart, monthEnd;
+            if (organization?.usage?.conversations?.lastReset && organization?.usage?.conversations?.nextReset) {
+              monthStart = new Date(organization.usage.conversations.lastReset);
+              monthEnd = new Date(organization.usage.conversations.nextReset);
+            } else {
+              // Fallback to calendar month
+              const now = new Date();
+              monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+              monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            }
+            
             const analyticsData = await analytics.find({ 
               agentId: widgetIdString,
-              date: { $gte: thirtyDaysAgo }
+              date: { $gte: monthStart, $lt: monthEnd }
             }).toArray();
             
-            console.log(`📊 Widget ${widget.name} (${widgetIdString}): Found ${analyticsData.length} analytics records`);
+            console.log(`📊 Widget ${widget.name} (${widgetIdString}): Found ${analyticsData.length} analytics records for ${monthStart.toISOString().split('T')[0]} to ${monthEnd.toISOString().split('T')[0]}`);
             if (analyticsData.length > 0) {
               console.log(`📊 Sample analytics data:`, analyticsData[0]);
             }
             
-            // Calculate stats for last 30 days (matching dashboard)
+            // Calculate stats for current month (matching quota widget)
             const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
             const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
             const totalResponseTimes = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
@@ -344,11 +357,29 @@ async function handler(req, res) {
                 totalMessages,
                 uniqueUsers,
                 responseTime: avgResponseTime,
-                analyticsDataPoints: analyticsData.length
+                analyticsDataPoints: analyticsData.length,
+                periodStart: new Date(monthStart).toISOString(),
+                periodEnd: new Date(monthEnd).toISOString()
               }
             };
           } catch (error) {
             console.error(`Error fetching analytics for widget ${widget._id}:`, error);
+            
+            // Get organization's billing period for error fallback too
+            const organization = widget.organizationId ? 
+              await db.collection('organizations').findOne({ _id: new ObjectId(widget.organizationId) }) : 
+              null;
+            
+            let fallbackStart, fallbackEnd;
+            if (organization?.usage?.conversations?.lastReset && organization?.usage?.conversations?.nextReset) {
+              fallbackStart = new Date(organization.usage.conversations.lastReset).toISOString();
+              fallbackEnd = new Date(organization.usage.conversations.nextReset).toISOString();
+            } else {
+              const now = new Date();
+              fallbackStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+              fallbackEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+            }
+            
             return {
               ...widget,
               stats: {
@@ -356,7 +387,9 @@ async function handler(req, res) {
                 totalMessages: 0,
                 uniqueUsers: 0,
                 responseTime: 0,
-                analyticsDataPoints: 0
+                analyticsDataPoints: 0,
+                periodStart: fallbackStart,
+                periodEnd: fallbackEnd
               }
             };
           }

@@ -170,6 +170,17 @@ export default async function handler(req, res) {
       suggestedResponses: widget.messages?.suggestedResponses || [],
       bannerText: widget.messages?.bannerText || null,
       disclaimerText: widget.messages?.disclaimerText || 'Opgiv ikke personlige oplysninger',
+      newConversationLabel: widget.messages?.newConversationLabel || null,
+      conversationHistoryLabel: widget.messages?.conversationHistoryLabel || null,
+      conversationLoadedLabel: widget.messages?.conversationLoadedLabel || null,
+      todayLabel: widget.messages?.todayLabel || null,
+      yesterdayLabel: widget.messages?.yesterdayLabel || null,
+      daysAgoSuffix: widget.messages?.daysAgoSuffix || null,
+      messagesLabel: widget.messages?.messagesLabel || null,
+      noConversationsLabel: widget.messages?.noConversationsLabel || null,
+      startConversationLabel: widget.messages?.startConversationLabel || null,
+      conversationDeletedLabel: widget.messages?.conversationDeletedLabel || null,
+      newConversationStartedLabel: widget.messages?.newConversationStartedLabel || null,
       voiceInput: {
         enabled: widget.messages?.voiceInput?.enabled !== false,
         language: widget.messages?.voiceInput?.language || 'da-DK',
@@ -196,7 +207,9 @@ export default async function handler(req, res) {
       logoUrl: widget.branding?.logoUrl || null,
       widgetLogoUrl: widget.branding?.widgetLogoUrl || widget.branding?.customWidgetLogo || widget.branding?.companyLogo || widget.branding?.logoUrl || null,
       imageSettings: widget.branding?.imageSettings || null,
-      iconSizes: widget.branding?.iconSizes || null
+      iconSizes: widget.branding?.iconSizes || null,
+      poweredByText: widget.branding?.poweredByText || widget.settings?.branding?.poweredByText || null,
+      availableNowText: widget.branding?.availableNowText || widget.settings?.branding?.availableNowText || null
     },
     apiUrl: process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 'https://www.elva-agents.com/',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
@@ -301,7 +314,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   }
   
   function generateConversationTitle(messages) {
-    if (!messages || messages.length === 0) return 'Ny samtale';
+    const defaultTitle = WIDGET_CONFIG.messages?.newConversationLabel || 'Ny samtale';
+    if (!messages || messages.length === 0) return defaultTitle;
     
     // Find first user message
     const firstUserMessage = messages.find(msg => msg.role === 'user');
@@ -312,7 +326,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       return title.length < cleanContent.length ? title + '...' : title;
     }
     
-    return 'Ny samtale';
+    return defaultTitle;
   }
   
   function getConversationHistory() {
@@ -606,7 +620,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant'}</div>
         <div style="font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 6px;">
           <div style="width: 6px; height: 6px; background: \${WIDGET_CONFIG.appearance.onlineIndicatorColor}; border-radius: 50%; animation: pulse 2s infinite;"></div>
-          Tilgængelig nu
+          \${(WIDGET_CONFIG.branding.availableNowText !== null && WIDGET_CONFIG.branding.availableNowText !== undefined && WIDGET_CONFIG.branding.availableNowText !== '') ? WIDGET_CONFIG.branding.availableNowText : 'Tilgængelig nu'}
         </div>
       </div>
     </div>
@@ -654,7 +668,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              Ny samtale
+              \${WIDGET_CONFIG.messages?.newConversationLabel || 'Ny samtale'}
             </button>
             <button class="menu-option" data-action="view-conversations" style="
               width: 100%;
@@ -673,7 +687,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
               <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              Tidligere samtaler
+              \${WIDGET_CONFIG.messages?.conversationHistoryLabel || 'Tidligere samtaler'}
             </button>
           </div>
         </div>
@@ -1247,7 +1261,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     opacity: 0.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
-  poweredBy.innerHTML = \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`;
+  const poweredByText = WIDGET_CONFIG.branding.poweredByText;
+  poweredBy.innerHTML = (poweredByText !== null && poweredByText !== undefined && poweredByText !== '')
+    ? \`\${poweredByText} <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`
+    : \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8; font-style: italic;">elva-solutions.com</a>\`;
   // Create banner (if bannerText is provided)
   let banner = null;
   if (WIDGET_CONFIG.messages.bannerText) {
@@ -1321,7 +1338,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
-      <div style="font-weight: 600; font-size: 16px;">Tidligere samtaler</div>
+      <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.messages?.conversationHistoryLabel || 'Tidligere samtaler'}</div>
     </div>
     
     <button id="closeHistoryBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
@@ -1352,7 +1369,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     opacity: 0.6;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   \`;
-  historyPoweredBy.innerHTML = \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`;
+  const historyPoweredByText = WIDGET_CONFIG.branding.poweredByText;
+  historyPoweredBy.innerHTML = (historyPoweredByText !== null && historyPoweredByText !== undefined && historyPoweredByText !== '')
+    ? \`\${historyPoweredByText} <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`
+    : \`Drevet af <a href="https://elva-solutions.com" target="_blank" style="color: \${themeColors.textColor}; text-decoration: none; opacity: 0.8;">elva-solutions.com</a>\`;
 
   historyView.appendChild(historyHeader);
   historyView.appendChild(historyContent);
@@ -1580,7 +1600,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     }, 100);
     
     // Optional: Show notification
-    showNotification('New conversation started');
+    showNotification(WIDGET_CONFIG.messages?.newConversationStartedLabel || 'New conversation started');
   }
 
   function handleViewConversations() {
@@ -1641,8 +1661,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       \`;
       emptyState.innerHTML = \`
         <div style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;">💬</div>
-        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Ingen tidligere samtaler</div>
-        <div style="font-size: 14px;">Start en samtale for at se den her</div>
+        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">\${WIDGET_CONFIG.messages?.noConversationsLabel || 'Ingen tidligere samtaler'}</div>
+        <div style="font-size: 14px;">\${WIDGET_CONFIG.messages?.startConversationLabel || 'Start en samtale for at se den her'}</div>
       \`;
       historyContent.appendChild(emptyState);
       return;
@@ -1670,7 +1690,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     // Format date
     const date = new Date(conversation.timestamp);
     const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-    const dateStr = daysAgo === 0 ? 'I dag' : daysAgo === 1 ? 'I går' : \`\${daysAgo}d\`;
+    const todayLabel = WIDGET_CONFIG.messages?.todayLabel || 'I dag';
+    const yesterdayLabel = WIDGET_CONFIG.messages?.yesterdayLabel || 'I går';
+    const daysAgoSuffix = WIDGET_CONFIG.messages?.daysAgoSuffix || 'd';
+    const dateStr = daysAgo === 0 ? todayLabel : daysAgo === 1 ? yesterdayLabel : \`\${daysAgo}\${daysAgoSuffix}\`;
     
     // Format display date
     const displayDate = date.toLocaleDateString('da-DK', { 
@@ -1708,7 +1731,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           font-size: 12px;
           color: \${themeColors.textColor};
           opacity: 0.7;
-        ">\${displayDate} • \${conversation.messageCount} beskeder</div>
+        ">\${displayDate} • \${conversation.messageCount} \${WIDGET_CONFIG.messages?.messagesLabel || 'beskeder'}</div>
       </div>
       
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -1793,7 +1816,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     hideHistoryView();
     
     // Show notification
-    showNotification('Samtale indlæst');
+    showNotification(WIDGET_CONFIG.messages?.conversationLoadedLabel || 'Samtale indlæst');
   }
 
   function deleteConversation(conversationId, event) {
@@ -1824,7 +1847,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     loadConversationHistory();
     
     // Show notification
-    showNotification('Samtale slettet');
+    showNotification(WIDGET_CONFIG.messages?.conversationDeletedLabel || 'Samtale slettet');
   }
 
   function showNotification(message) {
@@ -2979,7 +3002,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           const imageWrapper = document.createElement("div");
           imageWrapper.style.cssText = \`
             display: flex;
-            justify-content: center;
+            justify-content: left;
             margin: 8px 0;
           \`;
           
@@ -3290,7 +3313,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
             const imageWrapper = document.createElement("div");
             imageWrapper.style.cssText = \`
               display: flex;
-              justify-content: center;
+              justify-content: left;
               margin: 8px 0;
             \`;
             

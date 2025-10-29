@@ -92,6 +92,9 @@ export default function OrganizationSettings() {
   const [memberToRemove, setMemberToRemove] = useState(null);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [resetQuotaDialogOpen, setResetQuotaDialogOpen] = useState(false);
+  const [billingCycleDialogOpen, setBillingCycleDialogOpen] = useState(false);
+  const [billingCycleDate, setBillingCycleDate] = useState('');
+  const [updatingBillingCycle, setUpdatingBillingCycle] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -207,6 +210,57 @@ export default function OrganizationSettings() {
       });
     } finally {
       setResettingQuota(false);
+    }
+  };
+
+  const handleUpdateBillingCycle = async () => {
+    if (!billingCycleDate) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Date",
+        description: "Please select a valid billing cycle start date.",
+      });
+      return;
+    }
+
+    setUpdatingBillingCycle(true);
+    try {
+      const response = await fetch(
+        `/api/organizations/${session.user.currentOrganizationId}/billing-cycle`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ billingCycleStartDate: billingCycleDate }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Billing Cycle Updated",
+          description: `Billing cycle now starts on ${new Date(data.billingCycle.lastReset).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+        });
+        setBillingCycleDialogOpen(false);
+        setBillingCycleDate('');
+        // Refresh usage stats
+        fetchUsageStats();
+      } else {
+        const error = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.error || "Failed to update billing cycle.",
+        });
+      }
+    } catch (err) {
+      console.error('Error updating billing cycle:', err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An error occurred while updating the billing cycle.",
+      });
+    } finally {
+      setUpdatingBillingCycle(false);
     }
   };
 
@@ -491,6 +545,7 @@ export default function OrganizationSettings() {
     );
   }
 
+  const currentRole = organization?.role;
   const canEdit = organization?.role === 'owner' || organization?.role === 'admin';
   const canDelete = organization?.role === 'owner';
 
@@ -1034,41 +1089,66 @@ export default function OrganizationSettings() {
                       </div>
                     </div>
 
-                    {/* Platform Admin Actions */}
-                    {session?.user?.platformRole === 'platform_admin' && (
+                    {/* Platform Admin & Admin/Owner Actions */}
+                    {(session?.user?.platformRole === 'platform_admin' || ['admin', 'owner'].includes(currentRole)) && (
                       <>
                         <Separator />
                         <div className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="gap-1">
-                              <Crown className="h-3 w-3" />
-                              Platform Admin
+                              {session?.user?.platformRole === 'platform_admin' ? (
+                                <><Crown className="h-3 w-3" />Platform Admin</>
+                              ) : (
+                                <>Admin Actions</>
+                              )}
                             </Badge>
                           </div>
+                          
+                          {/* Billing Cycle Manager */}
                           <Alert>
                             <Info className="h-4 w-4" />
                             <AlertDescription>
-                              As a platform admin, you can manually reset the quota for this organization.
+                              Update the billing cycle start date to change when the monthly quota resets.
                             </AlertDescription>
                           </Alert>
                           <Button 
-                            variant="destructive" 
-                            onClick={() => setResetQuotaDialogOpen(true)}
-                            disabled={resettingQuota}
+                            variant="outline" 
+                            onClick={() => setBillingCycleDialogOpen(true)}
                             className="gap-2"
                           >
-                            {resettingQuota ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Resetting...
-                              </>
-                            ) : (
-                              <>
-                                <RotateCcw className="h-4 w-4" />
-                                Reset Quota
-                              </>
-                            )}
+                            <Calendar className="h-4 w-4" />
+                            Change Billing Cycle
                           </Button>
+
+                          {/* Platform Admin Only: Reset Quota */}
+                          {session?.user?.platformRole === 'platform_admin' && (
+                            <>
+                              <Alert>
+                                <Info className="h-4 w-4" />
+                                <AlertDescription>
+                                  As a platform admin, you can manually reset the quota for this organization.
+                                </AlertDescription>
+                              </Alert>
+                              <Button 
+                                variant="destructive" 
+                                onClick={() => setResetQuotaDialogOpen(true)}
+                                disabled={resettingQuota}
+                                className="gap-2"
+                              >
+                                {resettingQuota ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Resetting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <RotateCcw className="h-4 w-4" />
+                                    Reset Quota
+                                  </>
+                                )}
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </>
                     )}
@@ -1166,6 +1246,67 @@ export default function OrganizationSettings() {
                 <>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Reset Quota
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Billing Cycle Dialog */}
+      <AlertDialog open={billingCycleDialogOpen} onOpenChange={setBillingCycleDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              Update Billing Cycle
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Change the billing cycle start date for <strong>{organization?.name}</strong>. 
+              This will affect when the monthly conversation quota resets.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="billing-date">Billing Cycle Start Date</Label>
+              <Input
+                id="billing-date"
+                type="date"
+                value={billingCycleDate}
+                onChange={(e) => setBillingCycleDate(e.target.value)}
+                disabled={updatingBillingCycle}
+              />
+              <p className="text-sm text-muted-foreground">
+                Current billing period: {usageStats?.lastReset 
+                  ? new Date(usageStats.lastReset).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                  : 'Not set'}
+              </p>
+            </div>
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Setting a new billing cycle date will update when your quota resets each month. 
+                The quota counter will not be reset immediately.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updatingBillingCycle}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUpdateBillingCycle}
+              disabled={updatingBillingCycle || !billingCycleDate}
+            >
+              {updatingBillingCycle ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Update Billing Cycle
                 </>
               )}
             </AlertDialogAction>

@@ -130,7 +130,17 @@ export const authOptions = {
                 maxConversations: 10000,
                 maxDemos: 0
               },
+              usage: {
+                conversations: {
+                  current: 0,
+                  limit: 100,
+                  lastReset: new Date(),
+                  overage: 0,
+                  notificationsSent: []
+                }
+              },
               subscriptionStatus: 'trial',
+              trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
               settings: {
                 allowDemoCreation: false,
                 requireEmailVerification: false,

@@ -149,6 +149,25 @@ export default function ModernWidgetCard({ widget, isReadOnly = false }) {
       .slice(0, 2);
   };
 
+  const formatPeriod = (periodStart, periodEnd) => {
+    if (!periodStart || !periodEnd) {
+      // Fallback to current month if period data not available
+      const now = new Date();
+      const month = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      return month;
+    }
+    const start = new Date(periodStart);
+    const end = new Date(periodEnd);
+    const startMonth = start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const endMonth = end.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    // If same month, just show month. If different, show range
+    if (startMonth === endMonth) {
+      return startMonth;
+    }
+    return `${startMonth} - ${endMonth}`;
+  };
+
   return (
     <Card className="group relative overflow-hidden hover:shadow-lg transition-all duration-200 border hover:border-primary/20">
       <CardHeader className="pb-3">
@@ -269,10 +288,15 @@ export default function ModernWidgetCard({ widget, isReadOnly = false }) {
           </div>
         </div>
 
+        {/* Period Info */}
+        <div className="text-xs text-muted-foreground mb-3 text-center">
+          Data shown for {formatPeriod(widget.stats?.periodStart, widget.stats?.periodEnd)}
+        </div>
+
         {/* Last Activity */}
         <div className="flex items-center text-xs text-muted-foreground">
           <Calendar className="h-3 w-3 mr-1" />
-          Last updated {formatDate(widget.updatedAt || widget.createdAt)}
+          Updated {formatDate(widget.updatedAt || widget.createdAt)}
         </div>
       </CardContent>
 

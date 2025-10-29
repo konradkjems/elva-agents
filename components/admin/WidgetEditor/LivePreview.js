@@ -451,7 +451,7 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                   </div>
                   <div className="text-xs opacity-90 flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    Tilgængelig nu
+                    {settings.branding?.availableNowText || 'Tilgængelig nu'}
                   </div>
                 </div>
               </div>
@@ -486,7 +486,7 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                           </svg>
-                          Ny samtale
+                          {settings.messages?.newConversationLabel || 'Ny samtale'}
                         </button>
                         <button 
                           className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
@@ -498,7 +498,7 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
-                          Se samtaler
+                          {settings.messages?.conversationHistoryLabel || 'Tidligere samtaler'}
                         </button>
                         <button 
                           className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3"
@@ -898,7 +898,25 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                     opacity: 0.5
                   }}
                 >
-                  Drevet af elva-solutions.com
+                  {settings.branding?.poweredByText ? (
+                    <>
+                      {settings.branding.poweredByText}{' '}
+                      <a 
+                        href="https://elva-solutions.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        style={{ 
+                          color: themeColors.textColor, 
+                          textDecoration: 'none', 
+                          opacity: 0.8 
+                        }}
+                      >
+                        elva-solutions.com
+                      </a>
+                    </>
+                  ) : (
+                    'Drevet af elva-solutions.com'
+                  )}
                 </div>
               </div>
             </div>
@@ -933,7 +951,7 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                     </svg>
                   </button>
                   <div>
-                    <div className="font-semibold text-white text-base">Samtaler</div>
+                    <div className="font-semibold text-white text-base">{settings.messages?.conversationHistoryLabel || 'Tidligere samtaler'}</div>
                     <div className="text-xs opacity-90">Historik</div>
                   </div>
                 </div>

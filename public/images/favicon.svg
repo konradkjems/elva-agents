@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="204" height="204"><svg width="204" height="204" viewBox="0 0 204 204" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="204" height="204" rx="57" fill="#F3F4F6"></rect>
+<path d="M29.875 50.7917V176.477C29.875 180.021 34.1611 181.797 36.6678 179.29L67.3358 148.623C68.8282 147.13 70.8525 146.292 72.9631 146.292H157.208C165.999 146.292 173.125 139.166 173.125 130.375V50.7917C173.125 42.0011 165.999 34.875 157.208 34.875H45.7917C37.0011 34.875 29.875 42.0011 29.875 50.7917Z" stroke="#075EF0" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M125.375 106.5C119.012 111.453 110.654 114.458 101.5 114.458C92.3463 114.458 83.9878 111.453 77.625 106.5" stroke="#075EF0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M77.625 74.8221V74.6666" stroke="#075EF0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="M125.375 74.8221V74.6666" stroke="#075EF0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>

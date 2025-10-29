@@ -5,9 +5,11 @@ export default function Document() {
     <Html lang="en">
       <Head>
         {/* Favicon */}
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/images/Elva Logo Icon 2.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/images/Elva Logo Icon 2.png" />
+        <link rel="icon" href="/images/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/images/favicon-96x96.png" type="image/png" sizes="96x96" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
+        <link rel="manifest" href="/images/site.webmanifest" />
         
         {/* Meta tags */}
         <meta name="description" content="Elva Agents - AI Chat Platform for Customer Service" />

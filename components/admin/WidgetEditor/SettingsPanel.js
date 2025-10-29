@@ -550,6 +550,191 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       </p>
                     </div>
 
+                    {/* Labels Section */}
+                    <div className="border-t pt-6 mt-6">
+                      <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                        Menu & Conversation Labels
+                      </h5>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "Ny samtale" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.newConversationLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'newConversationLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Ny samtale"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Label for the "New conversation" button in the menu
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "Tidligere samtaler" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.conversationHistoryLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'conversationHistoryLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Tidligere samtaler"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Label for the "Conversation history" button and header
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "Samtale indlæst" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.conversationLoadedLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'conversationLoadedLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Samtale indlæst"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Notification message when a conversation is loaded
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "I dag" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.todayLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'todayLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="I dag"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Label for conversations from today
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "I går" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.yesterdayLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'yesterdayLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="I går"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Label for conversations from yesterday
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Days Suffix (for "2d", "3d", etc.)
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.daysAgoSuffix || ''}
+                            onChange={(e) => handleFieldChange('messages', 'daysAgoSuffix', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="d"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Suffix for days ago (e.g., "2d" = 2 + "d")
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "Beskeder" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.messagesLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'messagesLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="beskeder"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Label for message count (e.g., "5 beskeder")
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "Ingen tidligere samtaler" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.noConversationsLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'noConversationsLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Ingen tidligere samtaler"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Message shown when there are no conversations
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "Start en samtale..." Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.startConversationLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'startConversationLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Start en samtale for at se den her"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Helper text shown when there are no conversations
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "Samtale slettet" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.conversationDeletedLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'conversationDeletedLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="Samtale slettet"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Notification message when a conversation is deleted
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            "New conversation started" Label
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.messages?.newConversationStartedLabel || ''}
+                            onChange={(e) => handleFieldChange('messages', 'newConversationStartedLabel', e.target.value)}
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            placeholder="New conversation started"
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Notification message when a new conversation is started
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Popup Delay (milliseconds)
@@ -1190,6 +1375,38 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       />
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Your company or organization name
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        "Drevet af" Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.branding?.poweredByText || ''}
+                        onChange={(e) => handleFieldChange('branding', 'poweredByText', e.target.value)}
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="Powered by Elva"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Text shown as the attribution line (e.g., "Drevet af Elva")
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        "Tilgængelig nu" Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.branding?.availableNowText || ''}
+                        onChange={(e) => handleFieldChange('branding', 'availableNowText', e.target.value)}
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="Available now"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Text shown when agent is online (e.g., "Tilgængelig nu")
                       </p>
                     </div>
                   </div>
