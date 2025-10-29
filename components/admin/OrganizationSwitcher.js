@@ -240,7 +240,12 @@ export default function OrganizationSwitcher({ onCreateClick }) {
         <DropdownMenuSeparator />
 
         {/* Actions */}
-        <DropdownMenuItem onClick={onCreateClick} className="gap-2 cursor-pointer">
+        <DropdownMenuItem 
+          onClick={onCreateClick} 
+          className="gap-2 cursor-pointer"
+          disabled={!['admin', 'owner'].includes(currentOrg?.role)}
+          title={!['admin', 'owner'].includes(currentOrg?.role) ? 'Only organization administrators and owners can create organizations' : ''}
+        >
           <Plus className="h-4 w-4" />
           Create Organization
         </DropdownMenuItem>

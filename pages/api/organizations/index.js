@@ -85,6 +85,24 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Organization name is required' });
       }
 
+      // Check if user has admin/owner role in their current organization
+      const currentOrgId = session.user.currentOrganizationId;
+      if (currentOrgId) {
+        const userMembership = await db
+          .collection('team_members')
+          .findOne({
+            userId,
+            organizationId: new ObjectId(currentOrgId),
+            status: 'active'
+          });
+
+        if (!userMembership || !['admin', 'owner'].includes(userMembership.role)) {
+          return res.status(403).json({ 
+            error: 'Only organization administrators and owners can create new organizations' 
+          });
+        }
+      }
+
       // Generate slug if not provided
       let orgSlug = slug || name
         .toLowerCase()
