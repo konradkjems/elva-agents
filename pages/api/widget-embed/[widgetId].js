@@ -2289,6 +2289,25 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     return formatted;
   }
 
+  // EXTRACT IMAGE URLS FROM MESSAGE CONTENT
+  function extractImageUrls(content) {
+    const imageUrls = [];
+    
+    // Match URLs that end with image extensions or contain common CDN patterns
+    const urlRegex = /(https?:\\/\\/[^\\s)\\]]+(?:\\.(?:jpg|jpeg|png|gif|webp|svg)(?:[?#][^\\s)\\]]*)?|content\\/.*?\\/images\\/[^\\s)\\]]*|cdn\\/[^\\s)\\]]*\\.(?:jpg|jpeg|png|gif|webp)))/gi;
+    
+    let match;
+    while ((match = urlRegex.exec(content)) !== null) {
+      const url = match[1];
+      // Avoid duplicates
+      if (!imageUrls.includes(url)) {
+        imageUrls.push(url);
+      }
+    }
+    
+    return imageUrls;
+  }
+
   // PRODUCT CARDS PARSER AND RENDERING
   function parseProductCards(messageText) {
     const products = [];
@@ -2944,6 +2963,67 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           messageContent.appendChild(cardsContainer);
         }
       }
+
+      // DETECT AND DISPLAY IMAGES FROM MESSAGE CONTENT
+      const imageUrls = extractImageUrls(content);
+      if (imageUrls.length > 0) {
+        const imagesContainer = document.createElement("div");
+        imagesContainer.style.cssText = \`
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-top: 12px;
+        \`;
+        
+        imageUrls.forEach(imageUrl => {
+          const imageWrapper = document.createElement("div");
+          imageWrapper.style.cssText = \`
+            display: flex;
+            justify-content: center;
+            margin: 8px 0;
+          \`;
+          
+          const imageElement = document.createElement("img");
+          imageElement.src = imageUrl;
+          imageElement.alt = "Referenced image";
+          imageElement.style.cssText = \`
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+          \`;
+          
+          // Add hover effect and click to expand
+          imageElement.onmouseover = () => {
+            imageElement.style.transform = 'scale(1.02)';
+            imageElement.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
+          };
+          
+          imageElement.onmouseout = () => {
+            imageElement.style.transform = 'scale(1)';
+            imageElement.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+          };
+          
+          imageElement.onclick = () => {
+            // Open image in new tab on click
+            window.open(imageUrl, '_blank');
+          };
+          
+          // Handle image load errors
+          imageElement.onerror = () => {
+            imageElement.style.display = 'none';
+            imageWrapper.style.display = 'none';
+          };
+          
+          imageWrapper.appendChild(imageElement);
+          imagesContainer.appendChild(imageWrapper);
+        });
+        
+        messageContent.appendChild(imagesContainer);
+      }
+      
       assistantContainer.appendChild(avatar);
       assistantContainer.appendChild(messageContent);
       messageContentDiv.appendChild(assistantContainer);
@@ -3192,6 +3272,67 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
             );
             messageContent.appendChild(cardsContainer);
           }
+        }
+
+        // DETECT AND DISPLAY IMAGES FROM MESSAGE CONTENT (after typewriter effect)
+        const imageUrls = extractImageUrls(text);
+        if (imageUrls.length > 0) {
+          const messageContent = element.parentElement;
+          const imagesContainer = document.createElement("div");
+          imagesContainer.style.cssText = \`
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+          \`;
+          
+          imageUrls.forEach(imageUrl => {
+            const imageWrapper = document.createElement("div");
+            imageWrapper.style.cssText = \`
+              display: flex;
+              justify-content: center;
+              margin: 8px 0;
+            \`;
+            
+            const imageElement = document.createElement("img");
+            imageElement.src = imageUrl;
+            imageElement.alt = "Referenced image";
+            imageElement.style.cssText = \`
+              max-width: 100%;
+              max-height: 250px;
+              border-radius: 8px;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+              cursor: pointer;
+              transition: transform 0.2s ease, box-shadow 0.2s ease;
+            \`;
+            
+            // Add hover effect and click to expand
+            imageElement.onmouseover = () => {
+              imageElement.style.transform = 'scale(1.02)';
+              imageElement.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
+            };
+            
+            imageElement.onmouseout = () => {
+              imageElement.style.transform = 'scale(1)';
+              imageElement.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+            };
+            
+            imageElement.onclick = () => {
+              // Open image in new tab on click
+              window.open(imageUrl, '_blank');
+            };
+            
+            // Handle image load errors
+            imageElement.onerror = () => {
+              imageElement.style.display = 'none';
+              imageWrapper.style.display = 'none';
+            };
+            
+            imageWrapper.appendChild(imageElement);
+            imagesContainer.appendChild(imageWrapper);
+          });
+          
+          messageContent.appendChild(imagesContainer);
         }
       }
     }

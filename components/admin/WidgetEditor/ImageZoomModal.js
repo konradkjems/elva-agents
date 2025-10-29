@@ -12,6 +12,12 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
     logoOffsetY: 0
   });
 
+  // Helper function to safely get settings with defaults
+  const getSettingValue = (key, defaultValue = 0) => {
+    const value = localSettings?.[key];
+    return typeof value === 'number' ? value : defaultValue;
+  };
+
   // Helper function to generate smart AI icon
   const generateAIIcon = (widgetName, brandingTitle) => {
     const name = brandingTitle || widgetName || 'AI';
@@ -29,6 +35,15 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
   useEffect(() => {
     if (isOpen && imageSettings) {
       setLocalSettings(imageSettings);
+    } else if (isOpen) {
+      setLocalSettings({
+        avatarZoom: 1.0,
+        avatarOffsetX: 0,
+        avatarOffsetY: 0,
+        logoZoom: 1.0,
+        logoOffsetX: 0,
+        logoOffsetY: 0
+      });
     }
   }, [isOpen, imageSettings]);
 
@@ -147,7 +162,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                         alt="Avatar"
                         className="w-full h-full object-cover"
                         style={{
-                          transform: `scale(${localSettings.avatarZoom}) translate(${localSettings.avatarOffsetX}px, ${localSettings.avatarOffsetY}px)`,
+                          transform: `scale(${Math.max(1.0, getSettingValue('avatarZoom'))}) translate(${getSettingValue('avatarOffsetX')}px, ${getSettingValue('avatarOffsetY')}px)`,
                           transformOrigin: 'center center',
                           borderRadius: '50%'
                         }}
@@ -184,7 +199,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                           alt="Avatar"
                           className="w-full h-full object-cover"
                           style={{
-                            transform: `scale(${localSettings.avatarZoom}) translate(${localSettings.avatarOffsetX}px, ${localSettings.avatarOffsetY}px)`,
+                            transform: `scale(${Math.max(1.0, getSettingValue('avatarZoom'))}) translate(${getSettingValue('avatarOffsetX')}px, ${getSettingValue('avatarOffsetY')}px)`,
                             transformOrigin: 'center center',
                             borderRadius: '50%'
                           }}
@@ -237,7 +252,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                         alt="Company Logo"
                         className="w-full h-full object-contain"
                         style={{
-                          transform: `scale(${localSettings.logoZoom}) translate(${localSettings.logoOffsetX}px, ${localSettings.logoOffsetY}px)`,
+                          transform: `scale(${getSettingValue('logoZoom')}) translate(${getSettingValue('logoOffsetX')}px, ${getSettingValue('logoOffsetY')}px)`,
                           transformOrigin: 'center center'
                         }}
                       />
@@ -271,7 +286,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                           alt="Company Logo"
                           className="w-full h-full object-contain"
                           style={{
-                            transform: `scale(${localSettings.logoZoom}) translate(${localSettings.logoOffsetX}px, ${localSettings.logoOffsetY}px)`,
+                            transform: `scale(${getSettingValue('logoZoom')}) translate(${getSettingValue('logoOffsetX')}px, ${getSettingValue('logoOffsetY')}px)`,
                             transformOrigin: 'center center'
                           }}
                         />
@@ -325,7 +340,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                             alt="Company Logo"
                             className="w-full h-full object-contain"
                             style={{
-                              transform: `scale(${localSettings.logoZoom}) translate(${localSettings.logoOffsetX}px, ${localSettings.logoOffsetY}px)`,
+                              transform: `scale(${getSettingValue('logoZoom')}) translate(${getSettingValue('logoOffsetX')}px, ${getSettingValue('logoOffsetY')}px)`,
                               transformOrigin: 'center center'
                             }}
                           />
@@ -366,7 +381,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                               alt="Avatar"
                               className="w-full h-full object-cover"
                               style={{
-                                transform: `scale(${localSettings.avatarZoom}) translate(${localSettings.avatarOffsetX}px, ${localSettings.avatarOffsetY}px)`,
+                                transform: `scale(${Math.max(1.0, getSettingValue('avatarZoom'))}) translate(${getSettingValue('avatarOffsetX')}px, ${getSettingValue('avatarOffsetY')}px)`,
                                 transformOrigin: 'center center',
                                 borderRadius: '50%'
                               }}
@@ -408,11 +423,11 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Avatar Zoom Level
-                    <span className="text-xs text-gray-500 ml-2">({localSettings.avatarZoom.toFixed(1)}x)</span>
+                    <span className="text-xs text-gray-500 ml-2">({(getSettingValue('avatarZoom', 1.0)).toFixed(1)}x)</span>
                   </label>
                   <div className="flex items-center space-x-3">
                     <button
-                      onClick={() => handleSettingChange('avatarZoom', Math.max(0.5, localSettings.avatarZoom - 0.1))}
+                      onClick={() => handleSettingChange('avatarZoom', Math.max(0.5, getSettingValue('avatarZoom', 1.0) - 0.1))}
                       className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                     >
                       <span className="text-gray-600 font-medium">-</span>
@@ -423,19 +438,19 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                         min="0.5"
                         max="3.0"
                         step="0.1"
-                        value={localSettings.avatarZoom}
+                        value={getSettingValue('avatarZoom', 1.0)}
                         onChange={(e) => handleSettingChange('avatarZoom', e.target.value)}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
                     <button
-                      onClick={() => handleSettingChange('avatarZoom', Math.min(3.0, localSettings.avatarZoom + 0.1))}
+                      onClick={() => handleSettingChange('avatarZoom', Math.min(3.0, getSettingValue('avatarZoom', 1.0) + 0.1))}
                       className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                     >
                       <span className="text-gray-600 font-medium">+</span>
                     </button>
                     <span className="text-sm font-medium text-gray-700 w-12 text-center">
-                      {localSettings.avatarZoom.toFixed(1)}x
+                      {(getSettingValue('avatarZoom', 1.0)).toFixed(1)}x
                     </span>
                   </div>
                 </div>
@@ -455,11 +470,11 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Logo Zoom Level
-                    <span className="text-xs text-gray-500 ml-2">({localSettings.logoZoom.toFixed(1)}x)</span>
+                    <span className="text-xs text-gray-500 ml-2">({(getSettingValue('logoZoom', 1.0)).toFixed(1)}x)</span>
                   </label>
                   <div className="flex items-center space-x-3">
                     <button
-                      onClick={() => handleSettingChange('logoZoom', Math.max(0.5, localSettings.logoZoom - 0.1))}
+                      onClick={() => handleSettingChange('logoZoom', Math.max(0.5, getSettingValue('logoZoom', 1.0) - 0.1))}
                       className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                     >
                       <span className="text-gray-600 font-medium">-</span>
@@ -470,19 +485,19 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                         min="0.5"
                         max="3.0"
                         step="0.1"
-                        value={localSettings.logoZoom}
+                        value={getSettingValue('logoZoom', 1.0)}
                         onChange={(e) => handleSettingChange('logoZoom', e.target.value)}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                       />
                     </div>
                     <button
-                      onClick={() => handleSettingChange('logoZoom', Math.min(3.0, localSettings.logoZoom + 0.1))}
+                      onClick={() => handleSettingChange('logoZoom', Math.min(3.0, getSettingValue('logoZoom', 1.0) + 0.1))}
                       className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
                     >
                       <span className="text-gray-600 font-medium">+</span>
                     </button>
                     <span className="text-sm font-medium text-gray-700 w-12 text-center">
-                      {localSettings.logoZoom.toFixed(1)}x
+                      {(getSettingValue('logoZoom', 1.0)).toFixed(1)}x
                     </span>
                   </div>
                 </div>

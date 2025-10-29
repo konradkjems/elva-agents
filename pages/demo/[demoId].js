@@ -25,6 +25,7 @@ export default function DemoPage() {
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeError, setIframeError] = useState(false);
   const [clientWebsiteUrl, setClientWebsiteUrl] = useState(null);
+  const [showDemoInfo, setShowDemoInfo] = useState(true);
 
   useEffect(() => {
     if (demoId) {
@@ -358,28 +359,29 @@ export default function DemoPage() {
         )}
         
         {/* Demo info panel - shows on iframe load */}
-        {iframeLoaded && (
+        {iframeLoaded && showDemoInfo && (
           <div className="absolute top-4 left-4 right-4 z-10">
-            <div className="bg-black bg-opacity-75 text-white p-4 rounded-lg max-w-md">
+            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white p-4 rounded-xl shadow-2xl max-w-md border border-blue-400 border-opacity-30 backdrop-blur-sm">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-semibold text-lg mb-1">{demo.name}</h3>
+                  <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5" />
+                    {demo.name}
+                  </h3>
                   <p className="text-sm text-gray-300 mb-2">
                     {demo.description || `Demo of ${demo.sourceWidgetName}`}
                   </p>
-                  <div className="flex items-center gap-4 text-xs text-gray-300">
+                  <div className="flex items-center gap-4 text-xs text-blue-100">
                     <span>💬 Chat widget active</span>
                     <span>🔗 Interactive demo</span>
                   </div>
                 </div>
                 <button 
-                  onClick={() => {
-                    const panel = document.querySelector('.demo-info-panel');
-                    if (panel) panel.style.display = 'none';
-                  }}
-                  className="text-gray-400 hover:text-white ml-2"
+                  onClick={() => setShowDemoInfo(false)}
+                  className="text-white hover:text-blue-100 ml-2 flex-shrink-0 transition-colors duration-200 hover:scale-110 transform"
+                  aria-label="Close demo info"
                 >
-                  ×
+                  <XCircle className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -387,7 +389,7 @@ export default function DemoPage() {
         )}
 
         {/* Subtle demo indicator - always visible */}
-        <div className="absolute bottom-4 right-4 z-10">
+        <div className="absolute bottom-4 left-4 z-10">
           <div className="bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
             Demo Mode
           </div>
