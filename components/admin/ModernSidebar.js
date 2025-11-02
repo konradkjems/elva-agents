@@ -103,10 +103,17 @@ export default function ModernSidebar({ open, setOpen }) {
         <div className="flex items-center space-x-3">
           <div className="flex h-10 w-10 items-center justify-center">
             <a href="https://elva-solutions.com" target="_blank" rel="noopener noreferrer">
+              {/* Light mode logo */}
               <img 
                 src="/images/Elva Logo Icon 2.svg" 
                 alt="Elva Solutions" 
-                className="h-10 w-10"
+                className="h-10 w-10 block dark:hidden"
+              />
+              {/* Dark mode logo */}
+              <img 
+                src="/images/elva-logo-icon-dark.svg" 
+                alt="Elva Solutions" 
+                className="h-10 w-10 hidden dark:block"
               />
             </a>
           </div>

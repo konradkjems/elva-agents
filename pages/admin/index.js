@@ -23,7 +23,8 @@ import {
   Building2,
   Crown,
   Star,
-  Info
+  Info,
+  RefreshCw
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import QuotaUsageCard from '../../components/admin/QuotaUsageCard';
@@ -93,8 +94,9 @@ export default function ModernAdminDashboard() {
     }
   };
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (forceRefresh = false) => {
     try {
+      setLoading(true);
       let url = '/api/admin/analytics-overview';
       const params = new URLSearchParams();
       
@@ -106,6 +108,10 @@ export default function ModernAdminDashboard() {
         params.append('period', dateRange);
       }
       
+      if (forceRefresh) {
+        params.append('refresh', 'true');
+      }
+      
       const response = await fetch(`${url}?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data');
@@ -113,6 +119,13 @@ export default function ModernAdminDashboard() {
       const data = await response.json();
       setWidgets(data.widgets || []);
       setAnalyticsOverview(data.overview || {});
+      
+      if (forceRefresh) {
+        toast({
+          title: "Data refreshed",
+          description: "Dashboard data has been updated.",
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       toast({
@@ -125,7 +138,7 @@ export default function ModernAdminDashboard() {
     }
   };
 
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = async (forceRefresh = false) => {
     try {
       let url = `/api/analytics/metrics`;
       const params = new URLSearchParams();
@@ -138,6 +151,10 @@ export default function ModernAdminDashboard() {
         params.append('period', dateRange);
       }
       
+      if (forceRefresh) {
+        params.append('refresh', 'true');
+      }
+      
       const response = await fetch(`${url}?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
@@ -147,6 +164,13 @@ export default function ModernAdminDashboard() {
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     }
+  };
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      fetchDashboardData(true),
+      fetchAnalyticsData(true)
+    ]);
   };
 
   const handleCreateWidget = () => {
@@ -258,6 +282,17 @@ export default function ModernAdminDashboard() {
             )}
           </div>
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
             <Select value={dateRange} onValueChange={handleDateRangeChange}>
               <SelectTrigger className="w-32">
                 <Calendar className="h-4 w-4 mr-2" />

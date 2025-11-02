@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
-export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave, widgetName, brandingTitle, avatarUrl, logoUrl, themeColor }) {
+export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave, widgetName, brandingTitle, avatarUrl, logoUrl, themeColor, avatarBackgroundColor, useAvatarBackgroundColor = true }) {
   const [activeTab, setActiveTab] = useState('avatar');
   const [localSettings, setLocalSettings] = useState({
     avatarZoom: 1.0,
@@ -190,7 +190,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                         backgroundImage: avatarUrl ? 'none' : 'linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb)',
                         backgroundSize: '8px 8px',
                         backgroundPosition: '0 0, 4px 4px',
-                        backgroundColor: avatarUrl ? 'transparent' : (themeColor || '#4f46e5')
+                        backgroundColor: useAvatarBackgroundColor ? (avatarBackgroundColor || themeColor || '#4f46e5') : (avatarUrl ? 'transparent' : (avatarBackgroundColor || themeColor || '#4f46e5'))
                       }}
                     >
                       {avatarUrl ? (
@@ -207,7 +207,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                       ) : (
                         <div 
                           className="w-full h-full flex items-center justify-center"
-                          style={{ backgroundColor: themeColor || '#4f46e5' }}
+                          style={{ backgroundColor: avatarBackgroundColor || themeColor || '#4f46e5' }}
                         >
                           <span className="text-white text-xs font-semibold">
                             {generateAIIcon(widgetName, brandingTitle)}
@@ -389,7 +389,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                           ) : (
                             <div 
                               className="w-full h-full flex items-center justify-center"
-                              style={{ backgroundColor: themeColor || '#4f46e5' }}
+                              style={{ backgroundColor: avatarBackgroundColor || themeColor || '#4f46e5' }}
                             >
                               <span className="text-white text-xs font-semibold">
                                 {generateAIIcon(widgetName, brandingTitle)}

@@ -204,6 +204,8 @@ export default async function handler(req, res) {
       companyName: widget.branding?.companyName || 'Company',
       showBranding: widget.branding?.showBranding !== undefined ? widget.branding.showBranding : true,
       avatarUrl: widget.branding?.avatarUrl || null,
+      avatarBackgroundColor: widget.branding?.avatarBackgroundColor || null,
+      useAvatarBackgroundColor: widget.branding?.useAvatarBackgroundColor !== false, // Default to true
       logoUrl: widget.branding?.logoUrl || null,
       widgetLogoUrl: widget.branding?.widgetLogoUrl || widget.branding?.customWidgetLogo || widget.branding?.companyLogo || widget.branding?.logoUrl || null,
       imageSettings: widget.branding?.imageSettings || null,
@@ -919,7 +921,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     \`;
     
     // Update input padding to make room for image button
-    const leftPadding = WIDGET_CONFIG.messages.voiceInput.enabled ? '76px' : '46px';
+    // Add extra padding for better spacing between image button and placeholder text
+    const leftPadding = WIDGET_CONFIG.messages.voiceInput.enabled ? '84px' : '54px';
     input.style.paddingLeft = leftPadding;
     inputLabel.style.left = leftPadding;
     
@@ -2114,13 +2117,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     typingAvatar.style.cssText = \`
       width: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
       height: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
-      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
     \`;
     typingAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
       \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
@@ -2965,13 +2969,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       avatar.style.cssText = \`
         width: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
         height: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
-        background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+        background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
       \`;
       avatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
         \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
@@ -3202,13 +3207,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       avatar.style.cssText = \`
         width: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
         height: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
-        background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+        background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
       \`;
       avatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
         \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
@@ -3646,13 +3652,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     assistantAvatar.style.cssText = \`
       width: 32px;
       height: 32px;
-      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
     \`;
     assistantAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
       \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
@@ -3833,15 +3840,18 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     assistantAvatar.style.cssText = \`
       width: 32px;
       height: 32px;
-      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
     \`;
-    assistantAvatar.innerHTML = '<span style="color: white; font-size: 12px; font-weight: 600;">E</span>';
+    assistantAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+      \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+      \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
     
     const assistantContainer = document.createElement("div");
     assistantContainer.style.cssText = \`
@@ -3964,13 +3974,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     typingAvatar.style.cssText = \`
       width: 32px;
       height: 32px;
-      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
     \`;
     typingAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
       \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
@@ -4947,13 +4958,14 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     assistantAvatar.style.cssText = \`
       width: 32px;
       height: 32px;
-      background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
+      background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
     \`;
     assistantAvatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
       \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 

@@ -2,6 +2,7 @@ import clientPromise from '../../../lib/mongodb.js';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { ObjectId } from 'mongodb';
+import { getCache, setCache, generateCacheKey } from '../../../lib/cache.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -19,11 +20,6 @@ export default async function handler(req, res) {
     const currentOrgId = session.user?.currentOrganizationId;
     const isPlatformAdmin = session.user?.role === 'platform_admin';
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const analytics = db.collection('analytics');
-    const widgets = db.collection('widgets');
-
     const { 
       widgetId, 
       period = '7d', // 1d, 7d, 30d, 90d, all, custom
@@ -31,6 +27,35 @@ export default async function handler(req, res) {
       startDate: customStartDate,
       endDate: customEndDate
     } = req.query;
+
+    // Generate cache key based on org, period, and widgetId
+    const cacheKey = generateCacheKey('analytics-metrics', {
+      orgId: currentOrgId || 'none',
+      widgetId: widgetId || 'none',
+      period,
+      customStartDate: customStartDate || 'none',
+      customEndDate: customEndDate || 'none',
+      isPlatformAdmin: isPlatformAdmin ? 'true' : 'false'
+    });
+
+    // Check for manual refresh parameter
+    const shouldRefresh = req.query.refresh === 'true';
+    
+    // Check cache (60 second TTL for analytics metrics) - skip if refresh requested
+    if (!shouldRefresh) {
+      const cached = getCache(cacheKey);
+      if (cached) {
+        console.log('📦 Cache hit for analytics-metrics');
+        return res.status(200).json(cached);
+      }
+    } else {
+      console.log('🔄 Manual refresh requested for analytics-metrics');
+    }
+
+    const client = await clientPromise;
+    const db = client.db('elva-agents');
+    const analytics = db.collection('analytics');
+    const widgets = db.collection('widgets');
 
     // Calculate date range
     const now = new Date();
@@ -172,7 +197,7 @@ export default async function handler(req, res) {
       };
     }));
 
-    return res.status(200).json({
+    const response = {
       period,
       startDate: startDate?.toISOString(),
       endDate: endDate?.toISOString(),
@@ -180,7 +205,13 @@ export default async function handler(req, res) {
       widgetMetrics,
       widgetsWithAnalytics,
       dataPoints: analyticsData.length
-    });
+    };
+
+    // Cache the response for 60 seconds
+    setCache(cacheKey, response, 60);
+    console.log('📦 Cached analytics-metrics response');
+
+    return res.status(200).json(response);
 
   } catch (error) {
     console.error('Analytics API error:', error);

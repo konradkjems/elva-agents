@@ -234,18 +234,27 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
   
   // Calculate metrics for this conversation
   const messageCount = conversation.messageCount || conversation.messages?.length || 0;
-  const responseTimes = conversation.messages?.filter(m => m.responseTime).map(m => m.responseTime) || [];
+  const responseTimes = conversation.messages?.filter(m => m.responseTime && m.type === 'assistant').map(m => m.responseTime) || [];
   const avgResponseTime = responseTimes.length > 0 
     ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
     : 0;
   
+  // Only count conversations that have:
+  // 1. At least one message (messageCount > 0)
+  // 2. At least one assistant message (handled by OpenAI API)
+  const hasAssistantMessage = conversation.messages?.some(msg => msg.type === 'assistant') || false;
+  const shouldCountConversation = isNewConversation && messageCount > 0 && hasAssistantMessage;
+  
   // Calculate unique users for this widget on this date
+  // Only count from conversations with assistant messages
   const uniqueUsersToday = await db.collection('conversations').distinct('sessionId', {
     widgetId: widgetId,
     createdAt: {
       $gte: new Date(dateKey),
       $lt: new Date(new Date(dateKey).getTime() + 24 * 60 * 60 * 1000)
-    }
+    },
+    messageCount: { $gt: 0 },
+    'messages.type': 'assistant'
   });
   
   // Get or create analytics document for this day
@@ -260,7 +269,7 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
       { _id: existingDoc._id },
       {
         $inc: {
-          'metrics.conversations': isNewConversation ? 1 : 0,
+          'metrics.conversations': shouldCountConversation ? 1 : 0,
           'metrics.messages': messageCount
         },
         $set: {
@@ -279,7 +288,7 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
       agentId: agentIdString,
       date: new Date(dateKey),
       metrics: {
-        conversations: isNewConversation ? 1 : 0,
+        conversations: shouldCountConversation ? 1 : 0,
         messages: messageCount,
         uniqueUsers: uniqueUsersToday.length, // Use actual count
         responseRate: 100,
@@ -294,5 +303,5 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
     });
   }
   
-  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey, 'with', uniqueUsersToday.length, 'unique users');
+  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey, 'with', uniqueUsersToday.length, 'unique users', shouldCountConversation ? '(counted conversation)' : '(did not count conversation)');
 }

@@ -19,10 +19,22 @@ async function handler(req, res) {
 
     const client = await clientPromise;
     const db = client.db('elva-agents');
-    const conversations = db.collection('conversations');
+    const conversationsCollection = db.collection('conversations');
 
-    // Build query
-    const query = { widgetId: widgetId };
+    // widgetId can be stored as ObjectId or string in conversations
+    // Match both possibilities
+    const widgetIdString = String(widgetId);
+    const widgetIdObjectId = ObjectId.isValid(widgetId) ? new ObjectId(widgetId) : widgetId;
+
+    // Build query - match widgetId as both string and ObjectId
+    const queryConditions = [
+      {
+        $or: [
+          { widgetId: widgetIdObjectId },
+          { widgetId: widgetIdString }
+        ]
+      }
+    ];
 
     // Add date filtering
     if (period !== 'all') {
@@ -42,46 +54,75 @@ async function handler(req, res) {
       }
       
       if (startDate) {
-        query.startTime = { $gte: startDate };
+        // Use $or to match either createdAt or startTime
+        queryConditions.push({
+          $or: [
+            { createdAt: { $gte: startDate } },
+            { startTime: { $gte: startDate } }
+          ]
+        });
       }
     }
 
     // Add search filtering
     if (search) {
-      query.$or = [
-        { 'messages.content': { $regex: search, $options: 'i' } }
-      ];
+      queryConditions.push({
+        'messages.content': { $regex: search, $options: 'i' }
+      });
     }
+
+    // Combine all conditions with $and
+    const query = queryConditions.length > 1 
+      ? { $and: queryConditions }
+      : queryConditions[0];
 
     console.log('📞 Conversations query:', { query, period, search });
 
     // Fetch conversations
-    const conversationsData = await conversations
+    const allConversations = await conversationsCollection
       .find(query)
       .sort({ startTime: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(offset))
       .toArray();
 
-    console.log(`📞 Found ${conversationsData.length} conversations for widget ${widgetId}`);
+    console.log(`📞 Found ${allConversations.length} conversations for widget ${widgetId}`);
+
+    // Filter to only include conversations with assistant messages and messageCount > 0
+    const validConversations = allConversations.filter(conv => {
+      // Must have at least one message
+      if (!conv.messageCount || conv.messageCount === 0) return false;
+      
+      // Must have at least one assistant message (handled by OpenAI)
+      if (!conv.messages || !Array.isArray(conv.messages)) return false;
+      const hasAssistantMessage = conv.messages.some(msg => msg.type === 'assistant');
+      return hasAssistantMessage;
+    });
+
+    console.log(`📞 Filtered to ${validConversations.length} valid conversations (with assistant messages)`);
 
     // Transform data for frontend
-    const transformedConversations = conversationsData.map(conv => ({
-      _id: conv._id,
-      widgetId: conv.widgetId,
-      sessionId: conv.sessionId,
-      startTime: conv.startTime,
-      endTime: conv.endTime,
-      messageCount: conv.messageCount || conv.messages?.length || 0,
-      satisfaction: conv.satisfaction,
-      messages: conv.messages || [],
-      metadata: {
-        country: conv.metadata?.country,
-        referrer: conv.metadata?.referrer,
-        userAgent: conv.metadata?.userAgent,
-        ip: conv.metadata?.ip
-      }
-    }));
+    // messageCount should only count assistant messages
+    const transformedConversations = validConversations.map(conv => {
+      const assistantMessageCount = conv.messages?.filter(msg => msg.type === 'assistant').length || 0;
+      
+      return {
+        _id: conv._id,
+        widgetId: conv.widgetId,
+        sessionId: conv.sessionId,
+        startTime: conv.startTime,
+        endTime: conv.endTime,
+        messageCount: assistantMessageCount, // Only count assistant messages
+        satisfaction: conv.satisfaction,
+        messages: conv.messages || [],
+        metadata: {
+          country: conv.metadata?.country,
+          referrer: conv.metadata?.referrer,
+          userAgent: conv.metadata?.userAgent,
+          ip: conv.metadata?.ip
+        }
+      };
+    });
 
     return res.status(200).json(transformedConversations);
 

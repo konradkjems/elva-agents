@@ -1429,6 +1429,48 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       labelClassName="text-gray-800 dark:text-gray-100"
                     />
 
+                    {/* Avatar Background Color */}
+                    <div className="space-y-3">
+                      <Switch.Group>
+                        <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <div>
+                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Use Avatar Background Color
+                            </Switch.Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Show background color behind avatar (even when image is uploaded)
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.branding?.useAvatarBackgroundColor !== false}
+                            onChange={(checked) => handleFieldChange('branding', 'useAvatarBackgroundColor', checked)}
+                            className={`${
+                              settings.branding?.useAvatarBackgroundColor !== false ? 'bg-blue-600' : 'bg-gray-200'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+                          >
+                            <span
+                              className={`${
+                                settings.branding?.useAvatarBackgroundColor !== false ? 'translate-x-6' : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            />
+                          </Switch>
+                        </div>
+                      </Switch.Group>
+
+                      {settings.branding?.useAvatarBackgroundColor !== false && (
+                        <div>
+                          <ColorPicker
+                            label="Avatar Background Color"
+                            color={settings.branding?.avatarBackgroundColor || settings.appearance?.themeColor || '#4f46e5'}
+                            onChange={(color) => handleFieldChange('branding', 'avatarBackgroundColor', color)}
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            Background color for avatar circle
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <FileUpload
                       currentUrl={settings.branding?.logoUrl || ''}
                       onUpload={(url) => handleFieldChange('branding', 'logoUrl', url)}
@@ -1924,6 +1966,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
         avatarUrl={settings.branding?.avatarUrl}
         logoUrl={settings.branding?.logoUrl}
         themeColor={settings.appearance?.themeColor || settings.theme?.buttonColor}
+        avatarBackgroundColor={settings.branding?.avatarBackgroundColor}
+        useAvatarBackgroundColor={settings.branding?.useAvatarBackgroundColor !== false}
       />
     </div>
   );

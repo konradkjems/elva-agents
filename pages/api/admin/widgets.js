@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { ObjectId } from 'mongodb';
 import { requireRole } from '../../../lib/roleCheck';
+import { getCache, setCache, generateCacheKey } from '../../../lib/cache.js';
 
 // Mock data for testing (fallback)
 const mockWidgets = [
@@ -275,6 +276,26 @@ async function handler(req, res) {
     const isPlatformAdmin = session.user?.role === 'platform_admin';
 
     if (req.method === 'GET') {
+      // Generate cache key based on org
+      const cacheKey = generateCacheKey('admin-widgets', {
+        orgId: currentOrgId || 'none',
+        isPlatformAdmin: isPlatformAdmin ? 'true' : 'false'
+      });
+
+      // Check for manual refresh parameter
+      const shouldRefresh = req.query.refresh === 'true';
+      
+      // Check cache (60 second TTL for widgets data) - skip if refresh requested
+      if (!shouldRefresh) {
+        const cached = getCache(cacheKey);
+        if (cached) {
+          console.log('📦 Cache hit for admin-widgets');
+          return res.status(200).json(cached);
+        }
+      } else {
+        console.log('🔄 Manual refresh requested for admin-widgets');
+      }
+
       // Get widgets from MongoDB filtered by organization
       try {
         const client = await clientPromise;
@@ -340,15 +361,101 @@ async function handler(req, res) {
               console.log(`📊 Sample analytics data:`, analyticsData[0]);
             }
             
-            // Calculate stats for current month (matching quota widget)
-            const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
-            const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
-            const totalResponseTimes = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
-            const avgResponseTime = analyticsData.length > 0 ? Math.round(totalResponseTimes / analyticsData.length) : 0;
+            // Count conversations directly from conversations collection
+            // Only count conversations that:
+            // 1. Have at least one message (messageCount > 0)
+            // 2. Have at least one assistant message (handled by OpenAI API)
+            const conversationsCollection = db.collection('conversations');
             
-            // Calculate unique users by summing unique users across all analytics records
-            // Each analytics record contains unique users for that specific date
-            const uniqueUsers = analyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
+            // widgetId can be stored as ObjectId or string in conversations
+            // widgetIdString is already declared above, now determine if we can use ObjectId
+            // Only convert to ObjectId if it's a valid ObjectId format (24 char hex string)
+            let widgetIdObjectId;
+            
+            if (typeof widget._id === 'object') {
+              // Already an ObjectId
+              widgetIdObjectId = widget._id;
+            } else if (ObjectId.isValid(widget._id) && widget._id.length === 24) {
+              // Valid ObjectId string - convert it
+              widgetIdObjectId = new ObjectId(widget._id);
+            } else {
+              // Not a valid ObjectId format (e.g., 'cottonshoppen-widget-456')
+              // Use as string only - widgetIdString is already set above
+              widgetIdObjectId = null; // Don't use ObjectId for query
+            }
+            
+            // Get all conversations for this widget in the period
+            // Use $or to match widgetId as both string and ObjectId
+            // Match conversations where either createdAt OR startTime falls within the period
+            const widgetIdQuery = widgetIdObjectId 
+              ? {
+                  $or: [
+                    { widgetId: widgetIdObjectId },
+                    { widgetId: widgetIdString }
+                  ]
+                }
+              : { widgetId: widgetIdString }; // Only match string if not a valid ObjectId
+            
+            const allConversations = await conversationsCollection.find({
+              $and: [
+                widgetIdQuery,
+                {
+                  $or: [
+                    { createdAt: { $gte: monthStart, $lt: monthEnd } },
+                    { startTime: { $gte: monthStart, $lt: monthEnd } }
+                  ]
+                }
+              ]
+            }).toArray();
+            
+            console.log(`📊 Widget ${widget.name}: Found ${allConversations.length} conversations in period`);
+            
+            // Filter to only count conversations with assistant messages and messageCount > 0
+            const validConversations = allConversations.filter(conv => {
+              // Must have at least one message
+              if (!conv.messageCount || conv.messageCount === 0) {
+                console.log(`📊 Conversation ${conv._id}: Filtered out - messageCount is ${conv.messageCount}`);
+                return false;
+              }
+              
+              // Must have at least one assistant message (handled by OpenAI)
+              if (!conv.messages || !Array.isArray(conv.messages)) {
+                console.log(`📊 Conversation ${conv._id}: Filtered out - no messages array`);
+                return false;
+              }
+              
+              const hasAssistantMessage = conv.messages.some(msg => msg.type === 'assistant');
+              if (!hasAssistantMessage) {
+                console.log(`📊 Conversation ${conv._id}: Filtered out - no assistant messages. Message types: ${conv.messages.map(m => m.type).join(', ')}`);
+                return false;
+              }
+              
+              return true;
+            });
+            
+            console.log(`📊 Widget ${widget.name}: ${validConversations.length} valid conversations (out of ${allConversations.length} total)`);
+            const totalConversations = validConversations.length;
+            
+            // Calculate total messages from valid conversations only
+            // Only count assistant messages (handled by OpenAI API)
+            const totalMessages = validConversations.reduce((sum, conv) => {
+              const assistantMessages = conv.messages?.filter(msg => msg.type === 'assistant').length || 0;
+              return sum + assistantMessages;
+            }, 0);
+            
+            // Calculate average response time from valid conversations
+            const allResponseTimes = validConversations
+              .flatMap(conv => conv.messages?.filter(m => m.responseTime && m.type === 'assistant').map(m => m.responseTime) || [])
+              .filter(rt => rt != null);
+            const avgResponseTime = allResponseTimes.length > 0 
+              ? Math.round(allResponseTimes.reduce((a, b) => a + b, 0) / allResponseTimes.length)
+              : 0;
+            
+            // Calculate unique users from valid conversations
+            const uniqueUserIds = new Set(validConversations
+              .map(conv => conv.sessionId)
+              .filter(id => id != null));
+            const uniqueUsers = uniqueUserIds.size;
             
             return {
               ...widget,
@@ -400,6 +507,11 @@ async function handler(req, res) {
           id: w._id, 
           stats: w.stats 
         })));
+        
+        // Cache the response for 60 seconds
+        setCache(cacheKey, widgetsWithStats, 60);
+        console.log('📦 Cached admin-widgets response');
+        
         res.status(200).json(widgetsWithStats);
       } catch (dbError) {
         console.error('Database error, falling back to mock data:', dbError);

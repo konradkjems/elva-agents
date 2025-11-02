@@ -27,7 +27,8 @@ import {
   Activity,
   Zap,
   Star,
-  TrendingUp
+  TrendingUp,
+  RefreshCw
 } from 'lucide-react';
 
 
@@ -106,24 +107,34 @@ export default function ModernAnalytics() {
   };
 
 
-  const fetchAnalyticsData = useCallback(async () => {
+  const fetchAnalyticsData = useCallback(async (forceRefresh = false) => {
     try {
       const params = new URLSearchParams({ period: dateRange });
       if (selectedWidget !== 'all') {
         params.set('widgetId', selectedWidget);
+      }
+      if (forceRefresh) {
+        params.set('refresh', 'true');
       }
       const response = await fetch(`/api/analytics/metrics?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         console.log('📊 Frontend received analytics data:', data);
         setAnalyticsData(data);
+        
+        if (forceRefresh) {
+          toast({
+            title: "Data refreshed",
+            description: "Analytics data has been updated.",
+          });
+        }
       } else {
         console.error('Analytics API response not ok:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     }
-  }, [dateRange, selectedWidget]);
+  }, [dateRange, selectedWidget, toast]);
 
   const fetchSatisfactionData = useCallback(async () => {
     if (selectedWidget === 'all') {
@@ -147,11 +158,12 @@ export default function ModernAnalytics() {
     }
   }, [dateRange, selectedWidget]);
 
-  const fetchInitialData = async () => {
+  const fetchInitialData = async (forceRefresh = false) => {
     setLoading(true);
     try {
       // Fetch widgets first
-      const widgetsResponse = await fetch('/api/admin/widgets');
+      const widgetsUrl = forceRefresh ? '/api/admin/widgets?refresh=true' : '/api/admin/widgets';
+      const widgetsResponse = await fetch(widgetsUrl);
       if (widgetsResponse.ok) {
         const widgetsData = await widgetsResponse.json();
         console.log('📊 Fetched widgets:', widgetsData);
@@ -160,7 +172,7 @@ export default function ModernAnalytics() {
       
       // Then fetch analytics
       console.log('📊 Fetching analytics with dateRange:', dateRange, 'selectedWidget:', selectedWidget);
-      await fetchAnalyticsData();
+      await fetchAnalyticsData(forceRefresh);
     } catch (error) {
       console.error('📊 Error in fetchInitialData:', error);
       toast({
@@ -171,6 +183,11 @@ export default function ModernAnalytics() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    await fetchInitialData(true);
+    await fetchSatisfactionData();
   };
 
   useEffect(() => {
@@ -253,6 +270,17 @@ export default function ModernAnalytics() {
             </p>
           </div>
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
             <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="w-40">
                 <Calendar className="h-4 w-4 mr-2" />

@@ -604,7 +604,7 @@ export default function LivePreview({ widget, settings, showMobilePreview = true
                             style={{ 
                               width: `${settings.branding?.iconSizes?.messageAvatar || 32}px`, 
                               height: `${settings.branding?.iconSizes?.messageAvatar || 32}px`,
-                              backgroundColor: themeColor || '#4f46e5'
+                              backgroundColor: settings.branding?.useAvatarBackgroundColor !== false ? (settings.branding?.avatarBackgroundColor || themeColor || '#4f46e5') : (settings.branding?.avatarUrl ? 'transparent' : (settings.branding?.avatarBackgroundColor || themeColor || '#4f46e5'))
                             }}
                           >
                             {settings.branding?.avatarUrl ? (

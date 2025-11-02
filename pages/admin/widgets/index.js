@@ -31,6 +31,7 @@ import {
   BarChart3,
   Edit,
   Trash2,
+  RefreshCw,
   Eye,
   Play,
   MoreVertical,
@@ -355,10 +356,11 @@ export default function WidgetsPage() {
   const selectedWidgetName = widgets.find(w => w._id === selectedWidget)?.name || 'Select Widget';
 
   // Widget Management Functions
-  const fetchManagementWidgets = async () => {
+  const fetchManagementWidgets = async (forceRefresh = false) => {
     try {
       setManagementLoading(true);
-      const response = await fetch('/api/admin/widgets');
+      const url = forceRefresh ? '/api/admin/widgets?refresh=true' : '/api/admin/widgets';
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         console.log('📝 Fetched widgets:', data.length, 'widgets');
@@ -368,6 +370,13 @@ export default function WidgetsPage() {
         console.log('📝 Regular widgets (non-demo):', regularWidgets.length, 'widgets');
         console.log('📝 Regular widgets:', regularWidgets.map(w => ({ name: w.name, id: w._id })));
         setManagementWidgets(regularWidgets);
+        
+        if (forceRefresh) {
+          toast({
+            title: "Data refreshed",
+            description: "Widgets data has been updated.",
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch widgets:', error);
@@ -381,9 +390,10 @@ export default function WidgetsPage() {
     }
   };
 
-  const fetchAnalyticsData = async () => {
+  const fetchAnalyticsData = async (forceRefresh = false) => {
     try {
-      const response = await fetch('/api/analytics/metrics?period=30d');
+      const url = forceRefresh ? '/api/analytics/metrics?period=30d&refresh=true' : '/api/analytics/metrics?period=30d';
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setAnalyticsData(data);
@@ -391,6 +401,13 @@ export default function WidgetsPage() {
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
     }
+  };
+
+  const handleRefresh = async () => {
+    await Promise.all([
+      fetchManagementWidgets(true),
+      fetchAnalyticsData(true)
+    ]);
   };
 
   const handleCreateDemo = (widget) => {
@@ -568,6 +585,16 @@ export default function WidgetsPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={managementLoading}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${managementLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Button
               variant="outline"
               onClick={() => router.push('/admin/analytics')}
