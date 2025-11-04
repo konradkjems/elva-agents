@@ -2331,6 +2331,82 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     inputContainer.insertBefore(disclaimer, inputWrapper);
   }
 
+  // Helper function to clean HTML tags from URLs
+  function cleanUrlFromHtmlTags(url) {
+    if (!url) return url;
+    // Remove HTML tags from URL (e.g., <em>, <strong>, etc.)
+    return url.replace(/<[^>]+>/g, '');
+  }
+
+  // Helper function to generate descriptive link text from URL
+  function generateLinkText(url) {
+    if (!url) return 'Link';
+    
+    try {
+      // Clean URL first - decode URL-encoded characters
+      let cleanedUrl = url;
+      try {
+        cleanedUrl = decodeURIComponent(url);
+      } catch {
+        // If decoding fails, use original
+      }
+      
+      const urlObj = new URL(cleanedUrl);
+      let path = urlObj.pathname;
+      
+      // Extract meaningful text from path
+      // Remove common prefixes and get last meaningful segment
+      path = path.replace(/^\\/+/, '').replace(/\\/$/, '');
+      const segments = path.split('/').filter(s => s && !s.match(/^\\d+$/));
+      
+      if (segments.length > 0) {
+        // Get last meaningful segment
+        let text = segments[segments.length - 1];
+        
+        // Remove file extensions
+        text = text.replace(/\\.(html|htm|php|aspx|jsp)$/i, '');
+        
+        // Remove URL-encoded entities like &period;
+        text = text.replace(/&[a-z]+;/gi, '');
+        text = text.replace(/&amp;/g, '');
+        text = text.replace(/&nbsp;/g, ' ');
+        
+        // Remove numbers and special characters at the start
+        text = text.replace(/^[\\d&]+/, '');
+        
+        // Replace hyphens/underscores with spaces
+        text = text.replace(/[-_]/g, ' ');
+        
+        // Remove multiple spaces
+        text = text.replace(/\\s+/g, ' ').trim();
+        
+        // Capitalize first letter of each word
+        text = text.split(' ').map(word => {
+          if (!word) return '';
+          // Skip very short words or numbers
+          if (word.length < 2 || /^\\d+$/.test(word)) {
+            return word;
+          }
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        }).filter(w => w).join(' ');
+        
+        // Fallback to domain if path is not meaningful
+        if (!text || text.length < 3 || /^\\d+/.test(text)) {
+          text = urlObj.hostname.replace(/^www\\./, '');
+        }
+        
+        return text || 'Link';
+      }
+      
+      // Fallback to domain name
+      return urlObj.hostname.replace(/^www\\./, '');
+    } catch {
+      // If URL parsing fails, try to extract from string
+      const match = url.match(/(?:https?:\\/\\/)?(?:www\\.)?([^\\/]+)/);
+      return match ? match[1] : 'Link';
+    }
+  }
+
   function formatMessage(content) {
     // Convert text to HTML with enhanced formatting
     let formatted = content;
@@ -2338,8 +2414,62 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     // Skip deduplication for now to ensure markdown links work properly
     // TODO: Implement smarter deduplication that doesn't break markdown links
     
-    // Then, convert markdown-style links [text](url)
-    formatted = formatted.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline;">$1</a>');
+    // Step 1: Find all standalone URLs (not already in markdown links and not images) 
+    // and convert them to markdown links first
+    const urlPattern = /(https?:\\/\\/[^\\s)\\]]+)/gi;
+    const urlMatches = [];
+    let urlMatch;
+    
+    // Reset regex lastIndex
+    urlPattern.lastIndex = 0;
+    
+    while ((urlMatch = urlPattern.exec(content)) !== null) {
+      const url = urlMatch[1];
+      const startIndex = urlMatch.index;
+      const endIndex = startIndex + url.length;
+      
+      // Skip if it's an image URL
+      if (url.match(/\\.(jpg|jpeg|png|gif|webp|svg)(?:[?#]|$)/i)) {
+        continue;
+      }
+      
+      // Check if this URL is already inside a markdown link [text](url)
+      const before = content.substring(0, startIndex);
+      const after = content.substring(endIndex);
+      
+      // Check if it's inside markdown link [text](url)
+      const markdownLinkBefore = before.match(/\\[([^\\]]*)\\]\\($/);
+      if (markdownLinkBefore) {
+        continue; // Already in markdown link, skip
+      }
+      
+      urlMatches.push({
+        url: url,
+        startIndex: startIndex,
+        endIndex: endIndex
+      });
+    }
+    
+    // Process URLs in reverse order to preserve indices
+    // Add markdown links for standalone URLs
+    let contentWithMarkdownLinks = content;
+    for (let i = urlMatches.length - 1; i >= 0; i--) {
+      const match = urlMatches[i];
+      const cleanedUrl = cleanUrlFromHtmlTags(match.url);
+      const linkText = generateLinkText(cleanedUrl);
+      const markdownLink = \`[${linkText}](${cleanedUrl})\`;
+      
+      // Replace the URL with markdown link
+      contentWithMarkdownLinks = contentWithMarkdownLinks.substring(0, match.startIndex) + 
+                  markdownLink + 
+                  contentWithMarkdownLinks.substring(match.endIndex);
+    }
+    
+    // Step 2: Now convert all markdown links (including newly created ones) to HTML
+    formatted = contentWithMarkdownLinks.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, (match, linkText, url) => {
+      const cleanedUrl = cleanUrlFromHtmlTags(url);
+      return \`<a href="\${cleanedUrl}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline;">\${linkText}</a>\`;
+    });
     
     // Convert email addresses to mailto links
     formatted = formatted.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})/g, '<a href="mailto:$1" style="color: #4f46e5; text-decoration: underline;">$1</a>');
@@ -2389,9 +2519,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     let match;
     while ((match = urlRegex.exec(content)) !== null) {
-      const url = match[1];
+      const url = cleanUrlFromHtmlTags(match[1]);
       // Avoid duplicates
-      if (!imageUrls.includes(url)) {
+      if (url && !imageUrls.includes(url)) {
         imageUrls.push(url);
       }
     }
@@ -2453,7 +2583,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     while ((linkMatch = linkRegex.exec(messageText)) !== null) {
       const linkText = linkMatch[1];
-      const url = linkMatch[2];
+      const url = cleanUrlFromHtmlTags(linkMatch[2]);
       
       // Mark for fetching metadata
       products.push({
