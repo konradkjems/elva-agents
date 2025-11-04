@@ -2338,8 +2338,71 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   // Helper function to clean HTML tags from URLs
   function cleanUrlFromHtmlTags(url) {
     if (!url) return url;
-    // Remove HTML tags from URL (e.g., <em>, <strong>, etc.)
-    return url.replace(/<[^>]+>/g, '');
+    
+    let cleaned = url;
+    let wasDecoded = false;
+    
+    // First, try to decode URL-encoded HTML tags (e.g., %3Cem%3E = <em>)
+    try {
+      const decoded = decodeURIComponent(cleaned);
+      if (decoded !== cleaned) {
+        cleaned = decoded;
+        wasDecoded = true;
+      }
+    } catch {
+      // If decoding fails, continue with original URL
+    }
+    
+    // Remove HTML tags (e.g., <em>, <strong>, etc.)
+    cleaned = cleaned.replace(/<[^>]+>/g, '');
+    
+    // Also remove URL-encoded HTML tags directly (e.g., %3Cem%3E, %3C/em%3E)
+    // Pattern: %3C followed by tag name, optional attributes, then %3E
+    cleaned = cleaned.replace(/%3C(?:%2F)?(?:em|strong|b|i|u|span|div|p|br|a|img|script|style)[^%]*%3E/gi, '');
+    
+    // Remove any remaining URL-encoded angle brackets (%3C...%3E)
+    cleaned = cleaned.replace(/%3C[^%]*%3E/gi, '');
+    
+    // If we decoded and cleaned, we need to properly re-construct the URL
+    if (wasDecoded || cleaned !== url) {
+      try {
+        // Try to parse as URL to ensure it's valid
+        const urlObj = new URL(cleaned);
+        
+        // Re-encode pathname properly
+        const pathParts = urlObj.pathname.split('/').map(part => {
+          if (!part) return part;
+          // Encode each path segment
+          return encodeURIComponent(part);
+        });
+        
+        // Reconstruct URL with properly encoded path
+        urlObj.pathname = pathParts.join('/');
+        return urlObj.toString();
+      } catch {
+        // If URL parsing fails, try manual reconstruction
+        try {
+          const urlMatch = cleaned.match(/^(https?:\\/\\/)([^\\/]+)(.*)$/);
+          if (urlMatch) {
+            const protocol = urlMatch[1];
+            const domain = urlMatch[2];
+            const path = urlMatch[3];
+            
+            // Encode path segments
+            const pathSegments = path.split('/').map(segment => {
+              if (!segment) return segment;
+              return encodeURIComponent(segment);
+            });
+            
+            return protocol + domain + pathSegments.join('/');
+          }
+        } catch {
+          // If all else fails, return cleaned as-is
+        }
+      }
+    }
+    
+    return cleaned;
   }
 
   // Helper function to generate descriptive link text from URL
@@ -2370,13 +2433,15 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         // Remove file extensions
         text = text.replace(/\\.(html|htm|php|aspx|jsp)$/i, '');
         
-        // Remove URL-encoded entities like &period;
+        // Remove URL-encoded entities like &period; FIRST (before other processing)
+        text = text.replace(/&period;/gi, '.');
         text = text.replace(/&[a-z]+;/gi, '');
         text = text.replace(/&amp;/g, '');
         text = text.replace(/&nbsp;/g, ' ');
         
-        // Remove numbers and special characters at the start
-        text = text.replace(/^[\\d&]+/, '');
+        // Remove numbers and special characters at the start (including leading dots)
+        text = text.replace(/^[\\d&]+\\.?/, '');
+        text = text.replace(/^\\.+/, ''); // Remove leading dots
         
         // Replace hyphens/underscores with spaces
         text = text.replace(/[-_]/g, ' ');
@@ -2428,9 +2493,17 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     urlPattern.lastIndex = 0;
     
     while ((urlMatch = urlPattern.exec(content)) !== null) {
-      const url = urlMatch[1];
+      let url = urlMatch[1];
       const startIndex = urlMatch.index;
-      const endIndex = startIndex + url.length;
+      let endIndex = startIndex + url.length;
+      
+      // Trim trailing spaces/newlines from URL
+      const originalUrl = url;
+      url = url.trim();
+      if (url !== originalUrl) {
+        // Adjust endIndex if we trimmed
+        endIndex = startIndex + originalUrl.length;
+      }
       
       // Skip if it's an image URL
       if (url.match(/\\.(jpg|jpeg|png|gif|webp|svg)(?:[?#]|$)/i)) {
@@ -2448,7 +2521,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       }
       
       urlMatches.push({
-        url: url,
+        url: url.trim(), // Store trimmed URL
         startIndex: startIndex,
         endIndex: endIndex
       });
@@ -2461,7 +2534,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       const match = urlMatches[i];
       const cleanedUrl = cleanUrlFromHtmlTags(match.url);
       const linkText = generateLinkText(cleanedUrl);
-      const markdownLink = \`[${linkText}](${cleanedUrl})\`;
+      const markdownLink = '[' + linkText + '](' + cleanedUrl + ')';
       
       // Replace the URL with markdown link
       contentWithMarkdownLinks = contentWithMarkdownLinks.substring(0, match.startIndex) + 
@@ -2470,9 +2543,16 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     }
     
     // Step 2: Now convert all markdown links (including newly created ones) to HTML
+    // Use a more robust regex that handles URLs with special characters
     formatted = contentWithMarkdownLinks.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, (match, linkText, url) => {
-      const cleanedUrl = cleanUrlFromHtmlTags(url);
-      return \`<a href="\${cleanedUrl}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline;">\${linkText}</a>\`;
+      // Clean URL from HTML tags and ensure it's valid
+      const cleanedUrl = cleanUrlFromHtmlTags(url.trim());
+      // Only create link if URL is valid
+      if (cleanedUrl && cleanedUrl.startsWith('http')) {
+        return \`<a href="\${cleanedUrl}" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline;">\${linkText}</a>\`;
+      }
+      // If URL is invalid, return the link text as plain text
+      return linkText;
     });
     
     // Convert email addresses to mailto links
@@ -2523,9 +2603,21 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     let match;
     while ((match = urlRegex.exec(content)) !== null) {
-      const url = cleanUrlFromHtmlTags(match[1]);
-      // Avoid duplicates
-      if (url && !imageUrls.includes(url)) {
+      let url = match[1];
+      
+      // Clean URL from HTML tags (handles both raw and URL-encoded tags)
+      url = cleanUrlFromHtmlTags(url);
+      
+      // Double-check: if URL still contains HTML tags after cleaning, try again
+      // This handles cases where tags might be nested or encoded multiple times
+      let previousUrl = '';
+      while (url !== previousUrl && (url.includes('<') || url.includes('>') || url.includes('%3C') || url.includes('%3E'))) {
+        previousUrl = url;
+        url = cleanUrlFromHtmlTags(url);
+      }
+      
+      // Avoid duplicates and ensure URL is valid
+      if (url && url.length > 0 && !imageUrls.includes(url) && url.startsWith('http')) {
         imageUrls.push(url);
       }
     }
@@ -3202,6 +3294,9 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         \`;
         
         imageUrls.forEach(imageUrl => {
+          // Clean URL one more time before using it (defense in depth)
+          const cleanedImageUrl = cleanUrlFromHtmlTags(imageUrl);
+          
           const imageWrapper = document.createElement("div");
           imageWrapper.style.cssText = \`
             display: flex;
@@ -3210,7 +3305,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           \`;
           
           const imageElement = document.createElement("img");
-          imageElement.src = imageUrl;
+          imageElement.src = cleanedImageUrl;
           imageElement.alt = "Referenced image";
           imageElement.style.cssText = \`
             max-width: 100%;
@@ -3233,8 +3328,8 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           };
           
           imageElement.onclick = () => {
-            // Open image in new tab on click
-            window.open(imageUrl, '_blank');
+            // Open image in new tab on click (use cleaned URL)
+            window.open(cleanedImageUrl, '_blank');
           };
           
           // Handle image load errors
