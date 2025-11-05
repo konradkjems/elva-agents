@@ -820,9 +820,11 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     transition: all 0.2s ease;
     z-index: 2;
     border-radius: 4px;
+    pointer-events: auto;
   \`;
 
   // INPUT FIELD - Med padding til venstre for mikrofon
+  // Initial padding will be updated based on actual button visibility
   const input = document.createElement("input");
   input.type = "text";
   input.className = "widget-input";
@@ -839,9 +841,13 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     color: \${themeColors.textColor};
     transition: all 0.2s ease;
     box-sizing: border-box;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
   \`;
 
   // LABEL - Justeret for mikrofon ikon
+  // Initial position will be updated based on actual button visibility
   const inputLabel = document.createElement("label");
   inputLabel.htmlFor = "widget-input-field";
   inputLabel.textContent = WIDGET_CONFIG.messages.inputPlaceholder || "Stil et spørgsmål";
@@ -856,6 +862,10 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     pointer-events: none;
     transition: all 0.3s ease;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 100px);
   \`;
 
   // Disable input if widget is blocked
@@ -897,15 +907,19 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     imageUploadButton.type = 'button';
     imageUploadButton.className = 'elva-image-upload-btn';
     imageUploadButton.innerHTML = \`
-      <svg class="image-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-        <circle cx="9" cy="9" r="2"/>
-        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+      <svg class="image-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="-4.5 0 24 24" fill="currentColor">
+        <path d="m9.818 0c-3.012 0-5.455 2.442-5.455 5.455v9.818c0 1.808 1.465 3.273 3.273 3.273s3.273-1.465 3.273-3.273v-5.665c-.017-.589-.499-1.061-1.091-1.061s-1.074.471-1.091 1.059v.002 5.665.031c0 .603-.489 1.091-1.091 1.091s-1.091-.489-1.091-1.091c0-.011 0-.021 0-.032v.002-9.818c0-1.808 1.465-3.273 3.273-3.273s3.273 1.465 3.273 3.273v10.906c0 3.012-2.442 5.455-5.455 5.455s-5.455-2.442-5.455-5.455v-10.906c0-.009 0-.02 0-.031 0-.603-.489-1.091-1.091-1.091s-1.091.489-1.091 1.091v.032-.002 10.906c0 4.217 3.419 7.636 7.636 7.636s7.636-3.419 7.636-7.636v-10.906c-.003-3.011-2.444-5.452-5.455-5.455z"/>
       </svg>
     \`;
+    // Calculate position based on whether voice button is visible
+    // Voice button is at 12px from left, width ~32px, so image button should be at ~46px
+    // But we need to check if voice button is actually visible (not hidden by browser support)
+    const voiceButtonVisible = WIDGET_CONFIG.messages.voiceInput.enabled && 
+                               ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+    
     imageUploadButton.style.cssText = \`
       position: absolute;
-      left: \${WIDGET_CONFIG.messages.voiceInput.enabled ? '46px' : '16px'};
+      left: \${voiceButtonVisible ? '46px' : '16px'};
       top: 50%;
       transform: translateY(-50%);
       background: transparent;
@@ -917,28 +931,80 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      z-index: 10;
+      z-index: 3;
+      pointer-events: auto;
     \`;
     
     // Update input padding to make room for image button
     // Add extra padding for better spacing between image button and placeholder text
-    const leftPadding = WIDGET_CONFIG.messages.voiceInput.enabled ? '84px' : '54px';
+    // Voice button (32px) + gap (14px) + Image button (36px) = ~82px total
+    const leftPadding = voiceButtonVisible ? '82px' : '54px';
     input.style.paddingLeft = leftPadding;
     inputLabel.style.left = leftPadding;
     
+    // Add tooltip
+    imageUploadButton.setAttribute('title', 'Upload images - The Chatbot can understand images');
+    imageUploadButton.setAttribute('aria-label', 'Upload images - The Chatbot can understand images');
+    
+    // Create custom tooltip element
+    const tooltip = document.createElement('div');
+    tooltip.className = 'elva-image-upload-tooltip';
+    tooltip.textContent = 'Upload images - The Chatbot can understand images';
+    tooltip.style.cssText = \`
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      margin-bottom: 8px;
+      z-index: 1000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    \`;
+    
+    // Add tooltip arrow
+    const tooltipArrow = document.createElement('div');
+    tooltipArrow.style.cssText = \`
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 6px solid rgba(0, 0, 0, 0.9);
+    \`;
+    tooltip.appendChild(tooltipArrow);
+    
+    // Make button relative for tooltip positioning
+    imageUploadButton.style.position = 'absolute';
+    imageUploadButton.appendChild(tooltip);
+    
     imageUploadButton.onclick = () => fileInput.click();
     
-    // Hover effects with rounded corners
+    // Hover effects with rounded corners and tooltip
     imageUploadButton.onmouseover = () => {
       imageUploadButton.style.backgroundColor = 'rgba(107, 114, 128, 0.1)';
       imageUploadButton.style.transform = 'translateY(-50%) scale(1.05)';
       imageUploadButton.style.borderRadius = '8px';
+      tooltip.style.opacity = '1';
+      tooltip.style.transform = 'translateX(-50%) translateY(-4px)';
     };
     
     imageUploadButton.onmouseout = () => {
       imageUploadButton.style.backgroundColor = 'transparent';
       imageUploadButton.style.transform = 'translateY(-50%) scale(1)';
       imageUploadButton.style.borderRadius = '8px';
+      tooltip.style.opacity = '0';
+      tooltip.style.transform = 'translateX(-50%) translateY(-8px)';
     };
     // Handle file selection
     fileInput.addEventListener('change', async (e) => {
@@ -1012,6 +1078,22 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     inputFieldWrapper.appendChild(imageUploadButton);
     inputFieldWrapper.appendChild(fileInput);
+    
+    // Update positions after voice button visibility is determined
+    // This ensures Firefox (which doesn't support voice) gets correct positioning
+    setTimeout(() => {
+      const voiceBtnVisible = voiceButton && voiceButton.style.display !== 'none' && 
+                             WIDGET_CONFIG.messages.voiceInput.enabled &&
+                             recognition !== null;
+      
+      if (imageUploadButton) {
+        imageUploadButton.style.left = voiceBtnVisible ? '46px' : '16px';
+      }
+      
+      const leftPad = voiceBtnVisible ? '82px' : '54px';
+      input.style.paddingLeft = leftPad;
+      inputLabel.style.left = leftPad;
+    }, 100);
   }
 
   // Image preview helper function
@@ -1130,51 +1212,79 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
 
   // Initialize Speech Recognition if voice input is enabled
   if (WIDGET_CONFIG.messages.voiceInput.enabled) {
-    // Check browser support
+    // Check browser support - Firefox doesn't support Web Speech API natively
+    // Chrome/Edge use webkitSpeechRecognition, Safari also supports it
     const hasVoiceSupport = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
     
     if (hasVoiceSupport) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      
-      recognition.continuous = WIDGET_CONFIG.messages.voiceInput.continuousRecording;
-      recognition.interimResults = true;
-      recognition.lang = WIDGET_CONFIG.messages.voiceInput.language;
-      
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join('');
-        input.value = transcript;
-        updateLabelPosition();
-      };
-      
-      recognition.onend = () => {
-        if (WIDGET_CONFIG.messages.voiceInput.autoSendOnComplete && input.value.trim()) {
-          sendMessage();
-        }
-        isRecording = false;
-        updateVoiceButtonState();
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        isRecording = false;
-        updateVoiceButtonState();
+      try {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
         
-        // Show user-friendly error message
-        if (event.error === 'not-allowed') {
-          alert('Mikrofon tilladelse er nødvendig for voice input. Tillad adgang i dine browser indstillinger.');
-        } else if (event.error === 'no-speech') {
-          console.log('No speech detected');
+        recognition.continuous = WIDGET_CONFIG.messages.voiceInput.continuousRecording;
+        recognition.interimResults = true;
+        recognition.lang = WIDGET_CONFIG.messages.voiceInput.language;
+        
+        recognition.onresult = (event) => {
+          const transcript = Array.from(event.results)
+            .map(result => result[0].transcript)
+            .join('');
+          input.value = transcript;
+          updateLabelPosition();
+        };
+        
+        recognition.onend = () => {
+          if (WIDGET_CONFIG.messages.voiceInput.autoSendOnComplete && input.value.trim()) {
+            sendMessage();
+          }
+          isRecording = false;
+          updateVoiceButtonState();
+        };
+        
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          isRecording = false;
+          updateVoiceButtonState();
+          
+          // Show user-friendly error message
+          if (event.error === 'not-allowed') {
+            alert('Mikrofon tilladelse er nødvendig for voice input. Tillad adgang i dine browser indstillinger.');
+          } else if (event.error === 'no-speech') {
+            console.log('No speech detected');
+          }
+        };
+      } catch (error) {
+        console.error('Failed to initialize Speech Recognition:', error);
+        // Hide voice button if initialization fails
+        voiceButton.style.display = 'none';
+        // Adjust input padding back to normal
+        const basePadding = WIDGET_CONFIG.settings?.imageUpload?.enabled ? '54px' : '16px';
+        input.style.paddingLeft = basePadding;
+        inputLabel.style.left = basePadding;
+        // Update image button position if it exists
+        if (imageUploadButton) {
+          imageUploadButton.style.left = '16px';
         }
-      };
+      }
     } else {
-      // Hide voice button if not supported
+      // Hide voice button if not supported (e.g., Firefox)
       voiceButton.style.display = 'none';
       // Adjust input padding back to normal
-      input.style.padding = '0 16px';
-      inputLabel.style.left = '16px';
+      const basePadding = WIDGET_CONFIG.settings?.imageUpload?.enabled ? '54px' : '16px';
+      input.style.paddingLeft = basePadding;
+      inputLabel.style.left = basePadding;
+      // Update image button position if it exists (it will be defined later, but we set it here)
+      // We'll update it after imageUploadButton is created if needed
+      setTimeout(() => {
+        if (imageUploadButton) {
+          imageUploadButton.style.left = '16px';
+          // Also update input padding if image button exists
+          if (WIDGET_CONFIG.settings?.imageUpload?.enabled) {
+            input.style.paddingLeft = '54px';
+            inputLabel.style.left = '54px';
+          }
+        }
+      }, 0);
     }
   }
 
@@ -1197,8 +1307,12 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   }
 
   // Voice button event handlers
+  // Only attach if voice input is enabled AND recognition is available
   if (WIDGET_CONFIG.messages.voiceInput.enabled && recognition) {
-    voiceButton.onclick = () => {
+    voiceButton.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
       if (!recognition) {
         alert('Voice input is not supported in your browser');
         return;
@@ -1213,7 +1327,12 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
           updateVoiceButtonState();
         } catch (error) {
           console.error('Failed to start speech recognition:', error);
-          alert('Kunne ikke starte voice input. Prøv igen.');
+          isRecording = false;
+          updateVoiceButtonState();
+          // Don't show alert for common errors like "already started"
+          if (error.name !== 'InvalidStateError') {
+            alert('Kunne ikke starte voice input. Prøv igen.');
+          }
         }
       }
     };
@@ -2494,7 +2613,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
     
     while ((urlMatch = urlPattern.exec(content)) !== null) {
       let url = urlMatch[1];
-      const startIndex = urlMatch.index;
+      const startIndex = urlMatch.index;  
       let endIndex = startIndex + url.length;
       
       // Trim trailing spaces/newlines from URL
