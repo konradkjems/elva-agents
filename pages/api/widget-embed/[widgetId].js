@@ -656,6 +656,18 @@ export default async function handler(req, res) {
             // Fjern banner hvis bannerText ikke længere er tilgængelig
             bannerElement.remove();
           }
+
+          // Opdater "Available now" tekst hvis den findes
+          const availableNowElement = document.getElementById('available-now-text_' + WIDGET_CONFIG.widgetId);
+          if (availableNowElement && WIDGET_CONFIG.messages.availableNowText) {
+            // Behold kun den første child (online indicator dot) og opdater teksten
+            const onlineIndicator = availableNowElement.querySelector('div');
+            availableNowElement.innerHTML = '';
+            if (onlineIndicator) {
+              availableNowElement.appendChild(onlineIndicator);
+            }
+            availableNowElement.appendChild(document.createTextNode(WIDGET_CONFIG.messages.availableNowText));
+          }
         }, 100); // Lille delay for at sikre DOM er klar
       } else {
         console.log('🌐 Custom language mode: Language', userLanguage, 'not supported, using default labels for widget:', WIDGET_CONFIG.widgetId);
@@ -1287,7 +1299,7 @@ export default async function handler(req, res) {
       </div>
       <div>
         <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant'}</div>
-        <div style="font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 6px;">
+        <div id="available-now-text_\${WIDGET_CONFIG.widgetId}" style="font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 6px;">
           <div style="width: 6px; height: 6px; background: \${WIDGET_CONFIG.appearance.onlineIndicatorColor}; border-radius: 50%; animation: pulse 2s infinite;"></div>
           \${(WIDGET_CONFIG.messages.availableNowText !== null && WIDGET_CONFIG.messages.availableNowText !== undefined && WIDGET_CONFIG.messages.availableNowText !== '') ? WIDGET_CONFIG.messages.availableNowText : 'Tilgængelig nu'}
         </div>
