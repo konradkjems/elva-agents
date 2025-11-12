@@ -77,6 +77,8 @@ export const authOptions = {
   session: {
     strategy: 'jwt',
     maxAge: 24 * 60 * 60, // 24 hours
+    updateAge: 60 * 60, // Update session every hour when active
+    rolling: true, // Extend session on activity
   },
   callbacks: {
     async signIn({ user, account, profile }) {

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Test - Custom Language Mode</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>🧪 Widget Test - Standard Labels (No Auto-Detection)</h1>
+        <p>Denne side tester widgetten når Custom Language Mode er deaktiveret - den bruger standard labels uden sprog-detektion.</p>
+
+        <div class="status warning" style="background: #fff3cd; color: #856404; border: 1px solid #ffeaa7;">
+            ⚠️ <strong>Custom Language Mode is DISABLED</strong> on this widget<br>
+            <strong>This page shows standard labels (no auto-detection)</strong>
+        </div>
+
+        <div class="status info">
+            ℹ️ Med Custom Language Mode deaktiveret bruger widgetten standard labels uden sprog-detektion
+        </div>
+
+        <h3>Hvad skal testes:</h3>
+        <ul>
+            <li>☐ Widget viser standard labels fra Messages sektionen</li>
+            <li>☐ Widget ignorerer HTML lang attribute (lang="en" har ingen effekt)</li>
+            <li>☐ Ingen auto-detektion - altid de samme labels</li>
+            <li>☐ Labels ændrer sig ikke når du skifter mellem sprog sider</li>
+            <li>☐ Konsol viser: "🌐 Using standard labels (no language detection)"</li>
+        </ul>
+
+        <p><strong>Du kan ændre de manuelle labels her:</strong></p>
+        <p>➡️ <a href="http://localhost:3000/admin/widgets/6901df174edacd0efa1c1320" target="_blank">Widget Editor → Messages</a></p>
+
+        <h3>Sådan testes standard labels (ingen auto-detektion):</h3>
+        <ol>
+            <li>Se på widget labels - de burde være standard labels fra Messages sektionen</li>
+            <li>Skift til andre test sider (da, en, de, sv, no)</li>
+            <li>Bemærk at labels forbliver de samme på trods af forskellige HTML lang attributes</li>
+            <li>Ændr labels i editoren og se ændringerne her</li>
+            <li>Tjek konsol: "🌐 Using standard labels (no language detection)"</li>
+        </ol>
+
+        <h3>For at aktivere auto-detektion:</h3>
+        <ol>
+            <li>Gå til <a href="http://localhost:3000/admin/widgets/6901df174edacd0efa1c1320" target="_blank">widget editoren</a></li>
+            <li>Find "Messages" sektionen</li>
+            <li><strong>Slå TIL</strong> "Custom Language Mode" toggle</li>
+            <li>Gem ændringer</li>
+            <li>Test de andre sprog sider for auto-detektion</li>
+        </ol>
+    </div>
+
+    <!-- Widget Script -->
+    <script src="http://localhost:3000/api/widget-embed/6901df174edacd0efa1c1320"></script>
+
+    <div class="test-info">
+        <h3>Debug Information:</h3>
+        <p><strong>HTML lang:</strong> <span id="html-lang"></span> (skal ignoreres)</p>
+        <p><strong>Browser sprog:</strong> <span id="browser-lang"></span> (skal ignoreres)</p>
+        <p><strong>Custom Language Mode:</strong> <span id="custom-mode">Ukendt</span></p>
+
+        <script>
+            document.getElementById('html-lang').textContent = document.documentElement.lang;
+            document.getElementById('browser-lang').textContent = navigator.language;
+
+            // Simuler check af custom language mode (kun til test)
+            setTimeout(() => {
+                // Dette ville normalt komme fra WIDGET_CONFIG
+                document.getElementById('custom-mode').textContent = 'Aktiveret (hvis sat i editor)';
+            }, 1000);
+        </script>
+    </div>
+
+    <div class="test-info">
+        <h2>🔧 For at teste Custom Language Mode:</h2>
+        <ol>
+            <li>Gå til <a href="http://localhost:3000/admin/widgets/6901df174edacd0efa1c1320" target="_blank">widget editor</a></li>
+            <li>Find Messages sektionen</li>
+            <li>Aktivér "Custom Language Mode" toggle</li>
+            <li>Rediger labels efter behov</li>
+            <li>Gem ændringer</li>
+            <li>Genindlæs denne side</li>
+            <li>Verificér at widgetten bruger dine brugerdefinerede labels</li>
+        </ol>
+    </div>
+
+</body>
+</html>

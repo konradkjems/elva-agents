@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Switch } from '@headlessui/react';
-import { 
-  PaintBrushIcon, 
-  ChatBubbleLeftRightIcon, 
-  BuildingOfficeIcon, 
+import {
+  PaintBrushIcon,
+  ChatBubbleLeftRightIcon,
+  BuildingOfficeIcon,
   Cog6ToothIcon,
   CodeBracketIcon,
   InformationCircleIcon,
@@ -13,7 +13,8 @@ import {
   ArrowsPointingOutIcon,
   MagnifyingGlassIcon,
   StarIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import {
   Accordion,
@@ -26,9 +27,147 @@ import FileUpload from './FileUpload';
 import AdvancedSettings from './AdvancedSettings';
 import ImageZoomModal from './ImageZoomModal';
 
+// Default enabled languages
+const defaultEnabledLanguages = ['da', 'en', 'de', 'sv', 'no'];
+
+const defaultLanguagePacks = {
+  'da': {
+    welcomeMessage: 'Hej! Hvordan kan jeg hjælpe dig i dag?',
+    popupMessage: 'Hej! Har du brug for hjælp?',
+    typingText: 'AI tænker...',
+    inputPlaceholder: 'Skriv din besked...',
+    bannerText: 'Velkommen til vores kundeservice chat!',
+    suggestedResponses: [
+      'Hvad kan du hjælpe mig med?',
+      'Fortæl mig mere om jeres services',
+      'Hvordan kommer jeg i gang?',
+      'Kontakt support'
+    ],
+    newConversationLabel: 'Ny samtale',
+    conversationHistoryLabel: 'Samtalehistorik',
+    conversationLoadedLabel: 'Samtale indlæst',
+    todayLabel: 'I dag',
+    yesterdayLabel: 'I går',
+    daysAgoSuffix: 'd',
+    messagesLabel: 'beskeder',
+    noConversationsLabel: 'Ingen tidligere samtaler',
+    startConversationLabel: 'Start en samtale for at se den her',
+    conversationDeletedLabel: 'Samtale slettet',
+    newConversationStartedLabel: 'Ny samtale startet',
+    disclaimerText: 'Opgiv ikke personlige oplysninger'
+  },
+  'en': {
+    welcomeMessage: 'Hello! How can I help you today?',
+    popupMessage: 'Hi! Need help?',
+    typingText: 'AI is thinking...',
+    inputPlaceholder: 'Type your message...',
+    bannerText: 'Welcome to our customer service chat!',
+    suggestedResponses: [
+      'What can you help me with?',
+      'Tell me more about your services',
+      'How do I get started?',
+      'Contact support'
+    ],
+    newConversationLabel: 'New conversation',
+    conversationHistoryLabel: 'Conversation history',
+    conversationLoadedLabel: 'Conversation loaded',
+    todayLabel: 'Today',
+    yesterdayLabel: 'Yesterday',
+    daysAgoSuffix: 'd',
+    messagesLabel: 'messages',
+    noConversationsLabel: 'No previous conversations',
+    startConversationLabel: 'Start a conversation to see it here',
+    conversationDeletedLabel: 'Conversation deleted',
+    newConversationStartedLabel: 'New conversation started',
+    disclaimerText: 'Do not share personal information'
+  },
+  'de': {
+    welcomeMessage: 'Hallo! Wie kann ich Ihnen heute helfen?',
+    popupMessage: 'Hallo! Brauchen Sie Hilfe?',
+    typingText: 'KI denkt nach...',
+    inputPlaceholder: 'Schreiben Sie Ihre Nachricht...',
+    bannerText: 'Willkommen in unserem Kundenservice-Chat!',
+    suggestedResponses: [
+      'Womit können Sie mir helfen?',
+      'Erzählen Sie mir mehr über Ihre Dienstleistungen',
+      'Wie fange ich an?',
+      'Kontaktieren Sie den Support'
+    ],
+    newConversationLabel: 'Neues Gespräch',
+    conversationHistoryLabel: 'Gesprächsverlauf',
+    conversationLoadedLabel: 'Gespräch geladen',
+    todayLabel: 'Heute',
+    yesterdayLabel: 'Gestern',
+    daysAgoSuffix: 'd',
+    messagesLabel: 'Nachrichten',
+    noConversationsLabel: 'Keine früheren Gespräche',
+    startConversationLabel: 'Starten Sie ein Gespräch, um es hier zu sehen',
+    conversationDeletedLabel: 'Gespräch gelöscht',
+    newConversationStartedLabel: 'Neues Gespräch gestartet',
+    disclaimerText: 'Geben Sie keine persönlichen Informationen preis'
+  },
+  'sv': {
+    welcomeMessage: 'Hej! Hur kan jag hjälpa dig idag?',
+    popupMessage: 'Hej! Behöver du hjälp?',
+    typingText: 'AI tänker...',
+    inputPlaceholder: 'Skriv ditt meddelande...',
+    bannerText: 'Välkommen till vår kundservicechatt!',
+    suggestedResponses: [
+      'Vad kan du hjälpa mig med?',
+      'Berätta mer om era tjänster',
+      'Hur kommer jag igång?',
+      'Kontakta support'
+    ],
+    newConversationLabel: 'Nytt samtal',
+    conversationHistoryLabel: 'Samtalshistorik',
+    conversationLoadedLabel: 'Samtal laddat',
+    todayLabel: 'Idag',
+    yesterdayLabel: 'Igår',
+    daysAgoSuffix: 'd',
+    messagesLabel: 'meddelanden',
+    noConversationsLabel: 'Inga tidigare samtal',
+    startConversationLabel: 'Starta ett samtal för att se det här',
+    conversationDeletedLabel: 'Samtal raderat',
+    newConversationStartedLabel: 'Nytt samtal startat',
+    disclaimerText: 'Dela inte personlig information'
+  },
+  'no': {
+    welcomeMessage: 'Hei! Hvordan kan jeg hjelpe deg i dag?',
+    popupMessage: 'Hei! Trenger du hjelp?',
+    typingText: 'AI tenker...',
+    inputPlaceholder: 'Skriv meldingen din...',
+    bannerText: 'Velkommen til vår kundeservicechat!',
+    suggestedResponses: [
+      'Hva kan du hjelpe meg med?',
+      'Fortell meg mer om tjenestene deres',
+      'Hvordan kommer jeg i gang?',
+      'Kontakt support'
+    ],
+    newConversationLabel: 'Ny samtale',
+    conversationHistoryLabel: 'Samtalehistorikk',
+    conversationLoadedLabel: 'Samtale lastet',
+    todayLabel: 'I dag',
+    yesterdayLabel: 'I går',
+    daysAgoSuffix: 'd',
+    messagesLabel: 'meldinger',
+    noConversationsLabel: 'Ingen tidligere samtaler',
+    startConversationLabel: 'Start en samtale for å se den her',
+    conversationDeletedLabel: 'Samtale slettet',
+    newConversationStartedLabel: 'Ny samtale startet',
+    disclaimerText: 'Ikke del personlig informasjon'
+  }
+};
+
 export default function SettingsPanel({ settings, onChange, onSave, saving }) {
   const [validationErrors, setValidationErrors] = useState({});
   const [isImageZoomModalOpen, setIsImageZoomModalOpen] = useState(false);
+
+  const getLanguagePackValue = (langCode, field) => {
+    // Først tjek brugerdefinerede værdier, derefter default værdier
+    return settings.messages?.languagePacks?.[langCode]?.[field] ??
+           defaultLanguagePacks[langCode]?.[field] ??
+           '';
+  };
 
   const updateSetting = (section, key, value) => {
     // Clear validation error when user makes changes
@@ -464,6 +603,22 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Banner Text
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.messages?.bannerText || ''}
+                        onChange={(e) => handleFieldChange('messages', 'bannerText', e.target.value)}
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="Velkommen til vores kundeservice chat!"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Optional banner text shown at the top of the chat widget
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Typing Indicator Text
                       </label>
                       <input
@@ -550,188 +705,487 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       </p>
                     </div>
 
+                    {/* Custom Language Toggle */}
+                    <div>
+                      <Switch.Group>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Custom Language Mode
+                            </Switch.Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Disable automatic language detection and use only manually defined labels
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.messages?.customLanguage || false}
+                            onChange={(checked) => handleFieldChange('messages', 'customLanguage', checked)}
+                            className={`${
+                              settings.messages?.customLanguage ? 'bg-purple-600' : 'bg-gray-200'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
+                          >
+                            <span
+                              className={`${
+                                settings.messages?.customLanguage ? 'translate-x-6' : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            />
+                          </Switch>
+                        </div>
+                      </Switch.Group>
+                      {settings.messages?.customLanguage && (
+                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <p className="text-xs text-blue-800 dark:text-blue-300">
+                            When enabled, the widget will not automatically detect and apply language-specific labels.
+                            All labels must be manually defined above.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Enabled Languages Section */}
+                      {settings.messages?.customLanguage && (
+                        <div className="mt-4">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                            Enabled Languages
+                          </label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                            Select which languages should be available for auto-detection.
+                          </p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {[
+                              { code: 'da', name: 'Dansk' },
+                              { code: 'en', name: 'English' },
+                              { code: 'de', name: 'Deutsch' },
+                              { code: 'sv', name: 'Svenska' },
+                              { code: 'no', name: 'Norsk' }
+                            ].map((lang) => {
+                              const enabledLanguages = settings.messages?.enabledLanguages || defaultEnabledLanguages;
+                              const isEnabled = enabledLanguages.includes(lang.code);
+
+                              return (
+                                <div key={lang.code} className="flex items-center space-x-2">
+                                  <Switch
+                                    checked={isEnabled}
+                                    onChange={(checked) => {
+                                      const currentEnabled = settings.messages?.enabledLanguages || defaultEnabledLanguages;
+                                      let newEnabled;
+
+                                      if (checked) {
+                                        newEnabled = [...currentEnabled, lang.code];
+                                      } else {
+                                        newEnabled = currentEnabled.filter(code => code !== lang.code);
+                                        // Ensure at least one language is always enabled
+                                        if (newEnabled.length === 0) {
+                                          newEnabled = ['en'];
+                                        }
+                                      }
+
+                                      handleFieldChange('messages', 'enabledLanguages', newEnabled);
+                                    }}
+                                    className={`${
+                                      isEnabled ? 'bg-green-600' : 'bg-gray-200'
+                                    } relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
+                                  >
+                                    <span
+                                      className={`${
+                                        isEnabled ? 'translate-x-5' : 'translate-x-1'
+                                      } inline-block h-3 w-3 transform rounded-full bg-white transition-transform`}
+                                    />
+                                  </Switch>
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    {lang.name}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Language Packs Section */}
+                    <div className="border-t pt-6 mt-6">
+                      <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                        Language Packs
+                      </h5>
+
+                      <div className="space-y-6">
+                        {(settings.messages?.enabledLanguages || defaultEnabledLanguages).map((langCode) => {
+                          const langNames = {
+                            'da': 'Dansk',
+                            'en': 'English',
+                            'de': 'Deutsch',
+                            'sv': 'Svenska',
+                            'no': 'Norsk'
+                          };
+
+                          return (
+                            <details key={langCode} className="bg-gray-50 dark:bg-gray-800 rounded-lg">
+                              <summary className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center justify-between">
+                                <span>{langNames[langCode]} ({langCode.toUpperCase()})</span>
+                                <svg className="w-4 h-4 text-gray-500 dark:text-gray-400 transform transition-transform duration-200 details-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </summary>
+                              <div className="px-4 pb-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                      Welcome Message
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={getLanguagePackValue(langCode, 'welcomeMessage')}
+                                      onChange={(e) => handleFieldChange('messages', 'languagePacks', {
+                                        ...settings.messages?.languagePacks,
+                                        [langCode]: {
+                                          ...settings.messages?.languagePacks?.[langCode],
+                                          welcomeMessage: e.target.value
+                                        }
+                                      })}
+                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      placeholder="Welcome message..."
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                      Input Placeholder
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={getLanguagePackValue(langCode, 'inputPlaceholder')}
+                                      onChange={(e) => handleFieldChange('messages', 'languagePacks', {
+                                        ...settings.messages?.languagePacks,
+                                        [langCode]: {
+                                          ...settings.messages?.languagePacks?.[langCode],
+                                          inputPlaceholder: e.target.value
+                                        }
+                                      })}
+                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      placeholder="Type your message..."
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                      Typing Text
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={getLanguagePackValue(langCode, 'typingText')}
+                                      onChange={(e) => handleFieldChange('messages', 'languagePacks', {
+                                        ...settings.messages?.languagePacks,
+                                        [langCode]: {
+                                          ...settings.messages?.languagePacks?.[langCode],
+                                          typingText: e.target.value
+                                        }
+                                      })}
+                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      placeholder="AI is thinking..."
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                      Disclaimer Text
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={getLanguagePackValue(langCode, 'disclaimerText')}
+                                      onChange={(e) => handleFieldChange('messages', 'languagePacks', {
+                                        ...settings.messages?.languagePacks,
+                                        [langCode]: {
+                                          ...settings.messages?.languagePacks?.[langCode],
+                                          disclaimerText: e.target.value
+                                        }
+                                      })}
+                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      placeholder="Disclaimer text..."
+                                    />
+                                  </div>
+                                </div>
+
+                                <details className="mt-4">
+                                  <summary className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-800 dark:hover:text-blue-300">
+                                    Show all labels
+                                  </summary>
+                                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {[
+                                      'availableNowText', 'suggestedResponses', 'bannerText', 'popupMessage', 'newConversationLabel', 'conversationHistoryLabel',
+                                      'conversationLoadedLabel', 'todayLabel', 'yesterdayLabel',
+                                      'daysAgoSuffix', 'messagesLabel', 'noConversationsLabel',
+                                      'startConversationLabel', 'conversationDeletedLabel', 'newConversationStartedLabel'
+                                    ].map((labelKey) => (
+                                      <div key={labelKey}>
+                                        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 capitalize">
+                                          {labelKey.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                                        </label>
+                                        {labelKey === 'suggestedResponses' ? (
+                                          <textarea
+                                            value={Array.isArray(getLanguagePackValue(langCode, labelKey))
+                                              ? getLanguagePackValue(langCode, labelKey).join('\n')
+                                              : ''}
+                                            onChange={(e) => {
+                                              const lines = e.target.value.split('\n').filter(line => line.trim());
+                                              handleFieldChange('messages', 'languagePacks', {
+                                                ...settings.messages?.languagePacks,
+                                                [langCode]: {
+                                                  ...settings.messages?.languagePacks?.[langCode],
+                                                  [labelKey]: lines
+                                                }
+                                              });
+                                            }}
+                                            rows={4}
+                                            className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono"
+                                            placeholder="Enter one suggestion per line..."
+                                          />
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            value={getLanguagePackValue(langCode, labelKey)}
+                                            onChange={(e) => handleFieldChange('messages', 'languagePacks', {
+                                              ...settings.messages?.languagePacks,
+                                              [langCode]: {
+                                                ...settings.messages?.languagePacks?.[langCode],
+                                                [labelKey]: e.target.value
+                                              }
+                                            })}
+                                            className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                            placeholder={`${labelKey}...`}
+                                          />
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              </div>
+                            </details>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {/* Labels Section */}
                     <div className="border-t pt-6 mt-6">
                       <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">
                         Menu & Conversation Labels
                       </h5>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "Ny samtale" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.newConversationLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'newConversationLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Ny samtale"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Label for the "New conversation" button in the menu
-                          </p>
-                        </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "Tidligere samtaler" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.conversationHistoryLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'conversationHistoryLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Tidligere samtaler"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Label for the "Conversation history" button and header
-                          </p>
-                        </div>
+                      <div className="space-y-3">
+                        {/* Menu Labels */}
+                        <details className="bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <summary className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center justify-between">
+                            <span>Menu Labels</span>
+                            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400 transform transition-transform duration-200 details-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </summary>
+                          <div className="px-4 pb-4">
+                            <div className="space-y-4 mt-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "Ny samtale" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.newConversationLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'newConversationLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Ny samtale"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Label for the "New conversation" button in the menu
+                                </p>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "Samtale indlæst" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.conversationLoadedLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'conversationLoadedLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Samtale indlæst"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Notification message when a conversation is loaded
-                          </p>
-                        </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "Tidligere samtaler" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.conversationHistoryLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'conversationHistoryLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Tidligere samtaler"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Label for the "Conversation history" button and header
+                                </p>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "I dag" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.todayLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'todayLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="I dag"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Label for conversations from today
-                          </p>
-                        </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "Samtale indlæst" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.conversationLoadedLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'conversationLoadedLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Samtale indlæst"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Notification message when a conversation is loaded
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </details>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "I går" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.yesterdayLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'yesterdayLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="I går"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Label for conversations from yesterday
-                          </p>
-                        </div>
+                        {/* Date/Time Labels */}
+                        <details className="bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <summary className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center justify-between">
+                            <span>Date & Time Labels</span>
+                            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400 transform transition-transform duration-200 details-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </summary>
+                          <div className="px-4 pb-4">
+                            <div className="space-y-4 mt-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "I dag" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.todayLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'todayLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="I dag"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Label for conversations from today
+                                </p>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Days Suffix (for "2d", "3d", etc.)
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.daysAgoSuffix || ''}
-                            onChange={(e) => handleFieldChange('messages', 'daysAgoSuffix', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="d"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Suffix for days ago (e.g., "2d" = 2 + "d")
-                          </p>
-                        </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "I går" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.yesterdayLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'yesterdayLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="I går"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Label for conversations from yesterday
+                                </p>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "Beskeder" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.messagesLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'messagesLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="beskeder"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Label for message count (e.g., "5 beskeder")
-                          </p>
-                        </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Days Suffix (for "2d", "3d", etc.)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.daysAgoSuffix || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'daysAgoSuffix', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="d"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Suffix for days ago (e.g., "2d" = 2 + "d")
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </details>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "Ingen tidligere samtaler" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.noConversationsLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'noConversationsLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Ingen tidligere samtaler"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Message shown when there are no conversations
-                          </p>
-                        </div>
+                        {/* Conversation Status Labels */}
+                        <details className="bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <summary className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg flex items-center justify-between">
+                            <span>Conversation Status Labels</span>
+                            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400 transform transition-transform duration-200 details-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </summary>
+                          <div className="px-4 pb-4">
+                            <div className="space-y-4 mt-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "Beskeder" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.messagesLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'messagesLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="beskeder"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Label for message count (e.g., "5 beskeder")
+                                </p>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "Start en samtale..." Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.startConversationLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'startConversationLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Start en samtale for at se den her"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Helper text shown when there are no conversations
-                          </p>
-                        </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "Ingen tidligere samtaler" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.noConversationsLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'noConversationsLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Ingen tidligere samtaler"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Message shown when there are no conversations
+                                </p>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "Samtale slettet" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.conversationDeletedLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'conversationDeletedLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Samtale slettet"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Notification message when a conversation is deleted
-                          </p>
-                        </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "Start en samtale..." Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.startConversationLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'startConversationLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Start en samtale for at se den her"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Helper text shown when there are no conversations
+                                </p>
+                              </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            "New conversation started" Label
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.messages?.newConversationStartedLabel || ''}
-                            onChange={(e) => handleFieldChange('messages', 'newConversationStartedLabel', e.target.value)}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="New conversation started"
-                          />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Notification message when a new conversation is started
-                          </p>
-                        </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "Samtale slettet" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.conversationDeletedLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'conversationDeletedLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Samtale slettet"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Notification message when a conversation is deleted
+                                </p>
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  "New conversation started" Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.messages?.newConversationStartedLabel || ''}
+                                  onChange={(e) => handleFieldChange('messages', 'newConversationStartedLabel', e.target.value)}
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="New conversation started"
+                                />
+                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  Notification message when a new conversation is started
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </details>
                       </div>
                     </div>
 
@@ -1400,8 +1854,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       </label>
                       <input
                         type="text"
-                        value={settings.branding?.availableNowText || ''}
-                        onChange={(e) => handleFieldChange('branding', 'availableNowText', e.target.value)}
+                        value={settings.messages?.availableNowText || ''}
+                        onChange={(e) => handleFieldChange('messages', 'availableNowText', e.target.value)}
                         className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         placeholder="Available now"
                       />
@@ -1532,6 +1986,142 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         </Switch>
                       </div>
                     </Switch.Group>
+                  </div>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="privacy" className="border rounded-lg bg-white dark:bg-gray-800">
+            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+              <div className="flex items-center gap-3">
+                <ShieldCheckIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Privacy & Cookies</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6">
+              {/* Cookie Consent Banner Settings */}
+              <div className="space-y-8">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+                    <ShieldCheckIcon className="w-5 h-5 mr-2 text-purple-600" />
+                    Cookie Consent Banner
+                  </h4>
+
+                  <div className="space-y-6">
+                    {/* Enable Cookie Banner */}
+                    <div>
+                      <Switch.Group>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Enable Cookie Consent Banner
+                            </Switch.Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Show GDPR-compliant cookie consent banner to users
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.consent?.enabled !== false}
+                            onChange={(checked) => handleFieldChange('consent', 'enabled', checked)}
+                            className={`${
+                              settings.consent?.enabled !== false ? 'bg-purple-600' : 'bg-gray-200'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
+                          >
+                            <span
+                              className={`${
+                                settings.consent?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            />
+                          </Switch>
+                        </div>
+                      </Switch.Group>
+                    </div>
+
+                    {/* Banner Title */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Banner Title
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.consent?.title || '🍪 Vi respekterer dit privatliv'}
+                        onChange={(e) => handleFieldChange('consent', 'title', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="🍪 Vi respekterer dit privatliv"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Main title shown in the cookie consent banner
+                      </p>
+                    </div>
+
+                    {/* Banner Description */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Banner Description
+                      </label>
+                      <textarea
+                        value={settings.consent?.description || 'Vi bruger localStorage til at gemme din samtalehistorik, så du kan fortsætte hvor du slap. Vi indsamler ikke personlige oplysninger uden din tilladelse.'}
+                        onChange={(e) => handleFieldChange('consent', 'description', e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="Vi bruger localStorage til at gemme din samtalehistorik..."
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Description text explaining cookie usage
+                      </p>
+                    </div>
+
+                    {/* Privacy Policy URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Privacy Policy URL
+                      </label>
+                      <input
+                        type="url"
+                        value={settings.consent?.privacyUrl || 'https://elva-solutions.com/privacy'}
+                        onChange={(e) => handleFieldChange('consent', 'privacyUrl', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="https://your-website.com/privacy"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Link to your privacy policy page
+                      </p>
+                    </div>
+
+                    {/* Cookie Policy URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Cookie Policy URL
+                      </label>
+                      <input
+                        type="url"
+                        value={settings.consent?.cookiesUrl || 'https://elva-solutions.com/cookies'}
+                        onChange={(e) => handleFieldChange('consent', 'cookiesUrl', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        placeholder="https://your-website.com/cookies"
+                      />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Link to your cookie policy page
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Information Panel */}
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <InformationCircleIcon className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="text-sm text-purple-800">
+                      <p className="font-medium mb-1">Cookie Consent Banner Information</p>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Banner appears automatically when users first visit</li>
+                        <li>• Users can accept all cookies, select specific cookies, or reject non-essential cookies</li>
+                        <li>• Consent is stored for 30 days and automatically renewed</li>
+                        <li>• Only functional cookies (conversation history) are used by default</li>
+                        <li>• Analytics cookies can be enabled for usage tracking</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>

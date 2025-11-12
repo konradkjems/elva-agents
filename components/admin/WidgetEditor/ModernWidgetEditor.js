@@ -21,7 +21,8 @@ import {
   Sparkles,
   Code,
   Globe,
-  Zap
+  Zap,
+  Shield
 } from 'lucide-react';
 
 export default function ModernWidgetEditor({ widget, isNew = false }) {
@@ -47,7 +48,105 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
       welcomeMessage: 'Hi! How can I help you today?',
       placeholderText: 'Type your message...',
       offlineMessage: 'We\'re currently offline. Please leave a message.',
-      errorMessage: 'Sorry, something went wrong. Please try again.'
+      errorMessage: 'Sorry, something went wrong. Please try again.',
+      customLanguage: false,
+      languagePacks: widget.messages?.languagePacks || {
+        'da': {
+          welcomeMessage: 'Hej! Hvordan kan jeg hjælpe dig i dag?',
+          popupMessage: 'Hej! Har du brug for hjælp?',
+          typingText: 'AI tænker...',
+          inputPlaceholder: 'Skriv din besked...',
+          bannerText: 'Velkommen til vores kundeservice chat!',
+          newConversationLabel: 'Ny samtale',
+          conversationHistoryLabel: 'Samtalehistorik',
+          conversationLoadedLabel: 'Samtale indlæst',
+          todayLabel: 'I dag',
+          yesterdayLabel: 'I går',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'beskeder',
+          noConversationsLabel: 'Ingen tidligere samtaler',
+          startConversationLabel: 'Start en samtale for at se den her',
+          conversationDeletedLabel: 'Samtale slettet',
+          newConversationStartedLabel: 'Ny samtale startet',
+          disclaimerText: 'Opgiv ikke personlige oplysninger'
+        },
+        ...(widget.messages?.languagePacks?.en || {
+          welcomeMessage: 'Hello! How can I help you today?',
+          popupMessage: 'Hi! Need help?',
+          typingText: 'AI is typing...',
+          inputPlaceholder: 'Enter your message here...',
+          bannerText: 'Welcome to our customer service chat!',
+          newConversationLabel: 'Start new chat',
+          conversationHistoryLabel: 'Chat history',
+          conversationLoadedLabel: 'Chat loaded',
+          todayLabel: 'Today',
+          yesterdayLabel: 'Yesterday',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'messages',
+          noConversationsLabel: 'No previous chats',
+          startConversationLabel: 'Start a chat to see it here',
+          conversationDeletedLabel: 'Chat deleted',
+          newConversationStartedLabel: 'New chat started',
+          disclaimerText: 'Please do not share sensitive information'
+        }),
+        ...(widget.messages?.languagePacks?.de || {
+          welcomeMessage: 'Hallo! Wie kann ich Ihnen heute helfen?',
+          popupMessage: 'Hallo! Brauchen Sie Hilfe?',
+          typingText: 'KI denkt nach...',
+          inputPlaceholder: 'Schreiben Sie Ihre Nachricht...',
+          bannerText: 'Willkommen in unserem Kundenservice-Chat!',
+          newConversationLabel: 'Neues Gespräch',
+          conversationHistoryLabel: 'Gesprächsverlauf',
+          conversationLoadedLabel: 'Gespräch geladen',
+          todayLabel: 'Heute',
+          yesterdayLabel: 'Gestern',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'Nachrichten',
+          noConversationsLabel: 'Keine früheren Gespräche',
+          startConversationLabel: 'Starten Sie ein Gespräch, um es hier zu sehen',
+          conversationDeletedLabel: 'Gespräch gelöscht',
+          newConversationStartedLabel: 'Neues Gespräch gestartet',
+          disclaimerText: 'Geben Sie keine persönlichen Informationen preis'
+        }),
+        ...(widget.messages?.languagePacks?.sv || {
+          welcomeMessage: 'Hej! Hur kan jag hjälpa dig idag?',
+          popupMessage: 'Hej! Behöver du hjälp?',
+          typingText: 'AI tänker...',
+          inputPlaceholder: 'Skriv ditt meddelande...',
+          bannerText: 'Välkommen till vår kundservicechatt!',
+          newConversationLabel: 'Nytt samtal',
+          conversationHistoryLabel: 'Samtalshistorik',
+          conversationLoadedLabel: 'Samtal laddat',
+          todayLabel: 'Idag',
+          yesterdayLabel: 'Igår',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'meddelanden',
+          noConversationsLabel: 'Inga tidigare samtal',
+          startConversationLabel: 'Starta ett samtal för att se det här',
+          conversationDeletedLabel: 'Samtal raderat',
+          newConversationStartedLabel: 'Nytt samtal startat',
+          disclaimerText: 'Dela inte personlig information'
+        }),
+        ...(widget.messages?.languagePacks?.no || {
+          welcomeMessage: 'Hei! Hvordan kan jeg hjelpe deg i dag?',
+          popupMessage: 'Hei! Trenger du hjelp?',
+          typingText: 'AI tenker...',
+          inputPlaceholder: 'Skriv meldingen din...',
+          bannerText: 'Velkommen til vår kundeservicechat!',
+          newConversationLabel: 'Ny samtale',
+          conversationHistoryLabel: 'Samtalehistorikk',
+          conversationLoadedLabel: 'Samtale lastet',
+          todayLabel: 'I dag',
+          yesterdayLabel: 'I går',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'meldinger',
+          noConversationsLabel: 'Ingen tidligere samtaler',
+          startConversationLabel: 'Start en samtale for å se den her',
+          conversationDeletedLabel: 'Samtale slettet',
+          newConversationStartedLabel: 'Ny samtale startet',
+          disclaimerText: 'Ikke del personlig informasjon'
+        })
+      }
     },
     branding: {
       showBranding: true,
@@ -61,11 +160,19 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
       enableEmojis: true,
       allowFileUploads: false,
       customCSS: ''
+    },
+    consent: {
+      enabled: true,
+      title: '🍪 Vi respekterer dit privatliv',
+      description: 'Vi bruger localStorage til at gemme din samtalehistorik, så du kan fortsætte hvor du slap. Vi indsamler ikke personlige oplysninger uden din tilladelse.',
+      privacyUrl: 'https://elva-solutions.com/privacy',
+      cookiesUrl: 'https://elva-solutions.com/cookies'
     }
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
     if (widget && !isNew) {
@@ -80,7 +187,9 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
         },
         messages: {
           ...formData.messages,
-          ...widget.messages
+          ...widget.messages,
+          customLanguage: widget.messages?.customLanguage || false,
+          languagePacks: widget.messages?.languagePacks || formData.messages.languagePacks
         },
         branding: {
           ...formData.branding,
@@ -89,6 +198,10 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
         advanced: {
           ...formData.advanced,
           ...widget.advanced
+        },
+        consent: {
+          ...formData.consent,
+          ...widget.consent
         }
       });
     }
@@ -129,18 +242,24 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
 
       if (response.ok) {
         const savedWidget = await response.json();
+        setJustSaved(true);
+
         toast({
           title: `Widget ${isNew ? 'created' : 'updated'}`,
           description: `Your widget has been successfully ${isNew ? 'created' : 'updated'}.`,
         });
-        
+
         if (isNew) {
           router.push(`/admin/widgets/${savedWidget._id}`);
         }
+
+        // Reset justSaved flag after a short delay
+        setTimeout(() => setJustSaved(false), 2000);
       } else {
         throw new Error(`Failed to ${isNew ? 'create' : 'update'} widget`);
       }
     } catch (error) {
+      setJustSaved(false);
       toast({
         variant: "destructive",
         title: "Save failed",
@@ -148,6 +267,8 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
       });
     } finally {
       setIsSaving(false);
+      // Reset justSaved flag in case of error
+      setTimeout(() => setJustSaved(false), 100);
     }
   };
 
@@ -236,7 +357,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
           <CardContent className="p-0">
             <Tabs defaultValue="appearance" className="w-full">
               <div className="border-b">
-                <TabsList className="grid w-full grid-cols-4 rounded-none h-auto">
+                <TabsList className="grid w-full grid-cols-5 rounded-none h-auto">
                   <TabsTrigger value="appearance" className="gap-2 py-3">
                     <Palette className="h-4 w-4" />
                     Appearance
@@ -252,6 +373,10 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
                   <TabsTrigger value="advanced" className="gap-2 py-3">
                     <Code className="h-4 w-4" />
                     Advanced
+                  </TabsTrigger>
+                  <TabsTrigger value="privacy" className="gap-2 py-3">
+                    <Shield className="h-4 w-4" />
+                    Privacy
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -458,6 +583,82 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
                           className="font-mono text-sm"
                         />
                       </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="privacy" className="space-y-6 mt-0">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Cookie Consent Banner</h3>
+                    <div className="space-y-6">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="consentEnabled"
+                          checked={formData.consent.enabled}
+                          onCheckedChange={(checked) => handleInputChange('consent', 'enabled', checked)}
+                        />
+                        <Label htmlFor="consentEnabled">Enable cookie consent banner</Label>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="consentTitle">Banner Title</Label>
+                        <Input
+                          id="consentTitle"
+                          value={formData.consent.title}
+                          onChange={(e) => handleInputChange('consent', 'title', e.target.value)}
+                          placeholder="🍪 Vi respekterer dit privatliv"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="consentDescription">Banner Description</Label>
+                        <Textarea
+                          id="consentDescription"
+                          value={formData.consent.description}
+                          onChange={(e) => handleInputChange('consent', 'description', e.target.value)}
+                          placeholder="Vi bruger localStorage til at gemme din samtalehistorik..."
+                          rows={3}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="privacyUrl">Privacy Policy URL</Label>
+                        <Input
+                          id="privacyUrl"
+                          value={formData.consent.privacyUrl}
+                          onChange={(e) => handleInputChange('consent', 'privacyUrl', e.target.value)}
+                          placeholder="https://your-website.com/privacy"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cookiesUrl">Cookie Policy URL</Label>
+                        <Input
+                          id="cookiesUrl"
+                          value={formData.consent.cookiesUrl}
+                          onChange={(e) => handleInputChange('consent', 'cookiesUrl', e.target.value)}
+                          placeholder="https://your-website.com/cookies"
+                        />
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-4 border-t">
+                        <Switch
+                          id="customLanguage"
+                          checked={formData.messages.customLanguage}
+                          onCheckedChange={(checked) => handleInputChange('messages', 'customLanguage', checked)}
+                        />
+                        <Label htmlFor="customLanguage">Custom Language Mode</Label>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Disable automatic language detection and use only manually defined labels
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Language Packs</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Configure language-specific labels in the Messages tab above, or use the detailed editor in Settings Panel.
+                      </p>
                     </div>
                   </div>
                 </TabsContent>

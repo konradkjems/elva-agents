@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Test - English</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>🧪 Widget Test - English</h1>
+        <p>This page tests the widget with English language detection.</p>
+
+        <div class="status success">
+            ✅ HTML lang attribute: <strong>en</strong>
+        </div>
+
+        <div class="status info">
+            ℹ️ Widget waits for DOM ready before language detection - should now show English labels
+        </div>
+
+        <div class="status success" style="background: #d4edda; color: #155724; border: 1px solid #c3e6cb;">
+            ✅ <strong>Custom Language Mode should be ENABLED</strong> for auto-detection to work!<br>
+            <strong>When enabled, the widget will auto-detect English and show English labels.</strong>
+        </div>
+
+        <h3>How to enable auto-detection:</h3>
+        <ol>
+            <li>Go to <a href="http://localhost:3000/admin/widgets/6901df174edacd0efa1c1320" target="_blank">Widget Editor</a></li>
+            <li>Find the "Messages" section</li>
+            <li><strong>Turn ON</strong> the "Custom Language Mode" toggle</li>
+            <li>Save changes</li>
+            <li>Reload this test page</li>
+        </ol>
+
+        <h3>Expected English labels (when auto-detection works):</h3>
+        <ul>
+            <li><strong>Welcome:</strong> "Hello! How can I help you today?"</li>
+            <li><strong>Popup:</strong> "Hi! Need help?"</li>
+            <li><strong>Input:</strong> "Type your message..."</li>
+            <li><strong>Typing:</strong> "AI is thinking..."</li>
+            <li><strong>New conversation:</strong> "New conversation"</li>
+            <li><strong>Disclaimer:</strong> "Do not share personal information"</li>
+        </ul>
+
+    </div>
+
+    <!-- Widget Script -->
+    <script src="http://localhost:3000/api/widget-embed/6901df174edacd0efa1c1320"></script>
+
+    <div class="test-info">
+        <h3>Debug Information:</h3>
+        <p><strong>Browser language:</strong> <span id="browser-lang"></span></p>
+        <p><strong>HTML lang:</strong> <span id="html-lang"></span></p>
+        <p><strong>Detected language:</strong> <span id="detected-lang"></span></p>
+        <p><strong>Widget language detection:</strong> <span id="widget-lang">Waiting...</span></p>
+
+        <script>
+            document.getElementById('browser-lang').textContent = navigator.language;
+            document.getElementById('html-lang').textContent = document.documentElement.lang;
+            document.getElementById('detected-lang').textContent =
+                document.documentElement.lang ||
+                navigator.language ||
+                navigator.userLanguage ||
+                'da';
+
+            // Listen for widget language detection
+            const originalLog = console.log;
+            console.log = function(...args) {
+                if (args[0] && args[0].includes && args[0].includes('🌐 Auto-detecting language:')) {
+                    const lang = args[0].split('🌐 Auto-detecting language: ')[1].split(' ')[0];
+                    document.getElementById('widget-lang').textContent = lang + ' (active)';
+                }
+                originalLog.apply(console, args);
+            };
+        </script>
+    </div>
+
+</body>
+</html>

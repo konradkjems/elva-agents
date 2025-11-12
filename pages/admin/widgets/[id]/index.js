@@ -34,6 +34,8 @@ export default function WidgetEditor() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // 'success', 'error', null
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [lastSavedSettings, setLastSavedSettings] = useState(null);
   const isReadOnly = session?.user?.teamRole === 'member';
 
   useEffect(() => {
@@ -47,12 +49,17 @@ export default function WidgetEditor() {
 
   useEffect(() => {
     // Track unsaved changes
-    if (widget && JSON.stringify(widget) !== JSON.stringify(settings)) {
-      setHasUnsavedChanges(true);
-    } else {
-      setHasUnsavedChanges(false);
+    if (settings && lastSavedSettings) {
+      const hasChanges = JSON.stringify(lastSavedSettings) !== JSON.stringify(settings);
+
+      if (!justSaved) {
+        setHasUnsavedChanges(hasChanges);
+      } else {
+        // Force set to false when justSaved is true
+        setHasUnsavedChanges(false);
+      }
     }
-  }, [widget, settings]);
+  }, [settings, lastSavedSettings, justSaved]);
 
   const fetchWidget = async () => {
     if (!id) return;
@@ -65,6 +72,7 @@ export default function WidgetEditor() {
       const data = await response.json();
       setWidget(data);
       setSettings(data);
+      setLastSavedSettings(data);
     } catch (error) {
       console.error('Failed to fetch widget:', error);
       toast({
@@ -81,8 +89,6 @@ export default function WidgetEditor() {
     setSaving(true);
     setSaveStatus(null);
     
-    console.log('Saving widget with settings:', settings);
-    console.log('Branding imageSettings:', settings.branding?.imageSettings);
     
     try {
       const response = await fetch(`/api/admin/widgets/${id}`, {
@@ -97,8 +103,13 @@ export default function WidgetEditor() {
       
       const updatedWidget = await response.json();
       setWidget(updatedWidget);
+      setLastSavedSettings(settings); // Remember what we just saved
       setSaveStatus('success');
       setHasUnsavedChanges(false);
+      setJustSaved(true);
+
+      // Reset justSaved flag after a short delay to allow normal change detection again
+      setTimeout(() => setJustSaved(false), 2000);
       
       toast({
         title: "Widget saved successfully",
@@ -118,6 +129,8 @@ export default function WidgetEditor() {
       setTimeout(() => setSaveStatus(null), 5000);
     } finally {
       setSaving(false);
+      // Reset justSaved flag in case of error
+      setTimeout(() => setJustSaved(false), 100);
     }
   };
 

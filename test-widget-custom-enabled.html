@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Test - Custom Language Mode Enabled</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>🧪 Widget Test - Custom Language Mode Enabled</h1>
+        <p>Denne side tester widgetten når Custom Language Mode er aktiveret med tysk HTML lang attribute.</p>
+
+        <div class="status success">
+            ✅ <strong>Custom Language Mode is ENABLED</strong> on this widget<br>
+            <strong>HTML lang="de" should trigger German auto-detection</strong>
+        </div>
+
+        <div class="status info">
+            ℹ️ Med Custom Language Mode aktiveret burde widgetten detektere tysk og vise tyske labels
+        </div>
+
+        <h3>Forventede tyske labels (når auto-detektion virker):</h3>
+        <ul>
+            <li><strong>Velkomst:</strong> "Hallo! Wie kann ich Ihnen heute helfen?"</li>
+            <li><strong>Popup:</strong> "Hallo! Brauchen Sie Hilfe?"</li>
+            <li><strong>Input:</strong> "Schreiben Sie Ihre Nachricht..."</li>
+            <li><strong>Typing:</strong> "KI denkt nach..."</li>
+            <li><strong>Ny samtale:</strong> "Neues Gespräch"</li>
+            <li><strong>Disclaimer:</strong> "Geben Sie keine persönlichen Informationen preis"</li>
+        </ul>
+
+        <h3>Hvad skal testes:</h3>
+        <ul>
+            <li>☐ Widget viser tyske labels (auto-detektion fra lang="de")</li>
+            <li>☐ Konsol viser: "🌐 Custom language mode: Auto-detecting language: de"</li>
+            <li>☐ Ændring af HTML lang ændrer labels</li>
+        </ul>
+
+        <p><strong>For at aktivere Custom Language Mode:</strong></p>
+        <p>➡️ <a href="http://localhost:3000/admin/widgets/6901df174edacd0efa1c1320" target="_blank">Widget Editor → Messages → Custom Language Mode = ON</a></p>
+    </div>
+
+    <!-- Widget Script -->
+    <script src="http://localhost:3000/api/widget-embed/6901df174edacd0efa1c1320"></script>
+
+    <div class="test-info">
+        <h3>Debug Information:</h3>
+        <p><strong>HTML lang:</strong> <span id="html-lang"></span></p>
+        <p><strong>Browser sprog:</strong> <span id="browser-lang"></span></p>
+
+        <script>
+            document.getElementById('browser-lang').textContent = navigator.language;
+            document.getElementById('html-lang').textContent = document.documentElement.lang;
+        </script>
+    </div>
+
+</body>
+</html>

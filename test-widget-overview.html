@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Language Tests Overview</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .test-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .test-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .test-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .test-card p {
+            color: #666;
+            margin: 0 0 15px 0;
+            font-size: 14px;
+        }
+        .test-link {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .test-link:hover {
+            background: #0056b3;
+        }
+        .info-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .flag {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 Widget Language Tests</h1>
+        <p>Test the widget's automatic language detection with different languages</p>
+    </div>
+
+    <div class="test-grid">
+        <div class="test-card">
+            <h3><span class="flag">🇩🇰</span>Dansk (Danish)</h3>
+            <p>Test widget with Danish language detection</p>
+            <a href="test-widget-da.html" class="test-link">Test Dansk →</a>
+        </div>
+
+        <div class="test-card">
+            <h3><span class="flag">🇬🇧</span>English</h3>
+            <p>Test widget with English language detection</p>
+            <a href="test-widget-en.html" class="test-link">Test English →</a>
+        </div>
+
+        <div class="test-card">
+            <h3><span class="flag">🇩🇪</span>Deutsch (German)</h3>
+            <p>Test widget with German language detection</p>
+            <a href="test-widget-de.html" class="test-link">Test Deutsch →</a>
+        </div>
+
+        <div class="test-card">
+            <h3><span class="flag">🇸🇪</span>Svenska (Swedish)</h3>
+            <p>Test widget with Swedish language detection</p>
+            <a href="test-widget-sv.html" class="test-link">Test Svenska →</a>
+        </div>
+
+        <div class="test-card">
+            <h3><span class="flag">🇳🇴</span>Norsk (Norwegian)</h3>
+            <p>Test widget with Norwegian language detection</p>
+            <a href="test-widget-no.html" class="test-link">Test Norsk →</a>
+        </div>
+
+        <div class="test-card">
+            <h3><span class="flag">📝</span>Standard Labels</h3>
+            <p>Test widget with standard labels (no auto-detection)</p>
+            <a href="test-widget-custom.html" class="test-link">Test Standard →</a>
+        </div>
+
+        <div class="test-card">
+            <h3><span class="flag">🎛️</span>Auto-Detection</h3>
+            <p>Test widget with Custom Language Mode enabled</p>
+            <a href="test-widget-custom-enabled.html" class="test-link">Test Auto →</a>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <h2>ℹ️ How Language Detection Works</h2>
+        <ul>
+            <li><strong>Priority 1:</strong> HTML <code>lang</code> attribute (<code>&lt;html lang="de"&gt;</code>)</li>
+            <li><strong>Priority 2:</strong> Browser language (<code>navigator.language</code>)</li>
+            <li><strong>Fallback:</strong> Danish (<code>'da'</code>)</li>
+        </ul>
+
+        <h3>Supported Languages</h3>
+        <ul>
+            <li>🇩🇰 <strong>da</strong> - Dansk (Danish)</li>
+            <li>🇬🇧 <strong>en</strong> - English</li>
+            <li>🇩🇪 <strong>de</strong> - Deutsch (German)</li>
+            <li>🇸🇪 <strong>sv</strong> - Svenska (Swedish)</li>
+            <li>🇳🇴 <strong>no</strong> - Norsk (Norwegian)</li>
+        </ul>
+
+        <h3>🎛️ Custom Language Mode Settings</h3>
+        <div style="background: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 5px; border: 1px solid #bee5eb; margin-bottom: 20px;">
+            <strong>How Custom Language Mode works:</strong>
+            <ul style="margin-top: 10px;">
+                <li><strong>Custom Language Mode = OFF:</strong> Widget uses standard labels from Messages section, no language detection</li>
+                <li><strong>Custom Language Mode = ON:</strong> Widget auto-detects language from HTML lang attribute and shows appropriate labels</li>
+            </ul>
+            <br>
+            <strong>Test pages:</strong>
+            <ul>
+                <li><strong>test-widget-custom.html:</strong> Standard labels (Custom Language Mode = OFF)</li>
+                <li><strong>test-widget-custom-enabled.html:</strong> Auto-detection (Custom Language Mode = ON)</li>
+            </ul>
+        </div>
+
+        <h3>🔧 Recent Fix: DOM Ready Language Detection</h3>
+        <div style="background: #d1ecf1; color: #0c5460; padding: 15px; border-radius: 5px; border: 1px solid #bee5eb; margin-bottom: 20px;">
+            <strong>Language detection now waits for DOM ready!</strong> Previously, the widget script ran before the HTML <code>lang</code> attribute was available. Now it waits for <code>DOMContentLoaded</code> before detecting the language.
+            <br><br>
+            This should fix issues where widgets loaded as scripts couldn't read the page's language setting.
+        </div>
+
+        <h3>Test Instructions</h3>
+        <ol>
+            <li>Open each test page</li>
+            <li>Check that the widget appears in the bottom-right corner</li>
+            <li>Verify that labels match the expected language</li>
+            <li>Test different features (typing indicator, conversation history, etc.)</li>
+        </ol>
+
+        <h3>Custom Language Mode</h3>
+        <p>When enabled in the widget editor, the widget will use only manually defined labels and ignore automatic language detection.</p>
+    </div>
+
+</body>
+</html>

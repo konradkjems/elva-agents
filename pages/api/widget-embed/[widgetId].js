@@ -1,6 +1,6 @@
 import clientPromise from '../../../lib/mongodb.js';
 import { ObjectId } from 'mongodb';
-import { getConsentManagerCode } from '../../../lib/consent-banner.js';
+
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -146,7 +146,172 @@ export default async function handler(req, res) {
     // Generate the widget JavaScript with embedded configuration
     const widgetScript = `
 (function() {
-  const WIDGET_CONFIG = ${JSON.stringify({
+  // Sprog-detektion og internationalisering - bliver kaldt når widgetten initialiseres
+
+  // Default language packs for fallback when custom language pack fields are missing
+  const defaultLanguagePacks = {
+    'da': {
+      welcomeMessage: 'Hej! Hvordan kan jeg hjælpe dig i dag?',
+      popupMessage: 'Hej! Har du brug for hjælp?',
+      typingText: 'AI tænker...',
+      inputPlaceholder: 'Skriv din besked...',
+      bannerText: 'Velkommen til vores kundeservice chat!',
+      suggestedResponses: [
+        'Hvad kan du hjælpe mig med?',
+        'Fortæl mig mere om jeres services',
+        'Hvordan kommer jeg i gang?',
+        'Kontakt support'
+      ],
+      newConversationLabel: 'Ny samtale',
+      conversationHistoryLabel: 'Samtalehistorik',
+      conversationLoadedLabel: 'Samtale indlæst',
+      todayLabel: 'I dag',
+      yesterdayLabel: 'I går',
+      daysAgoSuffix: 'd',
+      messagesLabel: 'beskeder',
+      noConversationsLabel: 'Ingen tidligere samtaler',
+      startConversationLabel: 'Start en samtale for at se den her',
+      conversationDeletedLabel: 'Samtale slettet',
+      newConversationStartedLabel: 'Ny samtale startet',
+      disclaimerText: 'Opgiv ikke personlige oplysninger',
+      availableNowText: 'Tilgængelig nu'
+    },
+    'en': {
+      welcomeMessage: 'Hello! How can I help you today?',
+      popupMessage: 'Hi! Need help?',
+      typingText: 'AI is thinking...',
+      inputPlaceholder: 'Type your message...',
+      bannerText: 'Welcome to our customer service chat!',
+      suggestedResponses: [
+        'What can you help me with?',
+        'Tell me more about your services',
+        'How do I get started?',
+        'Contact support'
+      ],
+      newConversationLabel: 'New conversation',
+      conversationHistoryLabel: 'Conversation history',
+      conversationLoadedLabel: 'Conversation loaded',
+      todayLabel: 'Today',
+      yesterdayLabel: 'Yesterday',
+      daysAgoSuffix: 'd',
+      messagesLabel: 'messages',
+      noConversationsLabel: 'No previous conversations',
+      startConversationLabel: 'Start a conversation to see it here',
+      conversationDeletedLabel: 'Conversation deleted',
+      newConversationStartedLabel: 'New conversation started',
+      disclaimerText: 'Do not share personal information',
+      availableNowText: 'Available now'
+    },
+    'de': {
+      welcomeMessage: 'Hallo! Wie kann ich Ihnen heute helfen?',
+      popupMessage: 'Hallo! Brauchen Sie Hilfe?',
+      typingText: 'KI denkt nach...',
+      inputPlaceholder: 'Schreiben Sie Ihre Nachricht...',
+      bannerText: 'Willkommen in unserem Kundenservice-Chat!',
+      suggestedResponses: [
+        'Womit können Sie mir helfen?',
+        'Erzählen Sie mir mehr über Ihre Dienstleistungen',
+        'Wie fange ich an?',
+        'Kontaktieren Sie den Support'
+      ],
+      newConversationLabel: 'Neues Gespräch',
+      conversationHistoryLabel: 'Gesprächsverlauf',
+      conversationLoadedLabel: 'Gespräch geladen',
+      todayLabel: 'Heute',
+      yesterdayLabel: 'Gestern',
+      daysAgoSuffix: 'd',
+      messagesLabel: 'Nachrichten',
+      noConversationsLabel: 'Keine früheren Gespräche',
+      startConversationLabel: 'Starten Sie ein Gespräch, um es hier zu sehen',
+      conversationDeletedLabel: 'Gespräch gelöscht',
+      newConversationStartedLabel: 'Neues Gespräch gestartet',
+      disclaimerText: 'Geben Sie keine persönlichen Informationen preis',
+      availableNowText: 'Jetzt verfügbar'
+    },
+    'sv': {
+      welcomeMessage: 'Hej! Hur kan jag hjälpa dig idag?',
+      popupMessage: 'Hej! Behöver du hjälp?',
+      typingText: 'AI tänker...',
+      inputPlaceholder: 'Skriv ditt meddelande...',
+      bannerText: 'Välkommen till vår kundservicechatt!',
+      suggestedResponses: [
+        'Vad kan du hjälpa mig med?',
+        'Berätta mer om era tjänster',
+        'Hur kommer jag igång?',
+        'Kontakta support'
+      ],
+      newConversationLabel: 'Nytt samtal',
+      conversationHistoryLabel: 'Samtalshistorik',
+      conversationLoadedLabel: 'Samtal laddat',
+      todayLabel: 'Idag',
+      yesterdayLabel: 'Igår',
+      daysAgoSuffix: 'd',
+      messagesLabel: 'meddelanden',
+      noConversationsLabel: 'Inga tidigare samtal',
+      startConversationLabel: 'Starta ett samtal för att se det här',
+      conversationDeletedLabel: 'Samtal raderat',
+      newConversationStartedLabel: 'Nytt samtal startat',
+      disclaimerText: 'Dela inte personlig information',
+      availableNowText: 'Tillgänglig nu'
+    },
+    'no': {
+      welcomeMessage: 'Hei! Hvordan kan jeg hjelpe deg i dag?',
+      popupMessage: 'Hei! Trenger du hjelp?',
+      typingText: 'AI tenker...',
+      inputPlaceholder: 'Skriv meldingen din...',
+      bannerText: 'Velkommen til vår kundeservicechat!',
+      suggestedResponses: [
+        'Hva kan du hjelpe meg med?',
+        'Fortell meg mer om tjenestene deres',
+        'Hvordan kommer jeg i gang?',
+        'Kontakt support'
+      ],
+      newConversationLabel: 'Ny samtale',
+      conversationHistoryLabel: 'Samtalehistorikk',
+      conversationLoadedLabel: 'Samtale lastet',
+      todayLabel: 'I dag',
+      yesterdayLabel: 'I går',
+      daysAgoSuffix: 'd',
+      messagesLabel: 'meldinger',
+      noConversationsLabel: 'Ingen tidligere samtaler',
+      startConversationLabel: 'Start en samtale for å se den her',
+      conversationDeletedLabel: 'Samtale slettet',
+      newConversationStartedLabel: 'Ny samtale startet',
+      disclaimerText: 'Ikke del personlig informasjon',
+      availableNowText: 'Tilgjengelig nå'
+    }
+  };
+
+  let detectedLanguage = null;
+  const detectLanguage = () => {
+    if (detectedLanguage) return detectedLanguage;
+
+    // Vent på at DOM'en er klar før vi læser lang attributten
+    const getLangFromDOM = () => {
+      if (document.documentElement && document.documentElement.lang) {
+        return document.documentElement.lang;
+      }
+
+      // Prøv at finde html elementet på andre måder
+      const html = document.querySelector('html');
+      if (html && html.getAttribute('lang')) {
+        return html.getAttribute('lang');
+      }
+
+      return null;
+    };
+
+    // Prioritet: 1. HTML lang attribute, 2. Browser sprog, 3. Dansk som fallback
+    detectedLanguage = getLangFromDOM() ||
+                      navigator.language ||
+                      navigator.userLanguage ||
+                      'da';
+
+    return detectedLanguage;
+  };
+
+
+  let WIDGET_CONFIG = ${JSON.stringify({
     widgetId: widgetId,
     name: widget.name || 'AI Assistant',
     isBlocked: isBlocked,
@@ -169,7 +334,7 @@ export default async function handler(req, res) {
       inputPlaceholder: widget.messages?.inputPlaceholder || 'Type your message...',
       suggestedResponses: widget.messages?.suggestedResponses || [],
       bannerText: widget.messages?.bannerText || null,
-      disclaimerText: widget.messages?.disclaimerText || 'Opgiv ikke personlige oplysninger',
+      disclaimerText: widget.messages?.disclaimerText || 'Do not share personal information',
       newConversationLabel: widget.messages?.newConversationLabel || null,
       conversationHistoryLabel: widget.messages?.conversationHistoryLabel || null,
       conversationLoadedLabel: widget.messages?.conversationLoadedLabel || null,
@@ -181,6 +346,141 @@ export default async function handler(req, res) {
       startConversationLabel: widget.messages?.startConversationLabel || null,
       conversationDeletedLabel: widget.messages?.conversationDeletedLabel || null,
       newConversationStartedLabel: widget.messages?.newConversationStartedLabel || null,
+      availableNowText: widget.messages?.availableNowText || null,
+      customLanguage: widget.messages?.customLanguage || false,
+      enabledLanguages: widget.messages?.enabledLanguages || ['da', 'en', 'de', 'sv', 'no'],
+      languagePacks: widget.messages?.languagePacks || {
+        'da': {
+          welcomeMessage: 'Hej! Hvordan kan jeg hjælpe dig i dag?',
+          popupMessage: 'Hej! Har du brug for hjælp?',
+          typingText: 'AI tænker...',
+          inputPlaceholder: 'Skriv din besked...',
+          bannerText: 'Velkommen til vores kundeservice chat!',
+          suggestedResponses: [
+            'Hvad kan du hjælpe mig med?',
+            'Fortæl mig mere om jeres services',
+            'Hvordan kommer jeg i gang?',
+            'Kontakt support'
+          ],
+          newConversationLabel: 'Ny samtale',
+          conversationHistoryLabel: 'Samtalehistorik',
+          conversationLoadedLabel: 'Samtale indlæst',
+          todayLabel: 'I dag',
+          yesterdayLabel: 'I går',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'beskeder',
+          noConversationsLabel: 'Ingen tidligere samtaler',
+          startConversationLabel: 'Start en samtale for at se den her',
+          conversationDeletedLabel: 'Samtale slettet',
+          newConversationStartedLabel: 'Ny samtale startet',
+          disclaimerText: 'Opgiv ikke personlige oplysninger',
+          availableNowText: 'Tilgængelig nu'
+        },
+        'en': {
+          welcomeMessage: 'Hello! How can I assist you today?',
+          popupMessage: 'Hi there! Can I help you?',
+          typingText: 'AI is typing...',
+          inputPlaceholder: 'Enter your message here...',
+          bannerText: 'Welcome to our customer service chat!',
+          suggestedResponses: [
+            'What can you help me with?',
+            'Tell me more about your services',
+            'How do I get started?',
+            'Contact support'
+          ],
+          newConversationLabel: 'Start new chat',
+          conversationHistoryLabel: 'Chat history',
+          conversationLoadedLabel: 'Chat loaded',
+          todayLabel: 'Today',
+          yesterdayLabel: 'Yesterday',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'messages',
+          noConversationsLabel: 'No previous chats',
+          startConversationLabel: 'Start a chat to see it here',
+          conversationDeletedLabel: 'Chat deleted',
+          newConversationStartedLabel: 'New chat started',
+          disclaimerText: 'Please do not share sensitive information',
+          availableNowText: 'Available now'
+        },
+        'de': {
+          welcomeMessage: 'Hallo! Wie kann ich Ihnen heute helfen?',
+          popupMessage: 'Hallo! Brauchen Sie Hilfe?',
+          typingText: 'KI denkt nach...',
+          inputPlaceholder: 'Schreiben Sie Ihre Nachricht...',
+          bannerText: 'Willkommen in unserem Kundenservice-Chat!',
+          suggestedResponses: [
+            'Womit können Sie mir helfen?',
+            'Erzählen Sie mir mehr über Ihre Dienstleistungen',
+            'Wie fange ich an?',
+            'Kontaktieren Sie den Support'
+          ],
+          newConversationLabel: 'Neues Gespräch',
+          conversationHistoryLabel: 'Gesprächsverlauf',
+          conversationLoadedLabel: 'Gespräch geladen',
+          todayLabel: 'Heute',
+          yesterdayLabel: 'Gestern',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'Nachrichten',
+          noConversationsLabel: 'Keine früheren Gespräche',
+          startConversationLabel: 'Starten Sie ein Gespräch, um es hier zu sehen',
+          conversationDeletedLabel: 'Gespräch gelöscht',
+          newConversationStartedLabel: 'Neues Gespräch gestartet',
+          disclaimerText: 'Geben Sie keine persönlichen Informationen preis',
+          availableNowText: 'Jetzt verfügbar'
+        },
+        'sv': {
+          welcomeMessage: 'Hej! Hur kan jag hjälpa dig idag?',
+          popupMessage: 'Hej! Behöver du hjälp?',
+          typingText: 'AI tänker...',
+          inputPlaceholder: 'Skriv ditt meddelande...',
+          bannerText: 'Välkommen till vår kundservicechatt!',
+          suggestedResponses: [
+            'Vad kan du hjälpa mig med?',
+            'Berätta mer om era tjänster',
+            'Hur kommer jag igång?',
+            'Kontakta support'
+          ],
+          newConversationLabel: 'Nytt samtal',
+          conversationHistoryLabel: 'Samtalshistorik',
+          conversationLoadedLabel: 'Samtal laddat',
+          todayLabel: 'Idag',
+          yesterdayLabel: 'Igår',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'meddelanden',
+          noConversationsLabel: 'Inga tidigare samtal',
+          startConversationLabel: 'Starta ett samtal för att se det här',
+          conversationDeletedLabel: 'Samtal raderat',
+          newConversationStartedLabel: 'Nytt samtal startat',
+          disclaimerText: 'Dela inte personlig information',
+          availableNowText: 'Tillgänglig nu'
+        },
+        'no': {
+          welcomeMessage: 'Hei! Hvordan kan jeg hjelpe deg i dag?',
+          popupMessage: 'Hei! Trenger du hjelp?',
+          typingText: 'AI tenker...',
+          inputPlaceholder: 'Skriv meldingen din...',
+          bannerText: 'Velkommen til vår kundeservicechat!',
+          suggestedResponses: [
+            'Hva kan du hjelpe meg med?',
+            'Fortell meg mer om tjenestene deres',
+            'Hvordan kommer jeg i gang?',
+            'Kontakt support'
+          ],
+          newConversationLabel: 'Ny samtale',
+          conversationHistoryLabel: 'Samtalehistorikk',
+          conversationLoadedLabel: 'Samtale lastet',
+          todayLabel: 'I dag',
+          yesterdayLabel: 'I går',
+          daysAgoSuffix: 'd',
+          messagesLabel: 'meldinger',
+          noConversationsLabel: 'Ingen tidligere samtaler',
+          startConversationLabel: 'Start en samtale for å se den her',
+          conversationDeletedLabel: 'Samtale slettet',
+          newConversationStartedLabel: 'Ny samtale startet',
+          disclaimerText: 'Ikke del personlig informasjon',
+          availableNowText: 'Tilgjengelig nå'
+        }
+      },
       voiceInput: {
         enabled: widget.messages?.voiceInput?.enabled !== false,
         language: widget.messages?.voiceInput?.language || 'da-DK',
@@ -198,6 +498,13 @@ export default async function handler(req, res) {
         autoFetchProductData: widget.messages?.productCards?.autoFetchProductData || false
       }
     },
+    consent: {
+      enabled: widget.consent?.enabled !== false,
+      title: widget.consent?.title || '🍪 Vi respekterer dit privatliv',
+      description: widget.consent?.description || 'Vi bruger localStorage til at gemme din samtalehistorik, så du kan fortsætte hvor du slap. Vi indsamler ikke personlige oplysninger uden din tilladelse.',
+      privacyUrl: widget.consent?.privacyUrl || 'https://elva-solutions.com/privacy',
+      cookiesUrl: widget.consent?.cookiesUrl || 'https://elva-solutions.com/cookies'
+    },
     branding: {
       title: widget.branding?.title || widget.name || 'AI Assistant',
       assistantName: widget.branding?.assistantName || 'Assistant',
@@ -211,7 +518,7 @@ export default async function handler(req, res) {
       imageSettings: widget.branding?.imageSettings || null,
       iconSizes: widget.branding?.iconSizes || null,
       poweredByText: widget.branding?.poweredByText || widget.settings?.branding?.poweredByText || null,
-      availableNowText: widget.branding?.availableNowText || widget.settings?.branding?.availableNowText || null
+      availableNowText: widget.messages?.availableNowText || widget.branding?.availableNowText || widget.settings?.branding?.availableNowText || null
     },
     apiUrl: process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 'https://www.elva-agents.com/',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
@@ -257,7 +564,367 @@ export default async function handler(req, res) {
     }
   })};
 
-${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
+  // Brug konfigurerbare sprog-pakker fra widget settings
+  const enabledLanguages = WIDGET_CONFIG.messages.enabledLanguages || ['da', 'en', 'de', 'sv', 'no'];
+  const languagePacks = WIDGET_CONFIG.messages.languagePacks;
+
+  // Filtrer languagePacks så kun aktiverede sprog er inkluderet
+  const filteredLanguagePacks = {};
+  enabledLanguages.forEach(lang => {
+    if (languagePacks[lang]) {
+      filteredLanguagePacks[lang] = languagePacks[lang];
+    }
+  });
+
+
+  // Funktion til at anvende sprog-specifikke labels
+  const applyLanguageLabels = () => {
+    if (WIDGET_CONFIG.messages.customLanguage) {
+      // Custom Language Mode er slået TIL - brug auto-detektion og sprog-specifikke labels
+      const userLanguage = detectLanguage().split('-')[0]; // 'da-DK' -> 'da'
+      if (filteredLanguagePacks[userLanguage]) {
+        console.log('🌐 Custom language mode: Auto-detecting language:', userLanguage, 'for widget:', WIDGET_CONFIG.widgetId);
+
+        // For hver field i default language pack, brug brugerdefineret værdi eller fallback til standard
+        const allLabelKeys = Object.keys(defaultLanguagePacks[userLanguage] || {});
+        allLabelKeys.forEach(key => {
+          // Brug brugerdefineret værdi hvis den findes, ellers brug standard værdi
+          const customValue = filteredLanguagePacks[userLanguage][key];
+          const defaultValue = defaultLanguagePacks[userLanguage]?.[key];
+
+          if (customValue !== undefined && customValue !== null && customValue !== '') {
+            // Brug brugerdefineret værdi
+            WIDGET_CONFIG.messages[key] = customValue;
+          } else if (defaultValue !== undefined && defaultValue !== null) {
+            // Fallback til standard language pack værdi
+            WIDGET_CONFIG.messages[key] = defaultValue;
+          }
+        });
+
+        // Også behandl alle custom felter der findes i brugerens language pack men ikke i default
+        const userLanguageKeys = Object.keys(filteredLanguagePacks[userLanguage] || {});
+        userLanguageKeys.forEach(key => {
+          if (!allLabelKeys.includes(key)) {
+            // Dette er et custom felt der ikke findes i default - brug det direkte
+            const customValue = filteredLanguagePacks[userLanguage][key];
+            if (customValue !== undefined && customValue !== null && customValue !== '') {
+              WIDGET_CONFIG.messages[key] = customValue;
+            }
+          }
+        });
+
+        // Opdater DOM elementer der allerede er oprettet med de nye værdier
+        setTimeout(() => {
+          // Opdater input label hvis den findes
+          const inputLabel = document.querySelector('label[for="widget-input-field"]');
+          if (inputLabel && WIDGET_CONFIG.messages.inputPlaceholder) {
+            inputLabel.textContent = WIDGET_CONFIG.messages.inputPlaceholder;
+          }
+
+          // Opdater eller opret banner hvis bannerText er tilgængelig
+          let bannerElement = document.getElementById('widget-banner');
+          if (WIDGET_CONFIG.messages.bannerText) {
+            if (bannerElement) {
+              // Opdater eksisterende banner
+              bannerElement.textContent = WIDGET_CONFIG.messages.bannerText;
+            } else {
+              // Opret nyt banner hvis det ikke findes
+              const chatBox = document.querySelector('.elva-chat-box');
+              if (chatBox) {
+                const header = chatBox.querySelector('.elva-chat-header');
+                if (header) {
+                  bannerElement = document.createElement("div");
+                  bannerElement.id = "widget-banner";
+                  bannerElement.style.cssText = \`
+                    padding: 8px 16px;
+                    background: \${themeColors.messageBg || '#ffffff'};
+                    border-bottom: 1px solid \${themeColors.borderColor || '#e5e7eb'};
+                    font-size: 12px;
+                    color: \${themeColors.textColor || '#1f2937'};
+                    opacity: 0.8;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    text-align: center;
+                    line-height: 1.4;
+                  \`;
+                  bannerElement.textContent = WIDGET_CONFIG.messages.bannerText;
+                  // Indsæt banner efter header
+                  chatBox.insertBefore(bannerElement, header.nextSibling);
+                }
+              }
+            }
+          } else if (bannerElement) {
+            // Fjern banner hvis bannerText ikke længere er tilgængelig
+            bannerElement.remove();
+          }
+        }, 100); // Lille delay for at sikre DOM er klar
+      } else {
+        console.log('🌐 Custom language mode: Language', userLanguage, 'not supported, using default labels for widget:', WIDGET_CONFIG.widgetId);
+      }
+    } else {
+      // Custom Language Mode er slået FRA - brug kun de labels der er defineret i widget konfigurationen
+      console.log('🌐 Using standard labels (no language detection) for widget:', WIDGET_CONFIG.widgetId);
+    }
+  };
+
+  // Anvend sprog labels når DOM'en er klar
+  const applyLabelsWhenReady = () => {
+    if (document.readyState === 'loading') {
+      // DOM er stadig loading - vent på DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', applyLanguageLabels);
+    } else {
+      // DOM er allerede klar
+      applyLanguageLabels();
+    }
+  };
+
+  applyLabelsWhenReady();
+
+  // ============================================
+  // GDPR CONSENT MANAGER
+  // ============================================
+
+  const ElvaConsent = {
+    storageKey: 'elva-consent-' + WIDGET_CONFIG.widgetId,
+
+    // Get current consent state
+    getConsent: function() {
+      try {
+        const stored = localStorage.getItem(this.storageKey);
+        if (stored) {
+          const consent = JSON.parse(stored);
+          // Check if consent is still valid (30 days)
+          const consentDate = new Date(consent.timestamp);
+          const now = new Date();
+          const daysSinceConsent = (now - consentDate) / (1000 * 60 * 60 * 24);
+
+          if (daysSinceConsent > 30) {
+            // Consent expired, remove it
+            localStorage.removeItem(this.storageKey);
+            return null;
+          }
+
+          return consent;
+        }
+      } catch (error) {
+        console.error('Error reading consent:', error);
+      }
+      return null;
+    },
+
+    // Save consent
+    saveConsent: function(consent) {
+      const consentData = {
+        ...consent,
+        timestamp: new Date().toISOString(),
+        version: '1.0',
+        widgetId: WIDGET_CONFIG.widgetId
+      };
+
+      localStorage.setItem(this.storageKey, JSON.stringify(consentData));
+
+      // Fire consent change event
+      window.dispatchEvent(new CustomEvent('elva-consent-changed', {
+        detail: consentData
+      }));
+
+      console.log('✅ Consent saved:', consent);
+    },
+
+    // Check if we have consent for specific purpose
+    hasConsent: function(purpose) {
+      const consent = this.getConsent();
+      return consent && consent[purpose] === true;
+    },
+
+    // Show consent banner
+    showBanner: function() {
+      // Don't show banner if disabled or already decided
+      const consentConfig = WIDGET_CONFIG.consent || {};
+      const bannerEnabled = consentConfig.enabled !== false;
+
+      if (!bannerEnabled || this.getConsent()) {
+        return;
+      }
+
+      const primaryColor = WIDGET_CONFIG.theme?.buttonColor || '#4f46e5';
+
+      // Create banner HTML
+      const banner = document.createElement('div');
+      banner.id = 'elva-consent-banner';
+      banner.innerHTML = \`
+        <div class="elva-consent-overlay"></div>
+        <div class="elva-consent-banner-container">
+          <div class="elva-consent-content">
+            <h3>\${consentConfig.title || '🍪 Vi respekterer dit privatliv'}</h3>
+            <p>
+              \${consentConfig.description || 'Vi bruger localStorage til at gemme din samtalehistorik, så du kan fortsætte hvor du slap. Vi indsamler ikke personlige oplysninger uden din tilladelse.'}
+            </p>
+            <div class="elva-consent-options">
+              <label class="elva-consent-checkbox">
+                <input type="checkbox" id="elva-consent-necessary" checked disabled>
+                <span><strong>Nødvendige</strong> - Påkrævet for at chatten virker</span>
+              </label>
+              <label class="elva-consent-checkbox">
+                <input type="checkbox" id="elva-consent-functional" checked>
+                <span><strong>Funktionelle</strong> - Gem samtalehistorik og præferencer</span>
+              </label>
+            </div>
+            <div class="elva-consent-buttons">
+              <button id="elva-consent-accept" class="elva-consent-btn elva-consent-accept">
+                Accepter alle
+              </button>
+              <button id="elva-consent-reject" class="elva-consent-btn elva-consent-reject">
+                Afvis funktionelle
+              </button>
+              <a href="\${consentConfig.privacyUrl || 'https://elva-solutions.com/privacy'}" target="_blank" class="elva-consent-link">Privatlivspolitik</a>
+              <a href="\${consentConfig.cookiesUrl || 'https://elva-solutions.com/cookies'}" target="_blank" class="elva-consent-link">Cookie politik</a>
+            </div>
+          </div>
+        </div>
+      \`;
+
+      // Add styles
+      const style = document.createElement('style');
+      style.textContent = \`
+        .elva-consent-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 999998;
+          backdrop-filter: blur(2px);
+        }
+        .elva-consent-banner-container {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 999999;
+          max-width: 500px;
+          width: 90%;
+          max-height: 90vh;
+          overflow-y: auto;
+        }
+        .elva-consent-content {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .elva-consent-content h3 {
+          margin: 0 0 16px 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+        .elva-consent-content p {
+          margin: 0 0 20px 0;
+          color: #6b7280;
+          line-height: 1.5;
+        }
+        .elva-consent-options {
+          margin-bottom: 24px;
+        }
+        .elva-consent-checkbox {
+          display: flex;
+          align-items: center;
+          margin-bottom: 12px;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        .elva-consent-checkbox input {
+          margin-right: 8px;
+          width: 16px;
+          height: 16px;
+        }
+        .elva-consent-checkbox span {
+          color: #374151;
+        }
+        .elva-consent-buttons {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .elva-consent-btn {
+          padding: 8px 16px;
+          border: none;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .elva-consent-accept {
+          background: \${primaryColor};
+          color: white;
+        }
+        .elva-consent-accept:hover {
+          background: \${primaryColor}dd;
+        }
+        .elva-consent-reject {
+          background: #f3f4f6;
+          color: #374151;
+          border: 1px solid #d1d5db;
+        }
+        .elva-consent-reject:hover {
+          background: #e5e7eb;
+        }
+        .elva-consent-link {
+          color: \${primaryColor};
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 500;
+        }
+        .elva-consent-link:hover {
+          text-decoration: underline;
+        }
+        @media (max-width: 640px) {
+          .elva-consent-banner-container {
+            width: 95%;
+          }
+          .elva-consent-buttons {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .elva-consent-btn {
+            width: 100%;
+            text-align: center;
+          }
+        }
+      \`;
+      document.head.appendChild(style);
+      document.body.appendChild(banner);
+
+      // Handle button clicks
+      document.getElementById('elva-consent-accept').addEventListener('click', () => {
+        const functional = document.getElementById('elva-consent-functional').checked;
+        this.saveConsent({
+          necessary: true,
+          functional: functional
+        });
+        banner.remove();
+        style.remove();
+      });
+
+      document.getElementById('elva-consent-reject').addEventListener('click', () => {
+        this.saveConsent({
+          necessary: true,
+          functional: false
+        });
+        banner.remove();
+        style.remove();
+      });
+
+      // Handle overlay click to close
+      document.querySelector('.elva-consent-overlay').addEventListener('click', () => {
+        banner.remove();
+        style.remove();
+      });
+    }
+  };
 
   // Generate or retrieve user ID - RESPECTS GDPR CONSENT
   let userId = null;
@@ -622,7 +1289,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
         <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant'}</div>
         <div style="font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 6px;">
           <div style="width: 6px; height: 6px; background: \${WIDGET_CONFIG.appearance.onlineIndicatorColor}; border-radius: 50%; animation: pulse 2s infinite;"></div>
-          \${(WIDGET_CONFIG.branding.availableNowText !== null && WIDGET_CONFIG.branding.availableNowText !== undefined && WIDGET_CONFIG.branding.availableNowText !== '') ? WIDGET_CONFIG.branding.availableNowText : 'Tilgængelig nu'}
+          \${(WIDGET_CONFIG.messages.availableNowText !== null && WIDGET_CONFIG.messages.availableNowText !== undefined && WIDGET_CONFIG.messages.availableNowText !== '') ? WIDGET_CONFIG.messages.availableNowText : 'Tilgængelig nu'}
         </div>
       </div>
     </div>
@@ -1418,6 +2085,7 @@ ${getConsentManagerCode({ widgetId: widgetId, theme: widget.theme })}
   let banner = null;
   if (WIDGET_CONFIG.messages.bannerText) {
     banner = document.createElement("div");
+    banner.id = "widget-banner";
     banner.style.cssText = \`
       padding: 8px 16px;
       background: \${themeColors.messageBg};
