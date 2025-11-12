@@ -30,6 +30,90 @@ import ImageZoomModal from './ImageZoomModal';
 // Default enabled languages
 const defaultEnabledLanguages = ['da', 'en', 'de', 'sv', 'no'];
 
+// Support Request Labels by Language
+const supportRequestLabels = {
+  'da': {
+    emailSupportButtonText: '📧 Email Support',
+    attachmentNoticeText: 'Samtalen vedhæftes: Din nuværende samtale med AI\'en vil automatisk blive vedhæftet til denne anmodning.',
+    nameLabel: 'Dit navn (valgfri)',
+    namePlaceholder: 'Skriv dit navn her',
+    emailLabel: 'Din email',
+    emailPlaceholder: 'Skriv din email her',
+    messageLabel: 'Efterlad en besked (valgfri)',
+    messagePlaceholder: 'Skriv din besked her',
+    liveChatButtonText: '💬 Live Chat',
+    liveChatNoticeText: 'Live Chat: En agent vil tage over samtalen og chatte med dig i real-time.',
+    liveChatReasonLabel: 'Hvorfor har du brug for live chat? (valgfri)',
+    liveChatReasonPlaceholder: 'Forklar hvorfor du gerne vil tale med en person...',
+    cancelButtonText: 'Annuller',
+    submitButtonText: 'Send anmodning'
+  },
+  'en': {
+    emailSupportButtonText: '📧 Email Support',
+    attachmentNoticeText: 'Conversation attached: Your current conversation with the AI will automatically be attached to this request.',
+    nameLabel: 'Your name (optional)',
+    namePlaceholder: 'Enter your name',
+    emailLabel: 'Your email',
+    emailPlaceholder: 'Enter your email',
+    messageLabel: 'Leave a message (optional)',
+    messagePlaceholder: 'Type your message here',
+    liveChatButtonText: '💬 Live Chat',
+    liveChatNoticeText: 'Live Chat: An agent will take over the conversation and chat with you in real-time.',
+    liveChatReasonLabel: 'Why do you need live chat? (optional)',
+    liveChatReasonPlaceholder: 'Explain why you would like to speak with a person...',
+    cancelButtonText: 'Cancel',
+    submitButtonText: 'Send request'
+  },
+  'de': {
+    emailSupportButtonText: '📧 E-Mail-Support',
+    attachmentNoticeText: 'Unterhaltung angehängt: Ihre aktuelle Unterhaltung mit der KI wird automatisch an diese Anfrage angehängt.',
+    nameLabel: 'Ihr Name (optional)',
+    namePlaceholder: 'Geben Sie Ihren Namen ein',
+    emailLabel: 'Ihre E-Mail',
+    emailPlaceholder: 'Geben Sie Ihre E-Mail ein',
+    messageLabel: 'Nachricht hinterlassen (optional)',
+    messagePlaceholder: 'Geben Sie hier Ihre Nachricht ein',
+    liveChatButtonText: '💬 Live-Chat',
+    liveChatNoticeText: 'Live-Chat: Ein Agent übernimmt die Unterhaltung und chattet mit Ihnen in Echtzeit.',
+    liveChatReasonLabel: 'Warum benötigen Sie einen Live-Chat? (optional)',
+    liveChatReasonPlaceholder: 'Erklären Sie, warum Sie gerne mit einer Person sprechen möchten...',
+    cancelButtonText: 'Abbrechen',
+    submitButtonText: 'Anfrage senden'
+  },
+  'sv': {
+    emailSupportButtonText: '📧 E-post Support',
+    attachmentNoticeText: 'Konversation bifogad: Din nuvarande konversation med AI:n kommer automatiskt att bifogas till denna förfrågan.',
+    nameLabel: 'Ditt namn (valfritt)',
+    namePlaceholder: 'Skriv ditt namn',
+    emailLabel: 'Din e-post',
+    emailPlaceholder: 'Skriv din e-post',
+    messageLabel: 'Lämna ett meddelande (valfritt)',
+    messagePlaceholder: 'Skriv ditt meddelande här',
+    liveChatButtonText: '💬 Live Chat',
+    liveChatNoticeText: 'Live Chat: En agent kommer att ta över konversationen och chatta med dig i realtid.',
+    liveChatReasonLabel: 'Varför behöver du live chat? (valfritt)',
+    liveChatReasonPlaceholder: 'Förklara varför du vill prata med en person...',
+    cancelButtonText: 'Avbryt',
+    submitButtonText: 'Skicka förfrågan'
+  },
+  'no': {
+    emailSupportButtonText: '📧 E-post Support',
+    attachmentNoticeText: 'Samtale vedlagt: Din nåværende samtale med AI-en vil automatisk bli vedlagt til denne forespørselen.',
+    nameLabel: 'Ditt navn (valgfritt)',
+    namePlaceholder: 'Skriv ditt navn',
+    emailLabel: 'Din e-post',
+    emailPlaceholder: 'Skriv din e-post',
+    messageLabel: 'Legg igjen en melding (valgfritt)',
+    messagePlaceholder: 'Skriv meldingen din her',
+    liveChatButtonText: '💬 Live Chat',
+    liveChatNoticeText: 'Live Chat: En agent vil ta over samtalen og chatte med deg i sanntid.',
+    liveChatReasonLabel: 'Hvorfor trenger du live chat? (valgfritt)',
+    liveChatReasonPlaceholder: 'Forklar hvorfor du gjerne vil snakke med en person...',
+    cancelButtonText: 'Avbryt',
+    submitButtonText: 'Send forespørsel'
+  }
+};
+
 const defaultLanguagePacks = {
   'da': {
     welcomeMessage: 'Hej! Hvordan kan jeg hjælpe dig i dag?',
@@ -2429,104 +2513,240 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Email Support Button Text
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.emailSupportButtonText || '📧 Email Support'}
-                                onChange={(e) => handleFieldChange('manualReview', 'emailSupportButtonText', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="📧 Email Support"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'emailSupportButtonText', supportRequestLabels[e.target.value]?.emailSupportButtonText || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.emailSupportButtonText || '📧 Email Support'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'emailSupportButtonText', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="📧 Email Support"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Attachment Notice Text
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.attachmentNoticeText || 'Samtalen vedhæftes: Din nuværende samtale med AI\'en vil automatisk blive vedhæftet til denne anmodning.'}
-                                onChange={(e) => handleFieldChange('manualReview', 'attachmentNoticeText', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Samtalen vedhæftes: ..."
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'attachmentNoticeText', supportRequestLabels[e.target.value]?.attachmentNoticeText || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.attachmentNoticeText || 'Samtalen vedhæftes: Din nuværende samtale med AI\'en vil automatisk blive vedhæftet til denne anmodning.'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'attachmentNoticeText', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Samtalen vedhæftes: ..."
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Name Label
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.nameLabel || 'Dit navn (valgfri)'}
-                                onChange={(e) => handleFieldChange('manualReview', 'nameLabel', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Dit navn (valgfri)"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'nameLabel', supportRequestLabels[e.target.value]?.nameLabel || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.nameLabel || 'Dit navn (valgfri)'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'nameLabel', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Dit navn (valgfri)"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Name Placeholder
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.namePlaceholder || 'Skriv dit navn her'}
-                                onChange={(e) => handleFieldChange('manualReview', 'namePlaceholder', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Skriv dit navn her"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'namePlaceholder', supportRequestLabels[e.target.value]?.namePlaceholder || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.namePlaceholder || 'Skriv dit navn her'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'namePlaceholder', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Skriv dit navn her"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Email Label
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.emailLabel || 'Din email'}
-                                onChange={(e) => handleFieldChange('manualReview', 'emailLabel', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Din email"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'emailLabel', supportRequestLabels[e.target.value]?.emailLabel || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.emailLabel || 'Din email'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'emailLabel', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Din email"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Email Placeholder
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.emailPlaceholder || 'Skriv din email her'}
-                                onChange={(e) => handleFieldChange('manualReview', 'emailPlaceholder', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Skriv din email her"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'emailPlaceholder', supportRequestLabels[e.target.value]?.emailPlaceholder || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.emailPlaceholder || 'Skriv din email her'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'emailPlaceholder', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Skriv din email her"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Message Label
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.messageLabel || 'Efterlad en besked (valgfri)'}
-                                onChange={(e) => handleFieldChange('manualReview', 'messageLabel', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Efterlad en besked (valgfri)"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'messageLabel', supportRequestLabels[e.target.value]?.messageLabel || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.messageLabel || 'Efterlad en besked (valgfri)'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'messageLabel', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Efterlad en besked (valgfri)"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Message Placeholder
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.messagePlaceholder || 'Skriv din besked her'}
-                                onChange={(e) => handleFieldChange('manualReview', 'messagePlaceholder', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Skriv din besked her"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'messagePlaceholder', supportRequestLabels[e.target.value]?.messagePlaceholder || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.messagePlaceholder || 'Skriv din besked her'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'messagePlaceholder', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Skriv din besked her"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -2542,52 +2762,120 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                   Live Chat Button Text
                                 </label>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.liveChatButtonText || '💬 Live Chat'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatButtonText', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="💬 Live Chat"
-                                />
+                                <div className="flex gap-2">
+                                  <select
+                                    onChange={(e) => {
+                                      if (e.target.value !== 'custom') {
+                                        handleFieldChange('manualReview', 'liveChatButtonText', supportRequestLabels[e.target.value]?.liveChatButtonText || '');
+                                      }
+                                    }}
+                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                  >
+                                    <option value="custom">Custom</option>
+                                    <option value="da">Dansk</option>
+                                    <option value="en">English</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="sv">Svenska</option>
+                                    <option value="no">Norsk</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    value={settings.manualReview?.liveChatButtonText || '💬 Live Chat'}
+                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatButtonText', e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                    placeholder="💬 Live Chat"
+                                  />
+                                </div>
                               </div>
 
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                   Live Chat Notice Text
                                 </label>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.liveChatNoticeText || 'Live Chat: En agent vil tage over samtalen og chatte med dig i real-time.'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatNoticeText', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Live Chat: En agent vil tage over samtalen..."
-                                />
+                                <div className="flex gap-2">
+                                  <select
+                                    onChange={(e) => {
+                                      if (e.target.value !== 'custom') {
+                                        handleFieldChange('manualReview', 'liveChatNoticeText', supportRequestLabels[e.target.value]?.liveChatNoticeText || '');
+                                      }
+                                    }}
+                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                  >
+                                    <option value="custom">Custom</option>
+                                    <option value="da">Dansk</option>
+                                    <option value="en">English</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="sv">Svenska</option>
+                                    <option value="no">Norsk</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    value={settings.manualReview?.liveChatNoticeText || 'Live Chat: En agent vil tage over samtalen og chatte med dig i real-time.'}
+                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatNoticeText', e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                    placeholder="Live Chat: En agent vil tage over samtalen..."
+                                  />
+                                </div>
                               </div>
 
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                   Reason Label
                                 </label>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.liveChatReasonLabel || 'Hvorfor har du brug for live chat? (valgfri)'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonLabel', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Hvorfor har du brug for live chat? (valgfri)"
-                                />
+                                <div className="flex gap-2">
+                                  <select
+                                    onChange={(e) => {
+                                      if (e.target.value !== 'custom') {
+                                        handleFieldChange('manualReview', 'liveChatReasonLabel', supportRequestLabels[e.target.value]?.liveChatReasonLabel || '');
+                                      }
+                                    }}
+                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                  >
+                                    <option value="custom">Custom</option>
+                                    <option value="da">Dansk</option>
+                                    <option value="en">English</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="sv">Svenska</option>
+                                    <option value="no">Norsk</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    value={settings.manualReview?.liveChatReasonLabel || 'Hvorfor har du brug for live chat? (valgfri)'}
+                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonLabel', e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                    placeholder="Hvorfor har du brug for live chat? (valgfri)"
+                                  />
+                                </div>
                               </div>
 
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                   Reason Placeholder
                                 </label>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.liveChatReasonPlaceholder || 'Forklar hvorfor du gerne vil tale med en person...'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonPlaceholder', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Forklar hvorfor du gerne vil tale med en person..."
-                                />
+                                <div className="flex gap-2">
+                                  <select
+                                    onChange={(e) => {
+                                      if (e.target.value !== 'custom') {
+                                        handleFieldChange('manualReview', 'liveChatReasonPlaceholder', supportRequestLabels[e.target.value]?.liveChatReasonPlaceholder || '');
+                                      }
+                                    }}
+                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                  >
+                                    <option value="custom">Custom</option>
+                                    <option value="da">Dansk</option>
+                                    <option value="en">English</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="sv">Svenska</option>
+                                    <option value="no">Norsk</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    value={settings.manualReview?.liveChatReasonPlaceholder || 'Forklar hvorfor du gerne vil tale med en person...'}
+                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonPlaceholder', e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                    placeholder="Forklar hvorfor du gerne vil tale med en person..."
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2603,26 +2891,60 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Cancel Button Text
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.cancelButtonText || 'Annuller'}
-                                onChange={(e) => handleFieldChange('manualReview', 'cancelButtonText', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Annuller"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'cancelButtonText', supportRequestLabels[e.target.value]?.cancelButtonText || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.cancelButtonText || 'Annuller'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'cancelButtonText', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Annuller"
+                                />
+                              </div>
                             </div>
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 Submit Button Text
                               </label>
-                              <input
-                                type="text"
-                                value={settings.manualReview?.submitButtonText || 'Send anmodning'}
-                                onChange={(e) => handleFieldChange('manualReview', 'submitButtonText', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                placeholder="Send anmodning"
-                              />
+                              <div className="flex gap-2">
+                                <select
+                                  onChange={(e) => {
+                                    if (e.target.value !== 'custom') {
+                                      handleFieldChange('manualReview', 'submitButtonText', supportRequestLabels[e.target.value]?.submitButtonText || '');
+                                    }
+                                  }}
+                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                                >
+                                  <option value="custom">Custom</option>
+                                  <option value="da">Dansk</option>
+                                  <option value="en">English</option>
+                                  <option value="de">Deutsch</option>
+                                  <option value="sv">Svenska</option>
+                                  <option value="no">Norsk</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.submitButtonText || 'Send anmodning'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'submitButtonText', e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Send anmodning"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>

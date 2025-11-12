@@ -1,6 +1,6 @@
-import { uploadToCloudinary } from '../../../lib/cloudinary';
+import { uploadToCloudinary } from '../../../../lib/cloudinary';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]';
+import { authOptions } from '../../auth/[...nextauth]';
 import { ObjectId } from 'mongodb';
 import clientPromise from '../../../../lib/mongodb';
 
