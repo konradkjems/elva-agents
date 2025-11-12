@@ -1103,7 +1103,7 @@ export default async function handler(req, res) {
   // Helper function to generate chat bubble icon without online indicator
   function generateChatBubbleIcon() {
     return \`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 32px; height: 32px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle transition-transform duration-300" style="width: 40px !important; height: 40px !important; display: block !important;">
         <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"></path>
       </svg>
     \`;
@@ -1112,7 +1112,7 @@ export default async function handler(req, res) {
   // Helper function to generate chevron down icon for open state
   function generateChevronIcon() {
     return \`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 32px; height: 32px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 40px !important; height: 40px !important; display: block !important;">
         <path d="m6 9 6 6 6-6"></path>
       </svg>
     \`;
@@ -1152,7 +1152,7 @@ export default async function handler(req, res) {
         <img src="\${logoUrl}" 
              alt="Widget Logo" 
              class="widget-logo"
-             style="width: 32px; height: 32px; object-fit: contain; transition: all 0.3s ease;" 
+             style="width: 32px !important; height: 32px !important; max-width: 32px !important; max-height: 32px !important; object-fit: contain; transition: all 0.3s ease; display: block;" 
              onerror="console.error('Failed to load widget logo:', this.src); this.style.display='none';" 
              onload="" />
       \`;
@@ -1163,6 +1163,141 @@ export default async function handler(req, res) {
     }
   }
 
+  // Create widget-scoped CSS reset to prevent parent site CSS from affecting icons
+  const widgetStyle = document.createElement('style');
+  widgetStyle.id = 'elva-widget-reset-' + WIDGET_CONFIG.widgetId;
+  widgetStyle.textContent = \`
+    /* Widget CSS Reset - Isolate from parent site styles */
+    .elva-chat-box, .elva-chat-box *,
+    .mobile-chat-box, .mobile-chat-box *,
+    button[id^="menuBtn_"], button[id^="closeBtn_"],
+    button[id^="menuBtn_"] *, button[id^="closeBtn_"] *,
+    .widget-voice-button, .widget-voice-button *,
+    .elva-image-upload-btn, .elva-image-upload-btn *,
+    button[class*="widget-"], button[class*="widget-"] * {
+      box-sizing: border-box !important;
+    }
+    
+    /* Reset SVG icon sizes to prevent parent CSS scaling */
+    .elva-chat-box svg,
+    .mobile-chat-box svg,
+    button[id^="menuBtn_"] svg,
+    button[id^="closeBtn_"] svg,
+    .widget-voice-button svg,
+    .elva-image-upload-btn svg,
+    button[class*="widget-"] svg,
+    button[style*="position: fixed"] svg {
+      width: auto !important;
+      height: auto !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      display: block !important;
+    }
+    
+    /* Specific rules for chat button SVG - larger size for better visibility */
+    button[style*="position: fixed"][style*="border-radius: 50%"] svg {
+      width: 32px !important;
+      height: 32px !important;
+      max-width: 32px !important;
+      max-height: 32px !important;
+    }
+    
+    /* Specific rules for menu button SVG */
+    button[id^="menuBtn_"] svg,
+    button[id^="closeBtn_"] svg {
+      width: 22px !important;
+      height: 22px !important;
+      max-width: 22px !important;
+      max-height: 22px !important;
+    }
+    
+    /* Specific rules for voice button SVG */
+    .widget-voice-button svg.mic-icon,
+    .widget-voice-button svg.recording-icon {
+      width: 18px !important;
+      height: 18px !important;
+      max-width: 18px !important;
+      max-height: 18px !important;
+    }
+    
+    /* Specific rules for image upload button SVG */
+    .elva-image-upload-btn svg.image-icon {
+      width: 20px !important;
+      height: 20px !important;
+      max-width: 20px !important;
+      max-height: 20px !important;
+    }
+    
+    /* Specific rules for send button SVG */
+    button[style*="border-radius: 50%"][style*="background"]:not([id^="menuBtn_"]):not([id^="closeBtn_"]) svg {
+      width: 28px;
+      height: 28px;
+      max-width: 32px;
+      max-height: 32px;
+    }
+    
+    /* Specific rules for menu dropdown SVG */
+    .menu-option svg {
+      width: 16px !important;
+      height: 16px !important;
+      max-width: 16px !important;
+      max-height: 16px !important;
+    }
+    
+    /* Ensure button font sizes are not affected by parent */
+    .elva-chat-box button,
+    .mobile-chat-box button,
+    button[id^="menuBtn_"],
+    button[id^="closeBtn_"],
+    .widget-voice-button,
+    .elva-image-upload-btn {
+      font-size: inherit !important;
+      line-height: normal !important;
+    }
+    
+    /* Prevent parent CSS from affecting widget container */
+    .elva-chat-box,
+    .mobile-chat-box {
+      isolation: isolate !important;
+      contain: layout style paint !important;
+    }
+    
+    /* Prevent parent CSS from affecting widget logo images */
+    .widget-logo,
+    button[style*="position: fixed"] img {
+      width: 32px !important;
+      height: 32px !important;
+      max-width: 32px !important;
+      max-height: 32px !important;
+      object-fit: contain !important;
+    }
+    
+    /* Prevent parent CSS from affecting header avatar */
+    .elva-chat-box img[alt="Avatar"],
+    .mobile-chat-box img[alt="Avatar"] {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: cover !important;
+    }
+    
+    /* Prevent parent CSS from affecting header avatar container */
+    .elva-chat-box div[style*="border-radius: 50%"][style*="display: flex"],
+    .mobile-chat-box div[style*="border-radius: 50%"][style*="display: flex"] {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px !important;
+      min-height: 40px !important;
+      max-width: 40px !important;
+      max-height: 40px !important;
+    }
+    
+    /* Prevent parent CSS from affecting button sizes - but allow iconSizes config */
+    /* Note: Specific button sizes are set inline, this is a fallback */
+  \`;
+  document.head.appendChild(widgetStyle);
+
   // Create chat button with modern design matching LivePreview
   const chatBtn = document.createElement("button");
   chatBtn.innerHTML = generateWidgetContent(true); // Start minimized
@@ -1172,8 +1307,12 @@ export default async function handler(req, res) {
       WIDGET_CONFIG.appearance?.placement === 'top-right' ? 'top: 24px; right: 24px;' :
       WIDGET_CONFIG.appearance?.placement === 'top-left' ? 'top: 24px; left: 24px;' :
       'bottom: 24px; right: 24px;'}
-    width: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px;
-    height: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px;
+    width: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px !important;
+    height: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px !important;
+    min-width: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px !important;
+    min-height: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px !important;
+    max-width: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px !important;
+    max-height: \${WIDGET_CONFIG.branding?.iconSizes?.chatButton || 60}px !important;
     border-radius: 50%;
     background: \${WIDGET_CONFIG.appearance?.useGradient ? 
       \`linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'} 0%, \${WIDGET_CONFIG.appearance?.secondaryColor || adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)} 100%)\` : 
@@ -1190,6 +1329,7 @@ export default async function handler(req, res) {
     justify-content: center;
     overflow: hidden;
     backdrop-filter: blur(10px);
+    box-sizing: border-box;
   \`;
   
   chatBtn.onmouseover = () => {
@@ -1274,6 +1414,10 @@ export default async function handler(req, res) {
     overflow: visible;
     transition: all 0.3s ease;
     will-change: transform, opacity;
+    isolation: isolate;
+    contain: layout style paint;
+    box-sizing: border-box;
+    font-size: 16px;
   \`;
 
   // Create header matching LivePreview structure
@@ -1291,9 +1435,9 @@ export default async function handler(req, res) {
   \`;
   header.innerHTML = \`
     <div style="display: flex; align-items: center; gap: 12px; position: relative; z-index: 10;">
-      <div style="width: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px; height: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; backdrop-filter: blur(10px); overflow: hidden;">
+      <div style="width: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px !important; height: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px !important; min-width: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px !important; min-height: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px !important; max-width: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px !important; max-height: \${WIDGET_CONFIG.branding?.iconSizes?.headerAvatar || 40}px !important; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; backdrop-filter: blur(10px); overflow: hidden; box-sizing: border-box;">
         \${WIDGET_CONFIG.branding?.avatarUrl ? 
-          \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+          \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100% !important; height: 100% !important; max-width: 100% !important; max-height: 100% !important; object-fit: cover !important; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center; display: block;" />\` : 
           generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)
         }
       </div>
@@ -1308,8 +1452,8 @@ export default async function handler(req, res) {
     
     <div style="display: flex; align-items: center; gap: 8px; position: relative; z-index: 10;">
       <div style="position: relative;">
-        <button id="menuBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.15)'" onmouseout="this.style.backgroundColor='transparent'">
-          <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button id="menuBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s ease; box-sizing: border-box;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.15)'" onmouseout="this.style.backgroundColor='transparent'">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 22px !important; height: 22px !important; display: block !important;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
           </svg>
         </button>
@@ -1345,8 +1489,9 @@ export default async function handler(req, res) {
               display: flex;
               align-items: center;
               gap: 12px;
+              box-sizing: border-box;
             " onmouseover="this.style.backgroundColor='\${themeColors.messageBg}'" onmouseout="this.style.backgroundColor='transparent'">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px !important; height: 16px !important; display: block !important; flex-shrink: 0;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
               \${WIDGET_CONFIG.messages?.newConversationLabel || 'Ny samtale'}
@@ -1364,8 +1509,9 @@ export default async function handler(req, res) {
               display: flex;
               align-items: center;
               gap: 12px;
+              box-sizing: border-box;
             " onmouseover="this.style.backgroundColor='\${themeColors.messageBg}'" onmouseout="this.style.backgroundColor='transparent'">
-              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 16px !important; height: 16px !important; display: block !important; flex-shrink: 0;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
               \${WIDGET_CONFIG.messages?.conversationHistoryLabel || 'Tidligere samtaler'}
@@ -1374,8 +1520,8 @@ export default async function handler(req, res) {
         </div>
       </div>
       
-      <button id="closeBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.15)'" onmouseout="this.style.backgroundColor='transparent'">
-        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button id="closeBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 6px; border-radius: 50%; transition: all 0.2s ease; box-sizing: border-box;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.15)'" onmouseout="this.style.backgroundColor='transparent'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 22px !important; height: 22px !important; display: block !important;">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
@@ -1473,13 +1619,13 @@ export default async function handler(req, res) {
   voiceButton.className = "widget-voice-button";
   voiceButton.setAttribute('aria-label', 'Voice input');
   voiceButton.innerHTML = \`
-    <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px !important; height: 18px !important; display: block !important;">
       <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
       <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
       <line x1="12" y1="19" x2="12" y2="23"/>
       <line x1="8" y1="23" x2="16" y2="23"/>
     </svg>
-    <svg class="recording-icon" style="display:none" width="18" height="18" viewBox="0 0 24 24" fill="red">
+    <svg class="recording-icon" style="display:none !important; width: 18px !important; height: 18px !important;" width="18" height="18" viewBox="0 0 24 24" fill="red">
       <circle cx="12" cy="12" r="8"/>
     </svg>
   \`;
@@ -1500,6 +1646,7 @@ export default async function handler(req, res) {
     z-index: 2;
     border-radius: 4px;
     pointer-events: auto;
+    box-sizing: border-box;
   \`;
 
   // INPUT FIELD - Med padding til venstre for mikrofon
@@ -1586,7 +1733,7 @@ export default async function handler(req, res) {
     imageUploadButton.type = 'button';
     imageUploadButton.className = 'elva-image-upload-btn';
     imageUploadButton.innerHTML = \`
-      <svg class="image-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="-4.5 0 24 24" fill="currentColor">
+      <svg class="image-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="-4.5 0 24 24" fill="currentColor" style="width: 20px !important; height: 20px !important; display: block !important;">
         <path d="m9.818 0c-3.012 0-5.455 2.442-5.455 5.455v9.818c0 1.808 1.465 3.273 3.273 3.273s3.273-1.465 3.273-3.273v-5.665c-.017-.589-.499-1.061-1.091-1.061s-1.074.471-1.091 1.059v.002 5.665.031c0 .603-.489 1.091-1.091 1.091s-1.091-.489-1.091-1.091c0-.011 0-.021 0-.032v.002-9.818c0-1.808 1.465-3.273 3.273-3.273s3.273 1.465 3.273 3.273v10.906c0 3.012-2.442 5.455-5.455 5.455s-5.455-2.442-5.455-5.455v-10.906c0-.009 0-.02 0-.031 0-.603-.489-1.091-1.091-1.091s-1.091.489-1.091 1.091v.032-.002 10.906c0 4.217 3.419 7.636 7.636 7.636s7.636-3.419 7.636-7.636v-10.906c-.003-3.011-2.444-5.452-5.455-5.455z"/>
       </svg>
     \`;
@@ -1612,6 +1759,7 @@ export default async function handler(req, res) {
       transition: all 0.2s ease;
       z-index: 3;
       pointer-events: auto;
+      box-sizing: border-box;
     \`;
     
     // Update input padding to make room for image button
@@ -1827,14 +1975,18 @@ export default async function handler(req, res) {
 
   const sendButton = document.createElement("button");
   sendButton.innerHTML = \`
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px !important; height: 20px !important; display: block !important;">
       <path d="m22 2-7 20-4-9-9-4Z"></path>
       <path d="M22 2 11 13"></path>
     </svg>
   \`;
   sendButton.style.cssText = \`
-    width: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px;
-    height: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px;
+    width: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px !important;
+    height: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px !important;
+    min-width: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px !important;
+    min-height: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px !important;
+    max-width: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px !important;
+    max-height: \${WIDGET_CONFIG.branding?.iconSizes?.sendButton || 44}px !important;
     background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
     color: white;
     border: none;
@@ -1845,6 +1997,7 @@ export default async function handler(req, res) {
     justify-content: center;
     transition: all 0.2s ease;
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    box-sizing: border-box;
   \`;
 
   // Disable send button if widget is blocked
@@ -1975,15 +2128,20 @@ export default async function handler(req, res) {
     if (isRecording) {
       micIcon.style.display = 'none';
       recordingIcon.style.display = 'block';
+      recordingIcon.style.setProperty('display', 'block', 'important');
       voiceButton.style.color = '#ef4444';
       voiceButton.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
     } else {
       micIcon.style.display = 'block';
       recordingIcon.style.display = 'none';
+      recordingIcon.style.setProperty('display', 'none', 'important');
       voiceButton.style.color = '#6b7280';
       voiceButton.style.backgroundColor = 'transparent';
     }
   }
+
+  // Initialize voice button state - ensure recording icon is hidden
+  updateVoiceButtonState();
 
   // Voice button event handlers
   // Only attach if voice input is enabled AND recognition is available
@@ -2033,6 +2191,12 @@ export default async function handler(req, res) {
         voiceButton.style.borderRadius = '8px'; // Return to normal roundness
       }
     };
+  } else {
+    // If voice input is disabled or recognition not available, ensure recording icon is hidden
+    const recordingIcon = voiceButton.querySelector('.recording-icon');
+    if (recordingIcon) {
+      recordingIcon.style.display = 'none';
+    }
   }
 
   sendButton.onmouseover = () => {
@@ -2163,7 +2327,7 @@ export default async function handler(req, res) {
   historyHeader.innerHTML = \`
     <div style="display: flex; align-items: center; gap: 12px;">
       <button id="backBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
@@ -2171,7 +2335,7 @@ export default async function handler(req, res) {
     </div>
     
     <button id="closeHistoryBtn_\${WIDGET_CONFIG.widgetId}" style="background: none; border: none; color: white; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 50%; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
@@ -2486,7 +2650,7 @@ export default async function handler(req, res) {
     
     // Animate icon to chevron down when history is open
     animateIconChange(\`
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="27.5" height="27.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down transition-transform duration-300" style="width: 27.5px; height: 27.5px;">
         <path d="m6 9 6 6 6-6"></path>
       </svg>
     \`);
@@ -3073,7 +3237,8 @@ export default async function handler(req, res) {
       button.textContent = response;
       button.style.cssText = \`
         padding: 6px 12px;
-        font-size: 12px;
+        font-size: 14px !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         color: \${themeColors.textColor};
         background: \${themeColors.messageBg};
         border: 1px solid \${themeColors.borderColor};

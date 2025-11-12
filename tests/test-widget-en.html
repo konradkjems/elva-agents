@@ -1,5 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- Test for availableNowText language switching - should show "Available now" -->
+<!-- Test script to verify availableNowText updates with language changes -->
+<script>
+  // Test function to check availableNowText after language change
+  window.testAvailableNowText = function() {
+    setTimeout(() => {
+      const availableNowElement = document.querySelector('[id^="available-now-text_"]');
+      if (availableNowElement) {
+        const textContent = availableNowElement.textContent.trim();
+        console.log('🧪 Available now text:', textContent);
+
+        // Check if it contains expected English text
+        if (textContent.includes('Available now') || textContent.includes('Available')) {
+          console.log('✅ Available now text is in English');
+        } else {
+          console.log('❌ Available now text is not in English:', textContent);
+        }
+      } else {
+        console.log('❌ Available now element not found');
+      }
+    }, 2000); // Wait for widget to load and language to be detected
+  };
+
+  // Run test when page loads
+  window.addEventListener('load', () => {
+    console.log('🧪 Testing availableNowText language switching...');
+    window.testAvailableNowText();
+  });
+</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
