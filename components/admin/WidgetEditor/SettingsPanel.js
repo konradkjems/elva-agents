@@ -2326,6 +2326,35 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     {/* Support Request Settings */}
                     {settings.manualReview?.enabled !== false && (
                       <div className="space-y-4">
+                        {/* Enable Live Chat */}
+                        <div>
+                          <Switch.Group>
+                            <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                              <div>
+                                <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  Enable Live Chat
+                                </Switch.Label>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  Allow users to request live chat with an agent in addition to email support
+                                </p>
+                              </div>
+                              <Switch
+                                checked={settings.manualReview?.liveChatEnabled !== false}
+                                onChange={(checked) => handleFieldChange('manualReview', 'liveChatEnabled', checked)}
+                                className={`${
+                                  settings.manualReview?.liveChatEnabled !== false ? 'bg-green-600' : 'bg-gray-200'
+                                } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
+                              >
+                                <span
+                                  className={`${
+                                    settings.manualReview?.liveChatEnabled !== false ? 'translate-x-6' : 'translate-x-1'
+                                  } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                                />
+                              </Switch>
+                            </div>
+                          </Switch.Group>
+                        </div>
+
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Button Text
@@ -2388,6 +2417,214 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Message shown after successful submission
                           </p>
+                        </div>
+
+                        {/* Email Support Labels */}
+                        <div className="border-t pt-4 mt-4">
+                          <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                            Email Support Labels
+                          </h5>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Email Support Button Text
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.emailSupportButtonText || '📧 Email Support'}
+                                onChange={(e) => handleFieldChange('manualReview', 'emailSupportButtonText', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="📧 Email Support"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Attachment Notice Text
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.attachmentNoticeText || 'Samtalen vedhæftes: Din nuværende samtale med AI\'en vil automatisk blive vedhæftet til denne anmodning.'}
+                                onChange={(e) => handleFieldChange('manualReview', 'attachmentNoticeText', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Samtalen vedhæftes: ..."
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Name Label
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.nameLabel || 'Dit navn (valgfri)'}
+                                onChange={(e) => handleFieldChange('manualReview', 'nameLabel', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Dit navn (valgfri)"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Name Placeholder
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.namePlaceholder || 'Skriv dit navn her'}
+                                onChange={(e) => handleFieldChange('manualReview', 'namePlaceholder', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Skriv dit navn her"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Email Label
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.emailLabel || 'Din email'}
+                                onChange={(e) => handleFieldChange('manualReview', 'emailLabel', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Din email"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Email Placeholder
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.emailPlaceholder || 'Skriv din email her'}
+                                onChange={(e) => handleFieldChange('manualReview', 'emailPlaceholder', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Skriv din email her"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Message Label
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.messageLabel || 'Efterlad en besked (valgfri)'}
+                                onChange={(e) => handleFieldChange('manualReview', 'messageLabel', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Efterlad en besked (valgfri)"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Message Placeholder
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.messagePlaceholder || 'Skriv din besked her'}
+                                onChange={(e) => handleFieldChange('manualReview', 'messagePlaceholder', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Skriv din besked her"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Live Chat Labels */}
+                        {settings.manualReview?.liveChatEnabled !== false && (
+                          <div className="border-t pt-4 mt-4">
+                            <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                              Live Chat Labels
+                            </h5>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Live Chat Button Text
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.liveChatButtonText || '💬 Live Chat'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatButtonText', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="💬 Live Chat"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Live Chat Notice Text
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.liveChatNoticeText || 'Live Chat: En agent vil tage over samtalen og chatte med dig i real-time.'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatNoticeText', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Live Chat: En agent vil tage over samtalen..."
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Reason Label
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.liveChatReasonLabel || 'Hvorfor har du brug for live chat? (valgfri)'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonLabel', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Hvorfor har du brug for live chat? (valgfri)"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Reason Placeholder
+                                </label>
+                                <input
+                                  type="text"
+                                  value={settings.manualReview?.liveChatReasonPlaceholder || 'Forklar hvorfor du gerne vil tale med en person...'}
+                                  onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonPlaceholder', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  placeholder="Forklar hvorfor du gerne vil tale med en person..."
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Common Form Labels */}
+                        <div className="border-t pt-4 mt-4">
+                          <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                            Form Buttons
+                          </h5>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Cancel Button Text
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.cancelButtonText || 'Annuller'}
+                                onChange={(e) => handleFieldChange('manualReview', 'cancelButtonText', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Annuller"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Submit Button Text
+                              </label>
+                              <input
+                                type="text"
+                                value={settings.manualReview?.submitButtonText || 'Send anmodning'}
+                                onChange={(e) => handleFieldChange('manualReview', 'submitButtonText', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                placeholder="Send anmodning"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}

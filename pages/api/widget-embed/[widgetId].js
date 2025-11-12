@@ -550,10 +550,28 @@ export default async function handler(req, res) {
     },
     manualReview: {
       enabled: widget.manualReview?.enabled !== false,
+      liveChatEnabled: widget.manualReview?.liveChatEnabled !== false,
       buttonText: widget.manualReview?.buttonText || 'Request Support',
       formTitle: widget.manualReview?.formTitle || 'Request Support',
       formDescription: widget.manualReview?.formDescription || 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.',
-      successMessage: widget.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'
+      successMessage: widget.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.',
+      // Email support labels
+      emailSupportButtonText: widget.manualReview?.emailSupportButtonText || '📧 Email Support',
+      attachmentNoticeText: widget.manualReview?.attachmentNoticeText || 'Samtalen vedhæftes: Din nuværende samtale med AI\'en vil automatisk blive vedhæftet til denne anmodning.',
+      nameLabel: widget.manualReview?.nameLabel || 'Dit navn (valgfri)',
+      namePlaceholder: widget.manualReview?.namePlaceholder || 'Skriv dit navn her',
+      emailLabel: widget.manualReview?.emailLabel || 'Din email',
+      emailPlaceholder: widget.manualReview?.emailPlaceholder || 'Skriv din email her',
+      messageLabel: widget.manualReview?.messageLabel || 'Efterlad en besked (valgfri)',
+      messagePlaceholder: widget.manualReview?.messagePlaceholder || 'Skriv din besked her',
+      // Live chat labels
+      liveChatButtonText: widget.manualReview?.liveChatButtonText || '💬 Live Chat',
+      liveChatNoticeText: widget.manualReview?.liveChatNoticeText || 'Live Chat: En agent vil tage over samtalen og chatte med dig i real-time.',
+      liveChatReasonLabel: widget.manualReview?.liveChatReasonLabel || 'Hvorfor har du brug for live chat? (valgfri)',
+      liveChatReasonPlaceholder: widget.manualReview?.liveChatReasonPlaceholder || 'Forklar hvorfor du gerne vil tale med en person...',
+      // Common form labels
+      cancelButtonText: widget.manualReview?.cancelButtonText || 'Annuller',
+      submitButtonText: widget.manualReview?.submitButtonText || 'Send anmodning'
     },
     settings: {
       imageUpload: {
@@ -637,12 +655,12 @@ export default async function handler(req, res) {
                   bannerElement.id = "widget-banner";
                   bannerElement.style.cssText = \`
                     padding: 8px 16px;
-                    background: \${themeColors.messageBg || '#ffffff'};
-                    border-bottom: 1px solid \${themeColors.borderColor || '#e5e7eb'};
+                    background: rgb(243, 244, 246);
+                    border-bottom: 1px solid rgb(229, 231, 235);
                     font-size: 12px;
-                    color: \${themeColors.textColor || '#1f2937'};
+                    color: rgb(55, 65, 81);
                     opacity: 0.8;
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                     text-align: center;
                     line-height: 1.4;
                   \`;
@@ -961,6 +979,12 @@ export default async function handler(req, res) {
   
   // Store raw messages for history (before formatting)
   let currentConversationMessages = [];
+  
+  // Live chat state
+  let liveChatStatus = 'ai'; // 'ai' | 'requested' | 'active' | 'ended'
+  let liveChatEventSource = null;
+  let agentInfo = null;
+  let processedMessageIds = new Set();
 
   // Conversation history storage
   function saveConversationToHistory(conversationId, messages) {
@@ -1293,6 +1317,7 @@ export default async function handler(req, res) {
       max-height: 40px !important;
     }
     
+
     /* Prevent parent CSS from affecting button sizes - but allow iconSizes config */
     /* Note: Specific button sizes are set inline, this is a fallback */
   \`;
@@ -2264,12 +2289,12 @@ export default async function handler(req, res) {
     banner.id = "widget-banner";
     banner.style.cssText = \`
       padding: 8px 16px;
-      background: \${themeColors.messageBg};
-      border-bottom: 1px solid \${themeColors.borderColor};
+      background: rgb(243, 244, 246);
+      border-bottom: 1px solid rgb(229, 231, 235);
       font-size: 12px;
-      color: \${themeColors.textColor};
+      color: rgb(55, 65, 81);
       opacity: 0.8;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       text-align: center;
       line-height: 1.4;
     \`;
@@ -4114,7 +4139,7 @@ export default async function handler(req, res) {
       const messageBubble = document.createElement("div");
       messageBubble.style.cssText = \`
         background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
-        color: white;
+        color: #FFFFFF;
         padding: 12px 16px;
         border-radius: 18px 18px 4px 18px;
         font-size: 14px;
@@ -5131,6 +5156,35 @@ export default async function handler(req, res) {
     const msg = input.value.trim();
     if (msg === "" || isSending) return;
     
+    // If live chat is active, send to live chat endpoint
+    if (liveChatStatus === 'active' && currentConversationId) {
+      isSending = true;
+      addMessage('user', msg, currentImageAttachment);
+      input.value = "";
+      
+      try {
+        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/user-message\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversationId: currentConversationId,
+            message: msg
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          addMessage('assistant', 'Failed to send message: ' + (error.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error sending live chat message:', error);
+        addMessage('assistant', 'Failed to send message. Please try again.');
+      } finally {
+        isSending = false;
+      }
+      return;
+    }
+    
     isSending = true;
     
     // Remove suggested responses if they exist (they are in inputContainer, not messages)
@@ -5306,6 +5360,7 @@ export default async function handler(req, res) {
           
           // Reset support request form state for new conversation
           manualReviewFormOpen = false;
+          
         } else {
           console.log('📝 Using existing conversation ID:', currentConversationId);
         }
@@ -6192,6 +6247,99 @@ export default async function handler(req, res) {
       border: 1px solid \${themeColors.borderColor};
     \`;
     
+    // Form Title
+    const formTitle = document.createElement('h3');
+    formTitle.style.cssText = \`
+      font-size: 18px;
+      font-weight: 600;
+      color: \${themeColors.textColor};
+      margin-bottom: 8px;
+    \`;
+    formTitle.textContent = WIDGET_CONFIG.manualReview.formTitle;
+    formBubble.appendChild(formTitle);
+    
+    // Form Description
+    const formDescription = document.createElement('p');
+    formDescription.style.cssText = \`
+      font-size: 13px;
+      color: \${themeColors.textColor};
+      opacity: 0.8;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    \`;
+    formDescription.textContent = WIDGET_CONFIG.manualReview.formDescription;
+    formBubble.appendChild(formDescription);
+    
+    // Request type selector (only show if live chat is enabled)
+    let requestType = 'email'; // 'email' or 'live-chat'
+    let typeSelector = null;
+    
+    if (WIDGET_CONFIG.manualReview.liveChatEnabled) {
+      typeSelector = document.createElement('div');
+      typeSelector.style.cssText = \`
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        background: #f3f4f6;
+        padding: 4px;
+        border-radius: 8px;
+      \`;
+      
+      const emailOption = document.createElement('button');
+      emailOption.type = 'button';
+      emailOption.textContent = WIDGET_CONFIG.manualReview.emailSupportButtonText;
+      emailOption.style.cssText = \`
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        background: \${requestType === 'email' ? WIDGET_CONFIG.theme.buttonColor || '#4f46e5' : 'transparent'};
+        color: \${requestType === 'email' ? 'white' : themeColors.textColor};
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      \`;
+      
+      const liveChatOption = document.createElement('button');
+      liveChatOption.type = 'button';
+      liveChatOption.textContent = WIDGET_CONFIG.manualReview.liveChatButtonText;
+      liveChatOption.style.cssText = \`
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        background: \${requestType === 'live-chat' ? WIDGET_CONFIG.theme.buttonColor || '#4f46e5' : 'transparent'};
+        color: \${requestType === 'live-chat' ? 'white' : themeColors.textColor};
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      \`;
+      
+      emailOption.addEventListener('click', () => {
+        requestType = 'email';
+        emailOption.style.background = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
+        emailOption.style.color = 'white';
+        liveChatOption.style.background = 'transparent';
+        liveChatOption.style.color = themeColors.textColor;
+        updateFormFields();
+      });
+      
+      liveChatOption.addEventListener('click', () => {
+        requestType = 'live-chat';
+        liveChatOption.style.background = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
+        liveChatOption.style.color = 'white';
+        emailOption.style.background = 'transparent';
+        emailOption.style.color = themeColors.textColor;
+        updateFormFields();
+      });
+      
+      typeSelector.appendChild(emailOption);
+      typeSelector.appendChild(liveChatOption);
+      formBubble.appendChild(typeSelector);
+    }
+    
     // Form
     const form = document.createElement('form');
     form.style.cssText = \`
@@ -6201,135 +6349,184 @@ export default async function handler(req, res) {
       width: 100%;
     \`;
     
-    // Conversation attachment notice
-    const attachmentNotice = document.createElement('div');
-    attachmentNotice.style.cssText = \`
-      background: #f0f9ff;
-      border: 1px solid #bae6fd;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 16px;
-      font-size: 13px;
-      color: #0369a1;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    \`;
-    attachmentNotice.innerHTML = \`
-      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      <span><strong>Samtalen vedhæftes:</strong> Din nuværende samtale med AI'en vil automatisk blive vedhæftet til denne anmodning.</span>
-    \`;
+    // Dynamic form fields container
+    const formFieldsContainer = document.createElement('div');
+    formFieldsContainer.id = 'form-fields-container';
     
-    // Name field
-    const nameLabel = document.createElement('label');
-    nameLabel.style.cssText = \`
-      font-size: 14px;
-      font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 8px;
-      display: block;
-    \`;
-    nameLabel.textContent = 'Dit navn (valgfri)';
+    function updateFormFields() {
+      formFieldsContainer.innerHTML = '';
+      
+      if (requestType === 'email') {
+        // Email support fields
+        const attachmentNotice = document.createElement('div');
+        attachmentNotice.style.cssText = \`
+          background: #f0f9ff;
+          border: 1px solid #bae6fd;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: #0369a1;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        \`;
+        attachmentNotice.innerHTML = \`
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span><strong>\${WIDGET_CONFIG.manualReview.attachmentNoticeText.split(':')[0]}:</strong> \${WIDGET_CONFIG.manualReview.attachmentNoticeText.split(':').slice(1).join(':').trim()}</span>
+        \`;
+        formFieldsContainer.appendChild(attachmentNotice);
+        
+        // Name field
+        const nameLabel = document.createElement('label');
+        nameLabel.style.cssText = \`
+          font-size: 14px;
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 8px;
+          display: block;
+        \`;
+        nameLabel.textContent = WIDGET_CONFIG.manualReview.nameLabel;
+        formFieldsContainer.appendChild(nameLabel);
+        
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.id = 'support-name';
+        nameInput.required = false;
+        nameInput.placeholder = WIDGET_CONFIG.manualReview.namePlaceholder;
+        nameInput.style.cssText = \`
+          height: 50px;
+          padding: 0 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          font-size: 14px;
+          font-family: inherit;
+          outline: none;
+          transition: all 0.3s ease;
+          background: #ffffff;
+          width: 100%;
+          box-sizing: border-box;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          margin-bottom: 16px;
+        \`;
+        formFieldsContainer.appendChild(nameInput);
+        
+        // Email field
+        const emailLabel = document.createElement('label');
+        emailLabel.style.cssText = \`
+          font-size: 14px;
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 8px;
+          display: block;
+        \`;
+        emailLabel.textContent = WIDGET_CONFIG.manualReview.emailLabel;
+        formFieldsContainer.appendChild(emailLabel);
+        
+        const emailInput = document.createElement('input');
+        emailInput.type = 'email';
+        emailInput.id = 'support-email';
+        emailInput.required = true;
+        emailInput.placeholder = WIDGET_CONFIG.manualReview.emailPlaceholder;
+        emailInput.style.cssText = nameInput.style.cssText;
+        formFieldsContainer.appendChild(emailInput);
+        
+        // Message field
+        const messageLabel = document.createElement('label');
+        messageLabel.style.cssText = \`
+          font-size: 14px;
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 8px;
+          display: block;
+          margin-top: 16px;
+        \`;
+        messageLabel.textContent = WIDGET_CONFIG.manualReview.messageLabel;
+        formFieldsContainer.appendChild(messageLabel);
+        
+        const messageTextarea = document.createElement('textarea');
+        messageTextarea.id = 'support-message';
+        messageTextarea.required = false;
+        messageTextarea.rows = 4;
+        messageTextarea.placeholder = WIDGET_CONFIG.manualReview.messagePlaceholder;
+        messageTextarea.style.cssText = \`
+          padding: 14px 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          font-size: 14px;
+          font-family: inherit;
+          outline: none;
+          resize: vertical;
+          min-height: 100px;
+          background: #ffffff;
+          width: 100%;
+          box-sizing: border-box;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+        \`;
+        formFieldsContainer.appendChild(messageTextarea);
+      } else {
+        // Live chat fields
+        const liveChatNotice = document.createElement('div');
+        liveChatNotice.style.cssText = \`
+          background: #f0fdf4;
+          border: 1px solid #bbf7d0;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: #166534;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        \`;
+        const noticeParts = WIDGET_CONFIG.manualReview.liveChatNoticeText.split(':');
+        liveChatNotice.innerHTML = \`
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span><strong>\${noticeParts[0]}:</strong> \${noticeParts.slice(1).join(':').trim()}</span>
+        \`;
+        formFieldsContainer.appendChild(liveChatNotice);
+        
+        const reasonLabel = document.createElement('label');
+        reasonLabel.style.cssText = \`
+          font-size: 14px;
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 8px;
+          display: block;
+        \`;
+        reasonLabel.textContent = WIDGET_CONFIG.manualReview.liveChatReasonLabel;
+        formFieldsContainer.appendChild(reasonLabel);
+        
+        const reasonTextarea = document.createElement('textarea');
+        reasonTextarea.id = 'live-chat-reason';
+        reasonTextarea.required = false;
+        reasonTextarea.rows = 4;
+        reasonTextarea.placeholder = WIDGET_CONFIG.manualReview.liveChatReasonPlaceholder;
+        reasonTextarea.style.cssText = \`
+          padding: 14px 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          font-size: 14px;
+          font-family: inherit;
+          outline: none;
+          resize: vertical;
+          min-height: 100px;
+          background: #ffffff;
+          width: 100%;
+          box-sizing: border-box;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          transition: all 0.3s ease;
+        \`;
+        formFieldsContainer.appendChild(reasonTextarea);
+      }
+    }
     
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.required = false;
-    nameInput.placeholder = 'Skriv dit navn her';
-    nameInput.style.cssText = \`
-      height: 50px;
-      padding: 0 16px;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
-      font-size: 14px;
-      font-family: inherit;
-      outline: none;
-      transition: all 0.3s ease;
-      background: #ffffff;
-      width: 100%;
-      box-sizing: border-box;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    \`;
-    nameInput.addEventListener('focus', () => {
-      nameInput.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
-      nameInput.style.boxShadow = \`0 0 0 3px \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}20\`;
-      nameInput.style.transform = 'translateY(-1px)';
-    });
-    nameInput.addEventListener('blur', () => {
-      nameInput.style.borderColor = '#e5e7eb';
-      nameInput.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-      nameInput.style.transform = 'translateY(0)';
-    });
-    
-    // Email field
-    const emailLabel = document.createElement('label');
-    emailLabel.style.cssText = \`
-      font-size: 14px;
-      font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 8px;
-      display: block;
-    \`;
-    emailLabel.textContent = 'Din email';
-    
-    const emailInput = document.createElement('input');
-    emailInput.type = 'email';
-    emailInput.required = true;
-    emailInput.placeholder = 'Skriv din email her';
-    emailInput.style.cssText = nameInput.style.cssText;
-    emailInput.addEventListener('focus', () => {
-      emailInput.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
-      emailInput.style.boxShadow = \`0 0 0 3px \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}20\`;
-      emailInput.style.transform = 'translateY(-1px)';
-    });
-    emailInput.addEventListener('blur', () => {
-      emailInput.style.borderColor = '#e5e7eb';
-      emailInput.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-      emailInput.style.transform = 'translateY(0)';
-    });
-    
-    
-    // Message field
-    const messageLabel = document.createElement('label');
-    messageLabel.style.cssText = \`
-      font-size: 14px;
-      font-weight: 600;
-      color: #1f2937;
-      margin-bottom: 8px;
-      display: block;
-    \`;
-    messageLabel.textContent = 'Efterlad en besked (valgfri)';
-    
-    const messageTextarea = document.createElement('textarea');
-    messageTextarea.required = false;
-    messageTextarea.rows = 4;
-    messageTextarea.placeholder = 'Skriv din besked her';
-    messageTextarea.style.cssText = \`
-      padding: 14px 16px;
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
-      font-size: 14px;
-      font-family: inherit;
-      outline: none;
-      resize: vertical;
-      min-height: 100px;
-      background: #ffffff;
-      width: 100%;
-      box-sizing: border-box;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-    \`;
-    messageTextarea.addEventListener('focus', () => {
-      messageTextarea.style.borderColor = WIDGET_CONFIG.theme.buttonColor || '#4f46e5';
-      messageTextarea.style.boxShadow = \`0 0 0 3px \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}20\`;
-      messageTextarea.style.transform = 'translateY(-1px)';
-    });
-    messageTextarea.addEventListener('blur', () => {
-      messageTextarea.style.borderColor = '#e5e7eb';
-      messageTextarea.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
-      messageTextarea.style.transform = 'translateY(0)';
-    });
+    updateFormFields();
     
     // Buttons container
     const buttonsContainer = document.createElement('div');
@@ -6356,7 +6553,7 @@ export default async function handler(req, res) {
       transition: all 0.3s ease;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     \`;
-    cancelButton.textContent = 'Annuller';
+    cancelButton.textContent = WIDGET_CONFIG.manualReview.cancelButtonText;
     cancelButton.addEventListener('mouseenter', () => {
       cancelButton.style.backgroundColor = '#f9fafb';
       cancelButton.style.borderColor = '#d1d5db';
@@ -6398,7 +6595,7 @@ export default async function handler(req, res) {
       <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
       </svg>
-      Send
+      \${WIDGET_CONFIG.manualReview.submitButtonText}
     \`;
     submitButton.addEventListener('mouseenter', () => {
       submitButton.style.transform = 'translateY(-2px)';
@@ -6413,51 +6610,93 @@ export default async function handler(req, res) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
+      if (!currentConversationId) {
+        addMessage('assistant', 'Please start a conversation first.');
+        return;
+      }
+      
       const submitButtonText = submitButton.textContent;
-      submitButton.textContent = 'Submitting...';
+      submitButton.textContent = requestType === 'email' ? 'Submitting...' : 'Requesting...';
       submitButton.disabled = true;
       
       try {
-        const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/support-request/submit\`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            widgetId: WIDGET_CONFIG.widgetId,
-            conversationId: currentConversationId,
-            contactInfo: {
-              name: nameInput.value.trim(),
-              email: emailInput.value.trim()
-            },
-            message: messageTextarea.value.trim()
-          })
-        });
-        
-        if (response.ok) {
-          // Show success message
-          formBubble.innerHTML = \`
-            <div style="text-align: center; padding: 20px;">
-              <div style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-              </div>
-              <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Anmodning sendt</h3>
-              <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">\${manualReviewConfig.successMessage || 'Tak for din anmodning! Vores team vil gennemgå din samtale og kontakte dig inden for 24 timer.'}</p>
-            </div>
-          \`;
+        if (requestType === 'email') {
+          // Email support request
+          const nameInput = document.getElementById('support-name');
+          const emailInput = document.getElementById('support-email');
+          const messageTextarea = document.getElementById('support-message');
           
-          // Auto-remove success message after 3 seconds
-          setTimeout(() => {
+          const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/support-request/submit\`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              widgetId: WIDGET_CONFIG.widgetId,
+              conversationId: currentConversationId,
+              contactInfo: {
+                name: nameInput.value.trim(),
+                email: emailInput.value.trim()
+              },
+              message: messageTextarea.value.trim()
+            })
+          });
+          
+          if (response.ok) {
+            // Show success message
+            formBubble.innerHTML = \`
+              <div style="text-align: center; padding: 20px;">
+                <div style="width: 48px; height: 48px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                  <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+                <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Anmodning sendt</h3>
+                <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b7280; line-height: 1.5;">\${manualReviewConfig.successMessage || 'Tak for din anmodning! Vores team vil gennemgå din samtale og kontakte dig inden for 24 timer.'}</p>
+              </div>
+            \`;
+            
+            // Auto-remove success message after 3 seconds
+            setTimeout(() => {
+              manualReviewFormOpen = false;
+              messageDiv.remove();
+            }, 3000);
+          } else {
+            throw new Error('Failed to submit request');
+          }
+        } else {
+          // Live chat request
+          const reasonTextarea = document.getElementById('live-chat-reason');
+          
+          if (liveChatStatus === 'requested' || liveChatStatus === 'active') {
+            addMessage('assistant', 'Live chat is already ' + (liveChatStatus === 'requested' ? 'requested' : 'active') + '.');
             manualReviewFormOpen = false;
             messageDiv.remove();
-          }, 3000);
-        } else {
-          throw new Error('Failed to submit request');
+            return;
+          }
+          
+          const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/request\`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversationId: currentConversationId,
+              handoffReason: reasonTextarea.value.trim() || null
+            })
+          });
+
+          if (response.ok) {
+            liveChatStatus = 'requested';
+            manualReviewFormOpen = false;
+            messageDiv.remove();
+            addMessage('assistant', 'Live chat requested! An agent will join shortly.');
+            startLiveChatSSE();
+          } else {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to request live chat');
+          }
         }
       } catch (error) {
-        console.error('Error submitting support request:', error);
+        console.error('Error submitting request:', error);
         submitButton.textContent = submitButtonText;
         submitButton.disabled = false;
         
@@ -6487,13 +6726,7 @@ export default async function handler(req, res) {
     });
     
     // Assemble form
-    form.appendChild(attachmentNotice);
-    form.appendChild(nameLabel);
-    form.appendChild(nameInput);
-    form.appendChild(emailLabel);
-    form.appendChild(emailInput);
-    form.appendChild(messageLabel);
-    form.appendChild(messageTextarea);
+    form.appendChild(formFieldsContainer);
     
     buttonsContainer.appendChild(cancelButton);
     buttonsContainer.appendChild(submitButton);
@@ -6510,13 +6743,177 @@ export default async function handler(req, res) {
     messages.appendChild(messageDiv);
     messages.scrollTop = messages.scrollHeight;
     
-    // Close on cancel button click
-    cancelButton.addEventListener('click', () => {
-      messageDiv.remove();
-    });
-    
-    // Focus first input
-    nameInput.focus();
+    // Focus first input when form opens
+    setTimeout(() => {
+      const firstInput = formFieldsContainer.querySelector('input, textarea');
+      if (firstInput) firstInput.focus();
+    }, 100);
+  }
+
+  // Live Chat Functions
+  function startLiveChatSSE() {
+    if (!currentConversationId || liveChatEventSource) return;
+
+    liveChatEventSource = new EventSource(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/stream?conversationId=\${currentConversationId}\`);
+
+    liveChatEventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'connected') {
+          console.log('Live chat SSE connected');
+        } else if (data.type === 'status') {
+          liveChatStatus = data.status;
+          if (data.status === 'active' && data.agentInfo) {
+            agentInfo = data.agentInfo;
+            showAgentBanner();
+          } else if (data.status === 'ended') {
+            hideAgentBanner();
+            liveChatStatus = 'ai';
+            agentInfo = null;
+            if (liveChatEventSource) {
+              liveChatEventSource.close();
+              liveChatEventSource = null;
+            }
+          }
+        } else if (data.type === 'message') {
+          if (!processedMessageIds.has(data.message.id)) {
+            processedMessageIds.add(data.message.id);
+            if (data.message.type === 'agent' || data.message.role === 'agent') {
+              addAgentMessage(data.message);
+            } else if (data.message.type === 'system' || data.message.role === 'system') {
+              addMessage('assistant', data.message.content);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing SSE message:', error);
+      }
+    };
+
+    liveChatEventSource.onerror = (error) => {
+      console.error('Live chat SSE error:', error);
+      // EventSource will automatically reconnect
+    };
+  }
+
+  function showAgentBanner() {
+    if (!agentInfo) return;
+
+    // Remove existing banner if any
+    const existingBanner = chatBox.querySelector('.agent-banner');
+    if (existingBanner) existingBanner.remove();
+
+    const banner = document.createElement('div');
+    banner.className = 'agent-banner';
+    banner.style.cssText = \`
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    \`;
+
+    if (agentInfo.avatarUrl) {
+      const avatar = document.createElement('img');
+      avatar.src = agentInfo.avatarUrl;
+      avatar.style.cssText = 'width: 32px; height: 32px; border-radius: 50%; object-fit: cover;';
+      banner.appendChild(avatar);
+    }
+
+    const text = document.createElement('div');
+    text.style.cssText = 'flex: 1;';
+    text.innerHTML = \`<strong>\${agentInfo.displayName || 'Agent'}</strong>\${agentInfo.title ? ' - ' + agentInfo.title : ''} is now chatting with you\`;
+    banner.appendChild(text);
+
+    const header = chatBox.querySelector('.header');
+    if (header && header.nextSibling) {
+      chatBox.insertBefore(banner, header.nextSibling);
+    } else if (header) {
+      header.parentNode.insertBefore(banner, header.nextSibling);
+    }
+  }
+
+  function hideAgentBanner() {
+    const banner = chatBox.querySelector('.agent-banner');
+    if (banner) banner.remove();
+  }
+
+  function addAgentMessage(message) {
+    const messageDiv = document.createElement("div");
+    messageDiv.style.cssText = \`
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: flex-start;
+      animation: slideIn 0.3s ease-out;
+    \`;
+
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      max-width: 85%;
+    \`;
+
+    const avatar = document.createElement("div");
+    avatar.style.cssText = \`
+      width: 32px;
+      height: 32px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+    \`;
+    if (message.agentInfo?.avatarUrl) {
+      avatar.innerHTML = \`<img src="\${message.agentInfo.avatarUrl}" style="width: 100%; height: 100%; object-fit: cover;" />\`;
+    } else {
+      avatar.innerHTML = '<span style="color: white; font-size: 12px; font-weight: 600;">👤</span>';
+    }
+
+    const contentDiv = document.createElement("div");
+    contentDiv.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+    \`;
+
+    const nameLabel = document.createElement("div");
+    nameLabel.style.cssText = \`
+      font-size: 12px;
+      color: \${themeColors.textColor};
+      margin-bottom: 4px;
+      font-weight: 600;
+      opacity: 0.8;
+    \`;
+    nameLabel.textContent = message.agentInfo?.displayName || 'Agent';
+
+    const bubble = document.createElement("div");
+    bubble.style.cssText = \`
+      background: #d1fae5;
+      color: #065f46;
+      padding: 12px 16px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      max-width: 320px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid #a7f3d0;
+    \`;
+    bubble.textContent = message.content;
+
+    contentDiv.appendChild(nameLabel);
+    contentDiv.appendChild(bubble);
+    messageContentDiv.appendChild(avatar);
+    messageContentDiv.appendChild(contentDiv);
+    messageDiv.appendChild(messageContentDiv);
+
+    messages.appendChild(messageDiv);
+    messages.scrollTop = messages.scrollHeight;
   }
 
   // Setup support request button after initialization

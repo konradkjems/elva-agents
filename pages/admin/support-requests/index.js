@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import ModernLayout from '../../../components/admin/ModernLayout';
+import LiveChatInterface from '../../../components/admin/LiveChatInterface';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
   ClipboardDocumentListIcon,
@@ -37,6 +39,7 @@ const statusIcons = {
 export default function ManualReviews() {
   const router = useRouter();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('support-requests');
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReview, setSelectedReview] = useState(null);
@@ -46,11 +49,98 @@ export default function ManualReviews() {
   const [conversationKey, setConversationKey] = useState(0);
   const [supportEmail, setSupportEmail] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
+  
+  // Live chat queue state
+  const [liveChatQueue, setLiveChatQueue] = useState([]);
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [queuePollingInterval, setQueuePollingInterval] = useState(null);
 
   useEffect(() => {
     fetchReviews();
     fetchSupportEmail();
-  }, [statusFilter]);
+    
+    // Set active tab from URL query
+    if (router.query.tab === 'live-chat') {
+      setActiveTab('live-chat');
+    }
+  }, [statusFilter, router.query.tab]);
+
+  // Live chat queue - use longer interval to reduce refresh frequency
+  useEffect(() => {
+    if (activeTab === 'live-chat') {
+      fetchLiveChatQueue();
+      const interval = setInterval(() => {
+        fetchLiveChatQueue();
+      }, 10000); // Poll every 10 seconds (less frequent)
+      setQueuePollingInterval(interval);
+      
+      return () => {
+        clearInterval(interval);
+      };
+    } else {
+      if (queuePollingInterval) {
+        clearInterval(queuePollingInterval);
+        setQueuePollingInterval(null);
+      }
+    }
+  }, [activeTab]);
+
+  const fetchLiveChatQueue = async () => {
+    try {
+      setQueueLoading(true);
+      const response = await fetch('/api/live-chat/queue');
+      if (response.ok) {
+        const data = await response.json();
+        setLiveChatQueue(data.queue || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch live chat queue:', error);
+    } finally {
+      setQueueLoading(false);
+    }
+  };
+
+  const acceptLiveChat = async (conversationId) => {
+    try {
+      const response = await fetch('/api/live-chat/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversationId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedChat({ conversationId, agentInfo: data.agentInfo });
+        toast({
+          title: 'Chat accepted',
+          description: 'You are now connected to the user'
+        });
+        fetchLiveChatQueue(); // Refresh queue
+      } else {
+        const errorData = await response.json();
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: errorData.error || 'Failed to accept chat'
+        });
+      }
+    } catch (error) {
+      console.error('Error accepting live chat:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to accept chat'
+      });
+    }
+  };
+
+  const formatWaitTime = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}m ${secs}s`;
+  };
 
   // Reset notes when selecting a new review
   useEffect(() => {
@@ -218,7 +308,7 @@ export default function ManualReviews() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Support Requests</h1>
             <p className="text-muted-foreground">
-              Review and manage support requests from users
+              Review and manage support requests and live chat
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -249,8 +339,26 @@ export default function ManualReviews() {
           </div>
         </div>
 
-        {/* Status Overview */}
-        <div className="grid gap-4 md:grid-cols-4">
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList>
+            <TabsTrigger value="support-requests">
+              Support Requests
+              {reviews.length > 0 && (
+                <Badge className="ml-2">{reviews.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="live-chat">
+              Live Chat Queue
+              {liveChatQueue.length > 0 && (
+                <Badge className="ml-2 bg-red-500">{liveChatQueue.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="support-requests" className="space-y-6">
+            {/* Status Overview */}
+            <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending</CardTitle>
@@ -548,6 +656,124 @@ export default function ManualReviews() {
             )}
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="live-chat" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-3 h-[calc(100vh-300px)]">
+              {/* Queue List */}
+              <div className="lg:col-span-1">
+                <Card className="h-full">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>Waiting Queue</CardTitle>
+                      <Button onClick={fetchLiveChatQueue} variant="outline" size="sm">
+                        Refresh
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {queueLoading ? (
+                      <div className="flex items-center justify-center h-32">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                      </div>
+                    ) : liveChatQueue.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No pending live chat requests
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {liveChatQueue.map((item) => (
+                          <div
+                            key={item.conversationId}
+                            className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                              selectedChat?.conversationId === item.conversationId
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => {
+                              if (item.conversationId !== selectedChat?.conversationId) {
+                                // Check if already accepted
+                                fetch(`/api/live-chat/poll?conversationId=${item.conversationId}`)
+                                  .then(res => res.json())
+                                  .then(data => {
+                                    if (data.status === 'active') {
+                                      setSelectedChat({ conversationId: item.conversationId, agentInfo: data.agentInfo });
+                                    } else {
+                                      acceptLiveChat(item.conversationId);
+                                    }
+                                  });
+                              }
+                            }}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="font-medium text-sm">{item.widgetName}</h3>
+                                  <Badge className="bg-red-500">
+                                    Waiting
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  {item.organizationName}
+                                </p>
+                                {item.handoffReason && (
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    "{item.handoffReason.substring(0, 60)}..."
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <ClockIcon className="h-3 w-3" />
+                                    {formatWaitTime(item.waitTimeSeconds)}
+                                  </span>
+                                  <span>{item.messageCount} messages</span>
+                                </div>
+                              </div>
+                            </div>
+                            {selectedChat?.conversationId !== item.conversationId && (
+                              <Button
+                                size="sm"
+                                className="w-full mt-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  acceptLiveChat(item.conversationId);
+                                }}
+                              >
+                                Accept Chat
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Chat Interface */}
+              <div className="lg:col-span-2">
+                {selectedChat ? (
+                  <LiveChatInterface
+                    conversationId={selectedChat.conversationId}
+                    onEndChat={() => {
+                      setSelectedChat(null);
+                      fetchLiveChatQueue();
+                    }}
+                  />
+                ) : (
+                  <Card className="h-full">
+                    <CardContent className="flex items-center justify-center h-full">
+                      <div className="text-center text-muted-foreground">
+                        <ChatBubbleLeftRightIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Select a chat from the queue to start</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </ModernLayout>
   );
