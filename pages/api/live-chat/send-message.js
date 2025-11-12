@@ -80,9 +80,11 @@ export default async function handler(req, res) {
     // Broadcast to SSE connections
     try {
       const { broadcastToConversation } = await import('./stream');
-      broadcastToConversation(conversationId, {
+      console.log('Broadcasting agent message to conversation:', conversationId);
+      console.log('Message:', agentMessage);
+      broadcastToConversation(conversationId.toString(), {
         type: 'message',
-        conversationId,
+        conversationId: conversationId.toString(),
         message: agentMessage
       });
     } catch (error) {

@@ -43,8 +43,14 @@ export default async function handler(req, res) {
     }
 
     // Verify user is the agent for this conversation (or allow admin/owner)
+    // Convert widgetId to ObjectId if it's a valid ObjectId string
+    let widgetQuery = conversation.widgetId;
+    if (ObjectId.isValid(conversation.widgetId) && typeof conversation.widgetId === 'string') {
+      widgetQuery = new ObjectId(conversation.widgetId);
+    }
+    
     const widget = await db.collection('widgets').findOne({
-      _id: conversation.widgetId
+      _id: widgetQuery
     });
 
     if (!widget || !widget.organizationId) {
@@ -120,14 +126,15 @@ export default async function handler(req, res) {
     // Broadcast status change and end message to SSE connections
     try {
       const { broadcastToConversation } = await import('./stream');
-      broadcastToConversation(conversationId, {
+      const convId = conversationId.toString();
+      broadcastToConversation(convId, {
         type: 'status',
-        conversationId,
+        conversationId: convId,
         status: 'ended'
       });
-      broadcastToConversation(conversationId, {
+      broadcastToConversation(convId, {
         type: 'message',
-        conversationId,
+        conversationId: convId,
         message: endMessage
       });
     } catch (error) {

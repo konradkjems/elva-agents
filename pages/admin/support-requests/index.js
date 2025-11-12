@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import {
   ClipboardDocumentListIcon,
@@ -119,10 +120,23 @@ export default function ManualReviews() {
         fetchLiveChatQueue(); // Refresh queue
       } else {
         const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to accept chat';
+        const isAvailabilityError = errorMessage.includes('not available as an agent');
+        
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: errorData.error || 'Failed to accept chat'
+          description: isAvailabilityError 
+            ? 'You need to enable your agent availability. Go to Agent Profile settings to activate.'
+            : errorMessage,
+          action: isAvailabilityError ? (
+            <ToastAction
+              altText="Go to Agent Profile"
+              onClick={() => router.push('/admin/settings/agent-profile')}
+            >
+              Go to Agent Profile
+            </ToastAction>
+          ) : undefined
         });
       }
     } catch (error) {

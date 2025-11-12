@@ -23,7 +23,8 @@ import {
   Globe,
   User,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  UserCircle
 } from 'lucide-react';
 
 const getNavigationForRole = (session) => {
@@ -55,6 +56,12 @@ const getNavigationForRole = (session) => {
       href: '/admin/support-requests', 
       icon: ClipboardList,
       description: 'Review user requests'
+    },
+    { 
+      name: 'Agent Profile', 
+      href: '/admin/settings/agent-profile', 
+      icon: UserCircle,
+      description: 'Configure live chat availability'
     }
   ];
   
@@ -192,6 +199,10 @@ export default function ModernSidebar({ open, setOpen }) {
             <DropdownMenuItem onClick={() => router.push('/admin/profile')}>
               <User className="mr-2 h-4 w-4" />
               Profile Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/admin/settings/agent-profile')}>
+              <UserCircle className="mr-2 h-4 w-4" />
+              Agent Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 

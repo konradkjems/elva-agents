@@ -22,6 +22,7 @@ export default function LiveChatInterface({ conversationId, onEndChat }) {
   const messagesEndRef = useRef(null);
   const eventSourceRef = useRef(null);
   const processedMessageIds = useRef(new Set());
+  const lastMessageIdRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

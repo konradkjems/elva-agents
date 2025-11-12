@@ -64,9 +64,10 @@ export default async function handler(req, res) {
     // Broadcast to SSE connections
     try {
       const { broadcastToConversation } = await import('./stream');
-      broadcastToConversation(conversationId, {
+      const convId = conversationId.toString();
+      broadcastToConversation(convId, {
         type: 'message',
-        conversationId,
+        conversationId: convId,
         message: userMessage
       });
     } catch (error) {

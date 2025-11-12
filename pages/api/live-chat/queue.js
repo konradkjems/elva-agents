@@ -59,10 +59,12 @@ export default async function handler(req, res) {
     }).toArray();
 
     const widgetIds = widgets.map(w => w._id);
+    // Also include string versions for conversations that store widgetId as string
+    const widgetIdsWithStrings = [...widgetIds, ...widgetIds.map(id => id.toString())];
 
     // Get all conversations with requested live chat status
     const conversations = await db.collection('conversations').find({
-      widgetId: { $in: widgetIds },
+      widgetId: { $in: widgetIdsWithStrings },
       'liveChat.status': 'requested'
     })
     .sort({ 'liveChat.requestedAt': 1 }) // Oldest first

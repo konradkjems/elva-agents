@@ -38,14 +38,21 @@ export default async function handler(req, res) {
     // Check if already requested or active
     if (conversation.liveChat?.status === 'requested' || conversation.liveChat?.status === 'active') {
       return res.status(400).json({ 
-        error: 'Live chat already requested or active',
-        status: conversation.liveChat.status
+        error: 'Live chat already ' + (conversation.liveChat.status === 'active' ? 'active' : 'requested'),
+        status: conversation.liveChat.status,
+        agentInfo: conversation.liveChat?.agentInfo || null
       });
     }
 
     // Get widget to find organization
+    // Convert widgetId to ObjectId if it's a valid ObjectId string
+    let widgetQuery = conversation.widgetId;
+    if (ObjectId.isValid(conversation.widgetId) && typeof conversation.widgetId === 'string') {
+      widgetQuery = new ObjectId(conversation.widgetId);
+    }
+    
     const widget = await db.collection('widgets').findOne({
-      _id: conversation.widgetId
+      _id: widgetQuery
     });
 
     if (!widget || !widget.organizationId) {

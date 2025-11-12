@@ -983,8 +983,10 @@ export default async function handler(req, res) {
   // Live chat state
   let liveChatStatus = 'ai'; // 'ai' | 'requested' | 'active' | 'ended'
   let liveChatEventSource = null;
+  let liveChatPollInterval = null;
   let agentInfo = null;
   let processedMessageIds = new Set();
+  let lastPolledMessageId = null;
 
   // Conversation history storage
   function saveConversationToHistory(conversationId, messages) {
@@ -4071,6 +4073,14 @@ export default async function handler(req, res) {
     }
   }
 
+  function enforceMessageColor(element, color) {
+    if (!element) return;
+    element.style.setProperty('color', color, 'important');
+    element.querySelectorAll('*').forEach(child => {
+      child.style.setProperty('color', color, 'important');
+    });
+  }
+
   function addMessage(role, content, imageUrl = null) {
     const messageDiv = document.createElement("div");
     const isUser = role === 'user';
@@ -4139,7 +4149,6 @@ export default async function handler(req, res) {
       const messageBubble = document.createElement("div");
       messageBubble.style.cssText = \`
         background: \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'};
-        color: #FFFFFF;
         padding: 12px 16px;
         border-radius: 18px 18px 4px 18px;
         font-size: 14px;
@@ -4165,6 +4174,7 @@ export default async function handler(req, res) {
       const textDiv = document.createElement('div');
       textDiv.innerHTML = formatMessage(parsedContent);
       messageBubble.appendChild(textDiv);
+      enforceMessageColor(messageBubble, '#FFFFFF');
       
       messageContentDiv.appendChild(messageBubble);
     } else {
@@ -4212,7 +4222,6 @@ export default async function handler(req, res) {
       const messageBubble = document.createElement("div");
       messageBubble.style.cssText = \`
         background: \${themeColors.messageBg};
-        color: \${themeColors.textColor};
         padding: 12px 4px 12px 16px;
         border-radius: 18px 18px 18px 4px;
         font-size: 14px;
@@ -4224,6 +4233,7 @@ export default async function handler(req, res) {
       \`;
       messageBubble.className = 'messageBubble';
       messageBubble.innerHTML = formatMessage(parsedContent);
+      enforceMessageColor(messageBubble, '#374151');
       
       messageContent.appendChild(nameLabel);
       messageContent.appendChild(messageBubble);
@@ -4453,7 +4463,6 @@ export default async function handler(req, res) {
       const messageBubble = document.createElement("div");
       messageBubble.style.cssText = \`
         background: \${themeColors.messageBg};
-        color: \${themeColors.textColor};
         padding: 12px 4px 12px 16px;
         border-radius: 18px 18px 18px 4px;
         font-size: 14px;
@@ -4472,7 +4481,7 @@ export default async function handler(req, res) {
         display: inline-block;
         width: 2px;
         height: 16px;
-        background: \${themeColors.textColor};
+        background: #374151;
         margin-left: 2px;
         animation: blink 1s infinite;
         vertical-align: middle;
@@ -4480,6 +4489,7 @@ export default async function handler(req, res) {
       
       messageContent.appendChild(nameLabel);
       messageContent.appendChild(messageBubble);
+      enforceMessageColor(messageBubble, '#374151');
       
       // Add product cards if any were found (after typewriter completes)
       if (products.length > 0) {
@@ -4528,7 +4538,7 @@ export default async function handler(req, res) {
         const partialHTML = getPartialHTML(fullHTML, charCount);
         
         // Add cursor and update display
-        const cursorHTML = '<span style="display: inline-block; width: 2px; height: 16px; background: ' + themeColors.textColor + '; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
+        const cursorHTML = '<span style="display: inline-block; width: 2px; height: 16px; background: #000000; margin-left: 2px; animation: blink 1s infinite; vertical-align: middle;"></span>';
         element.innerHTML = partialHTML + cursorHTML;
         
         // Scroll to bottom
@@ -4539,6 +4549,7 @@ export default async function handler(req, res) {
       } else {
         // Typing complete - show full HTML without cursor
         element.innerHTML = fullHTML;
+        enforceMessageColor(element, '#374151');
         
         // Add product cards after typewriter effect completes
         if (products.length > 0) {
@@ -4901,7 +4912,6 @@ export default async function handler(req, res) {
     ratingBubble.className = 'satisfaction-rating-bubble';
     ratingBubble.style.cssText = \`
       background: \${themeColors.messageBg};
-      color: \${themeColors.textColor};
       padding: 16px;
       border-radius: 18px 18px 18px 4px;
       font-size: 14px;
@@ -4915,7 +4925,7 @@ export default async function handler(req, res) {
     const feedbackPlaceholder = satisfactionConfig.feedbackPlaceholder || 'Optional feedback...';
     
     ratingBubble.innerHTML = \`
-      <div style="margin-bottom: 16px; color: \${themeColors.textColor}; font-size: 14px; line-height: 1.4;">
+      <div style="margin-bottom: 16px; color: #000000; font-size: 14px; line-height: 1.4;">
         \${promptText}
       </div>
       <div class="rating-emojis" style="display: flex; gap: 12px; justify-content: center; margin-bottom: \${allowFeedback ? '16px' : '0'};">
@@ -4941,6 +4951,7 @@ export default async function handler(req, res) {
           onblur="this.style.borderColor='\${themeColors.borderColor}'"></textarea>
       \` : ''}
     \`;
+    enforceMessageColor(ratingBubble, '#000000');
     
     // Add event listeners
     ratingBubble.querySelectorAll('.rating-btn').forEach(btn => {
@@ -5361,8 +5372,13 @@ export default async function handler(req, res) {
           // Reset support request form state for new conversation
           manualReviewFormOpen = false;
           
+          // Check if this conversation already has active live chat
+          checkAndStartLiveChatSSE();
+          
         } else {
           console.log('📝 Using existing conversation ID:', currentConversationId);
+          // Also check for existing conversations
+          checkAndStartLiveChatSSE();
         }
 
         // Add message with typewriter effect
@@ -6668,11 +6684,39 @@ export default async function handler(req, res) {
           // Live chat request
           const reasonTextarea = document.getElementById('live-chat-reason');
           
+          // Check local status first
           if (liveChatStatus === 'requested' || liveChatStatus === 'active') {
             addMessage('assistant', 'Live chat is already ' + (liveChatStatus === 'requested' ? 'requested' : 'active') + '.');
             manualReviewFormOpen = false;
             messageDiv.remove();
             return;
+          }
+          
+          // Also check server status before sending request
+          try {
+            const statusCheck = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/poll?conversationId=\${currentConversationId}\`);
+            if (statusCheck.ok) {
+              const statusData = await statusCheck.json();
+              if (statusData.status === 'requested' || statusData.status === 'active') {
+                console.log('⚠️ Live chat already ' + statusData.status + ' on server');
+                liveChatStatus = statusData.status;
+                if (statusData.status === 'active' && statusData.agentInfo) {
+                  agentInfo = statusData.agentInfo;
+                  showAgentBanner();
+                }
+                addMessage('assistant', 'Live chat is already ' + (statusData.status === 'requested' ? 'requested' : 'active') + '.');
+                manualReviewFormOpen = false;
+                messageDiv.remove();
+                // Start polling/SSE if not already started
+                if (!liveChatEventSource && !liveChatPollInterval) {
+                  startLiveChatSSE();
+                }
+                return;
+              }
+            }
+          } catch (statusError) {
+            console.error('Error checking live chat status:', statusError);
+            // Continue with request if status check fails
           }
           
           const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/request\`, {
@@ -6689,10 +6733,43 @@ export default async function handler(req, res) {
             manualReviewFormOpen = false;
             messageDiv.remove();
             addMessage('assistant', 'Live chat requested! An agent will join shortly.');
+            // Start SSE, which will fallback to polling if SSE fails
             startLiveChatSSE();
+            // Also start polling immediately as backup (SSE will close it if successful)
+            setTimeout(() => {
+              if (!liveChatPollInterval && !liveChatEventSource) {
+                console.log('🔄 SSE failed, starting polling as backup');
+                startLiveChatPolling();
+              }
+            }, 6000); // Wait 6 seconds for SSE to connect or timeout
           } else {
             const error = await response.json();
-            throw new Error(error.error || 'Failed to request live chat');
+            const errorMessage = error.error || 'Failed to request live chat';
+            
+            // If chat is already requested/active, update local state
+            if (errorMessage.includes('already requested') || errorMessage.includes('already active')) {
+              console.log('⚠️ Live chat already requested/active on server');
+              liveChatStatus = error.status === 'active' ? 'active' : 'requested';
+              
+              // Update agent info if available
+              if (error.agentInfo) {
+                agentInfo = error.agentInfo;
+                if (error.status === 'active') {
+                  showAgentBanner();
+                }
+              }
+              
+              manualReviewFormOpen = false;
+              messageDiv.remove();
+              addMessage('assistant', 'Live chat is already ' + (error.status === 'active' ? 'active' : 'requested') + '.');
+              // Start polling/SSE if not already started
+              if (!liveChatEventSource && !liveChatPollInterval) {
+                startLiveChatSSE();
+              }
+              return;
+            }
+            
+            throw new Error(errorMessage);
           }
         }
       } catch (error) {
@@ -6751,22 +6828,180 @@ export default async function handler(req, res) {
   }
 
   // Live Chat Functions
-  function startLiveChatSSE() {
-    if (!currentConversationId || liveChatEventSource) return;
-
-    liveChatEventSource = new EventSource(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/stream?conversationId=\${currentConversationId}\`);
-
-    liveChatEventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+  async function checkAndStartLiveChatSSE() {
+    if (!currentConversationId) {
+      console.log('⚠️ No conversation ID to check for live chat');
+      return;
+    }
+    
+    // Check if conversation already has active live chat
+    try {
+      console.log('🔍 Checking live chat status for conversation:', currentConversationId);
+      const response = await fetch(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/poll?conversationId=\${currentConversationId}\`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 Current live chat status:', data.status);
         
-        if (data.type === 'connected') {
-          console.log('Live chat SSE connected');
-        } else if (data.type === 'status') {
+        if (data.status === 'active' || data.status === 'requested') {
+          console.log('✅ Live chat already ' + data.status + ', starting SSE');
           liveChatStatus = data.status;
+          
+          if (data.agentInfo) {
+            agentInfo = data.agentInfo;
+            showAgentBanner();
+          }
+          
+          // Start SSE if not already active, or use polling as fallback
+          if (!liveChatEventSource && !liveChatPollInterval) {
+            startLiveChatSSE();
+          } else if (!liveChatPollInterval) {
+            // If SSE failed, use polling
+            startLiveChatPolling();
+          }
+          
+          // Show status message to user
+          if (data.status === 'requested') {
+            addMessage('assistant', 'Live chat requested! An agent will join shortly.');
+          } else if (data.status === 'active' && data.agentInfo) {
+            addMessage('assistant', \`\${data.agentInfo.displayName}\${data.agentInfo.title ? ' - ' + data.agentInfo.title : ''} is chatting with you.\`);
+          }
+        } else {
+          console.log('ℹ️ Live chat status is:', data.status);
+        }
+      } else {
+        console.log('⚠️ Failed to check live chat status:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Error checking live chat status:', error);
+    }
+  }
+  
+  function startLiveChatPolling() {
+    if (!currentConversationId) {
+      console.log('⚠️ Cannot start polling: No conversation ID');
+      return;
+    }
+    
+    if (liveChatPollInterval) {
+      console.log('⚠️ Polling already active');
+      return;
+    }
+    
+    console.log('🔄 Starting live chat polling for conversation:', currentConversationId);
+    console.log('📡 Poll URL:', \`\${WIDGET_CONFIG.apiUrl}/api/live-chat/poll?conversationId=\${currentConversationId}\`);
+    
+    // Do initial poll immediately
+    pollLiveChat();
+    
+    // Then poll every 2 seconds
+    liveChatPollInterval = setInterval(() => {
+      pollLiveChat();
+    }, 2000);
+  }
+  
+  async function pollLiveChat() {
+    if (!currentConversationId) return;
+    
+    try {
+      const pollUrl = \`\${WIDGET_CONFIG.apiUrl}/api/live-chat/poll?conversationId=\${currentConversationId}\${lastPolledMessageId ? '&lastMessageId=' + lastPolledMessageId : ''}\`;
+      console.log('📡 Polling:', pollUrl);
+      
+      const response = await fetch(pollUrl);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📥 Poll response:', { status: data.status, newMessages: data.newMessages?.length || 0 });
+        
+        // Update status
+        if (data.status !== liveChatStatus) {
+          const previousStatus = liveChatStatus;
+          liveChatStatus = data.status;
+          console.log('📊 Status changed from', previousStatus, 'to', data.status);
+          
           if (data.status === 'active' && data.agentInfo) {
             agentInfo = data.agentInfo;
             showAgentBanner();
+            if (previousStatus === 'requested') {
+              addMessage('assistant', \`\${agentInfo.displayName}\${agentInfo.title ? ' - ' + agentInfo.title : ''} har accepteret chatten og vil svare dig nu.\`);
+            }
+          } else if (data.status === 'ended') {
+            hideAgentBanner();
+            liveChatStatus = 'ai';
+            agentInfo = null;
+            if (liveChatPollInterval) {
+              clearInterval(liveChatPollInterval);
+              liveChatPollInterval = null;
+            }
+          }
+        }
+        
+        // Process new messages
+        if (data.newMessages && data.newMessages.length > 0) {
+          console.log('📨 Processing', data.newMessages.length, 'new messages');
+          data.newMessages.forEach(msg => {
+            if (!processedMessageIds.has(msg.id)) {
+              processedMessageIds.add(msg.id);
+              console.log('➕ Adding message:', msg.id, msg.type, msg.content?.substring(0, 50));
+              if (msg.type === 'agent' || msg.role === 'agent') {
+                addAgentMessage(msg);
+              } else if (msg.type === 'system' || msg.role === 'system') {
+                addMessage('assistant', msg.content);
+              }
+            } else {
+              console.log('⏭️ Skipping duplicate message:', msg.id);
+            }
+          });
+          lastPolledMessageId = data.lastMessageId;
+          console.log('💾 Updated lastPolledMessageId to:', lastPolledMessageId);
+        }
+      } else {
+        console.error('❌ Poll failed:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('❌ Error polling live chat:', error);
+    }
+  }
+  
+  function startLiveChatSSE() {
+    if (!currentConversationId) {
+      console.log('⚠️ Cannot start SSE: No conversation ID');
+      // Fallback to polling
+      startLiveChatPolling();
+      return;
+    }
+    
+    if (liveChatEventSource) {
+      console.log('⚠️ SSE already active');
+      return;
+    }
+
+    console.log('🔌 Starting SSE connection for conversation:', currentConversationId);
+    console.log('🔗 SSE URL:', \`\${WIDGET_CONFIG.apiUrl}/api/live-chat/stream?conversationId=\${currentConversationId}\`);
+    
+    try {
+      liveChatEventSource = new EventSource(\`\${WIDGET_CONFIG.apiUrl}/api/live-chat/stream?conversationId=\${currentConversationId}\`);
+
+    liveChatEventSource.onmessage = (event) => {
+      console.log('📨 SSE message received:', event.data);
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📦 Parsed SSE data:', data);
+        
+        if (data.type === 'connected') {
+          console.log('✅ Live chat SSE connected');
+        } else if (data.type === 'status') {
+          console.log('📊 Status update received:', data.status, 'Agent:', data.agentInfo);
+          const previousStatus = liveChatStatus;
+          liveChatStatus = data.status;
+          
+          if (data.status === 'active' && data.agentInfo) {
+            agentInfo = data.agentInfo;
+            showAgentBanner();
+            console.log('✅ Live chat is now active, agent:', agentInfo);
+            
+            // If transitioning from 'requested' to 'active', show confirmation
+            if (previousStatus === 'requested') {
+              addMessage('assistant', \`\${agentInfo.displayName}\${agentInfo.title ? ' - ' + agentInfo.title : ''} har accepteret chatten og vil svare dig nu.\`);
+            }
           } else if (data.status === 'ended') {
             hideAgentBanner();
             liveChatStatus = 'ai';
@@ -6775,15 +7010,31 @@ export default async function handler(req, res) {
               liveChatEventSource.close();
               liveChatEventSource = null;
             }
+            if (liveChatPollInterval) {
+              clearInterval(liveChatPollInterval);
+              liveChatPollInterval = null;
+            }
+            console.log('❌ Live chat ended');
           }
         } else if (data.type === 'message') {
+          console.log('Received message via SSE:', data.message);
           if (!processedMessageIds.has(data.message.id)) {
             processedMessageIds.add(data.message.id);
             if (data.message.type === 'agent' || data.message.role === 'agent') {
+              console.log('Adding agent message:', data.message);
               addAgentMessage(data.message);
             } else if (data.message.type === 'system' || data.message.role === 'system') {
               addMessage('assistant', data.message.content);
+            } else if (data.message.type === 'user' || data.message.role === 'user') {
+              // User messages are already shown when sent, skip
+              console.log('Skipping user message (already shown)');
+            } else {
+              // Fallback: show any other message as assistant message
+              console.log('Unknown message type, showing as assistant:', data.message);
+              addMessage('assistant', data.message.content);
             }
+          } else {
+            console.log('Skipping duplicate message:', data.message.id);
           }
         }
       } catch (error) {
@@ -6792,9 +7043,58 @@ export default async function handler(req, res) {
     };
 
     liveChatEventSource.onerror = (error) => {
-      console.error('Live chat SSE error:', error);
-      // EventSource will automatically reconnect
+      console.error('❌ Live chat SSE error:', error);
+      console.log('SSE readyState:', liveChatEventSource?.readyState);
+      console.log('SSE URL:', liveChatEventSource?.url);
+      
+      // readyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
+      if (liveChatEventSource?.readyState === 2 || liveChatEventSource?.readyState === 0) {
+        console.error('❌ SSE connection failed. Falling back to polling...');
+        if (liveChatEventSource) {
+          liveChatEventSource.close();
+          liveChatEventSource = null;
+        }
+        // Fallback to polling
+        startLiveChatPolling();
+      }
     };
+    
+    liveChatEventSource.onopen = () => {
+      console.log('✅ SSE connection opened successfully');
+      console.log('SSE readyState:', liveChatEventSource?.readyState);
+    };
+    
+    // Set timeout to fallback to polling if SSE doesn't connect within 3 seconds
+    const sseTimeoutId = setTimeout(() => {
+      console.log('⏱️ SSE timeout check - readyState:', liveChatEventSource?.readyState);
+      if (liveChatEventSource && liveChatEventSource.readyState !== 1) {
+        console.log('⏱️ SSE connection timeout. Falling back to polling...');
+        if (liveChatEventSource) {
+          liveChatEventSource.close();
+          liveChatEventSource = null;
+        }
+        if (!liveChatPollInterval) {
+          startLiveChatPolling();
+        }
+      } else if (liveChatEventSource?.readyState === 1) {
+        console.log('✅ SSE connected, clearing timeout');
+      }
+    }, 3000);
+    
+    // Clear timeout if SSE connects successfully
+    const originalOnOpen = liveChatEventSource.onopen;
+    liveChatEventSource.onopen = () => {
+      clearTimeout(sseTimeoutId);
+      console.log('✅ SSE connection opened successfully');
+      console.log('SSE readyState:', liveChatEventSource?.readyState);
+      if (originalOnOpen) originalOnOpen();
+    };
+    
+    } catch (error) {
+      console.error('❌ Failed to create EventSource:', error);
+      console.log('🔄 Falling back to polling...');
+      startLiveChatPolling();
+    }
   }
 
   function showAgentBanner() {
@@ -6920,6 +7220,13 @@ export default async function handler(req, res) {
   setTimeout(() => {
     setupManualReviewButton();
   }, 100);
+  
+  // Check for active live chat on widget load (if conversation exists)
+  setTimeout(() => {
+    if (currentConversationId) {
+      checkAndStartLiveChatSSE();
+    }
+  }, 500);
 
 })();
 `;

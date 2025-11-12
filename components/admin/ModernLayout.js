@@ -49,7 +49,8 @@ import {
   ArrowRight,
   Loader2,
   ClipboardList,
-  Monitor
+  Monitor,
+  UserCircle
 } from 'lucide-react';
 
 export default function ModernLayout({ children }) {
@@ -191,6 +192,7 @@ export default function ModernLayout({ children }) {
           { name: 'Widgets', href: '/admin/widgets', icon: MessageCircle, description: 'Manage chat widgets' },
           { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, description: 'Performance insights' },
           { name: 'Support Requests', href: '/admin/support-requests', icon: ClipboardList, description: 'User support' },
+          { name: 'Agent Profile', href: '/admin/settings/agent-profile', icon: UserCircle, description: 'Configure live chat availability' },
           ...(session?.user?.teamRole !== 'member' ? [
             { name: 'Demo Widgets', href: '/admin/demo-widgets', icon: Globe, description: 'Client demonstrations' },
             { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'Platform configuration' }
