@@ -10,7 +10,7 @@ const conversation = [
   {
     id: 'user-1',
     sender: 'user',
-    text: 'Hej! Jeg vil gerne have en avanceret kaffemaskine, der sender en push-notifikation, når kaffen er klar.',
+    text: 'Jeg leder efter en smart kaffemaskine',
     delay: 1000,
   },
   {
@@ -24,7 +24,7 @@ const conversation = [
     type: 'products',
     heading: 'Udvalgte anbefalinger til dig',
     footer: 'Alle produkter er i lager og kan konfigureres med automatiske flows direkte fra widgetten.',
-    delay: 1600,
+    delay: 2400,
     products: [
       {
         id: 'brew-pro',
@@ -34,7 +34,8 @@ const conversation = [
         tag: 'Mest valgt',
         cta: 'Se detaljer',
         fallback: 'EP',
-        mediaColor: 'linear-gradient(135deg, rgba(79,70,229,0.18), rgba(59,130,246,0.2))',
+        mediaColor: 'linear-gradient(135deg, rgba(23,91,250,0.18), rgba(23,91,250,0.2))',
+        image: '/images/Elva Brew Pro.png',
       },
       {
         id: 'smart-pour',
@@ -44,6 +45,7 @@ const conversation = [
         cta: 'Tilføj til kurv',
         fallback: 'SP',
         mediaColor: 'linear-gradient(135deg, rgba(14,165,233,0.16), rgba(45,212,191,0.2))',
+        image: '/images/smart-pour-x.png',
       },
       {
         id: 'micro-roast',
@@ -53,6 +55,7 @@ const conversation = [
         cta: 'Book demo',
         fallback: 'MR',
         mediaColor: 'linear-gradient(135deg, rgba(244,114,182,0.18), rgba(59,130,246,0.18))',
+        image: '/images/micro-roast-mini.png',
       },
     ],
   },
@@ -65,7 +68,7 @@ const conversation = [
   {
     id: 'user-2',
     sender: 'user',
-    text: 'Den første model i sort lyder perfekt. Lad os tage den!',
+    text: 'Den første i sort tak',
     delay: 1100,
   },
   {

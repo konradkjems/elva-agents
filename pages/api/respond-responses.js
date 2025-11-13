@@ -15,6 +15,58 @@ const openai = new OpenAI({
   maxRetries: 2
 });
 
+const widgetCache = new Map();
+const WIDGET_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const runInBackground = (fn) => {
+  if (typeof setImmediate === 'function') {
+    setImmediate(fn);
+  } else {
+    setTimeout(fn, 0);
+  }
+};
+
+function updateAnalyticsAsync(db, widgetId, conversation, isNewConversation = false) {
+  runInBackground(async () => {
+    try {
+      await updateAnalytics(db, widgetId, conversation, isNewConversation);
+    } catch (analyticsError) {
+      console.error('Analytics update error (background):', analyticsError);
+    }
+  });
+}
+
+function cacheWidget(widgetId, widget) {
+  widgetCache.set(widgetId, {
+    widget,
+    cachedAt: Date.now()
+  });
+}
+
+function getCachedWidget(widgetId) {
+  const cached = widgetCache.get(widgetId);
+  if (!cached) return null;
+  if (Date.now() - cached.cachedAt > WIDGET_CACHE_TTL) {
+    widgetCache.delete(widgetId);
+    return null;
+  }
+  return cached.widget;
+}
+
+async function getWidgetWithCache(db, queryId) {
+  const cacheKey = String(queryId);
+  const cachedWidget = getCachedWidget(cacheKey);
+  if (cachedWidget) {
+    return cachedWidget;
+  }
+
+  const widget = await db.collection("widgets").findOne({ _id: queryId });
+  if (widget) {
+    cacheWidget(cacheKey, widget);
+  }
+  return widget;
+}
+
 export default async function handler(req, res) {
   // Set CORS headers for all requests
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -69,7 +121,7 @@ export default async function handler(req, res) {
     }
     
     // Get widget configuration
-    const widget = await db.collection("widgets").findOne({ _id: queryId });
+    const widget = await getWidgetWithCache(db, queryId);
     if (!widget) {
       console.log('❌ Widget not found:', widgetId);
       return res.status(404).json({ error: "Widget not found" });
@@ -196,9 +248,7 @@ export default async function handler(req, res) {
             { type: "input_image", image_url: imageUrl }
           ]
         }
-      ] : message,
-      // Enable streaming for image support
-      stream: !!imageUrl || false
+      ] : message
     };
 
     // Add version if specified in widget configuration
@@ -216,159 +266,21 @@ export default async function handler(req, res) {
       version: responsePayload.prompt.version || 'latest',
       hasContext: !!responsePayload.previous_response_id,
       hasImage: !!imageUrl,
-      streaming: responsePayload.stream,
       messageLength: message.length
     });
 
     // Call OpenAI Responses API with timing
     const startTime = Date.now();
-    
-    // Handle streaming response if images are present
     let aiReply, responseId, usage;
-    
-    if (responsePayload.stream) {
-      // Collect streamed chunks
-      const stream = await openai.responses.create(responsePayload);
-      let fullResponse = null;
-      let accumulatedText = '';
-      let lastCompletedResponse = null;
-      
-      for await (const chunk of stream) {
-        // Handle different event types from streaming Responses API
-        if (chunk.type === 'response.created' && chunk.response) {
-          // Initial response created event
-          fullResponse = chunk.response;
-          // If this already has output_text, use it
-          if (chunk.response.output_text) {
-            lastCompletedResponse = chunk.response;
-          }
-        } else if (chunk.type === 'response.delta' && chunk.response) {
-          // Delta updates - accumulate text
-          if (chunk.response.output_text) {
-            accumulatedText += chunk.response.output_text;
-          }
-          // Merge any new fields from delta
-          if (fullResponse && chunk.response) {
-            Object.assign(fullResponse, chunk.response);
-          }
-        } else if (chunk.type === 'response.done' && chunk.response) {
-          // Final response - use this as the complete response
-          fullResponse = chunk.response;
-          lastCompletedResponse = chunk.response;
-        } else if (chunk.response) {
-          // Fallback: use response object directly and merge
-          if (!fullResponse) {
-            fullResponse = chunk.response;
-          } else {
-            // Merge additional data
-            Object.assign(fullResponse, chunk.response);
-          }
-          // If this response has output_text or completed output, use it
-          if (chunk.response.output_text || 
-              (chunk.response.status === 'completed' && chunk.response.output && chunk.response.output.length > 0) ||
-              (chunk.response.status === 'done')) {
-            lastCompletedResponse = chunk.response;
-          }
-        }
-      }
-      
-      // Use the last completed response if we have one, otherwise use fullResponse
-      const finalResponse = lastCompletedResponse || fullResponse;
-      
-      // If we accumulated text separately, add it to response
-      if (accumulatedText) {
-        if (!finalResponse.output_text) {
-          finalResponse.output_text = accumulatedText;
-        } else {
-          // Combine if both exist
-          finalResponse.output_text = finalResponse.output_text + accumulatedText;
-        }
-      }
-      
-      const response = finalResponse;
-      
-      // Only log full responses in development (contains user content/PII)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Raw OpenAI streaming response (dev):', JSON.stringify(response, null, 2));
-      }
 
-      // Extract response data from Responses API structure
-      if (!response) {
-        throw new Error('No response received from streaming API');
-      }
-      
-      // If response is still in progress, we might need to wait or retrieve it
-      if (response.status === 'in_progress' && !response.output_text && (!response.output || response.output.length === 0)) {
-        // Response is still processing - try to retrieve it using the response ID
-        try {
-          const retrievedResponse = await openai.responses.retrieve(response.id);
-          if (retrievedResponse && (retrievedResponse.output_text || (retrievedResponse.output && retrievedResponse.output.length > 0))) {
-            Object.assign(response, retrievedResponse);
-          }
-        } catch (retrieveError) {
-          console.error('Error retrieving response:', retrieveError);
-          // Continue with original response
-        }
-      }
-      
-      if (response.output_text) {
-        aiReply = response.output_text;
-      } else if (response.output && Array.isArray(response.output) && response.output.length > 0) {
-        // Find the message output (type: 'message')
-        const messageOutput = response.output.find(output => output.type === 'message');
-        if (messageOutput && messageOutput.content && Array.isArray(messageOutput.content)) {
-          // Find output_text content item
-          const textContent = messageOutput.content.find(c => c.type === 'output_text');
-          if (textContent && textContent.text) {
-            aiReply = textContent.text;
-          }
-        }
-        
-        // Fallback: if no message output found, try to find any output_text type directly
-        if (!aiReply) {
-          const outputTextOutput = response.output.find(output => output.type === 'output_text');
-          if (outputTextOutput && outputTextOutput.text) {
-            aiReply = outputTextOutput.text;
-          }
-        }
-        
-        if (!aiReply) {
-          throw new Error(`No message output found in Responses API response. Output array: ${JSON.stringify(response.output)}`);
-        }
-      } else {
-        throw new Error(`Unexpected response structure from OpenAI Responses API. Status: ${response.status}, Has output_text: ${!!response.output_text}, Output length: ${response.output?.length || 0}`);
-      }
-      
-      responseId = (response && response.id) || `resp_${Date.now()}`;
-      usage = (response && response.usage) || { total_tokens: 0 };
-    } else {
-      // Non-streaming response (no images)
-      const response = await openai.responses.create(responsePayload);
+    const response = await openai.responses.create(responsePayload);
 
-      // Only log full responses in development (contains user content/PII)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 Raw OpenAI response (dev):', JSON.stringify(response, null, 2));
-      }
-
-      // Extract response data from Responses API structure
-      if (response.output_text) {
-        aiReply = response.output_text;
-      } else if (response.output && Array.isArray(response.output)) {
-        // Find the message output (type: 'message')
-        const messageOutput = response.output.find(output => output.type === 'message');
-        if (messageOutput && messageOutput.content && messageOutput.content[0]) {
-          aiReply = messageOutput.content[0].text;
-        } else {
-          throw new Error('No message output found in Responses API response');
-        }
-      } else {
-        throw new Error('Unexpected response structure from OpenAI Responses API');
-      }
-      
-      responseId = response.id || `resp_${Date.now()}`;
-      usage = response.usage || { total_tokens: 0 };
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Raw OpenAI response (dev):', JSON.stringify(response, null, 2));
     }
-    
+
+    ({ aiReply, responseId, usage } = extractResponseData(response));
+
     const responseTime = Date.now() - startTime;
 
     console.log('✅ OpenAI Responses API success:', {
@@ -408,10 +320,20 @@ export default async function handler(req, res) {
     conversation.messages.push(aiMessage);
 
     // Update conversation history tracking
+    if (!conversation.openai) {
+      conversation.openai = {
+        lastResponseId: null,
+        conversationHistory: []
+      };
+    }
     if (!conversation.openai.conversationHistory) {
       conversation.openai.conversationHistory = [];
     }
     conversation.openai.conversationHistory.push(responseId);
+    conversation.openai.lastResponseId = responseId;
+
+    conversation.messageCount = conversation.messages.length;
+    conversation.updatedAt = new Date();
 
     // Update conversation in database
     await db.collection("conversations").updateOne(
@@ -419,22 +341,22 @@ export default async function handler(req, res) {
       { 
         $set: { 
           messages: conversation.messages,
-          messageCount: conversation.messages.length,
-          updatedAt: new Date(),
-          "openai.lastResponseId": responseId,
+          messageCount: conversation.messageCount,
+          updatedAt: conversation.updatedAt,
+          "openai.lastResponseId": conversation.openai.lastResponseId,
           "openai.conversationHistory": conversation.openai.conversationHistory
         } 
       }
     );
-    console.log('📝 Conversation updated (Responses API):', conversation._id, 'Messages:', conversation.messages.length, 'Response time:', responseTime + 'ms');
-
-    // Update analytics after successful conversation - pass isNewConversation flag
-    try {
-      await updateAnalytics(db, widgetId, conversation, conversation.isNew);
-    } catch (analyticsError) {
-      console.error('Analytics update error:', analyticsError);
-      // Don't fail the response if analytics update fails
-    }
+    console.log(
+      '📝 Conversation updated (Responses API):',
+      conversation._id,
+      'Messages:',
+      conversation.messages.length,
+      'Response time:',
+      responseTime + 'ms',
+      `(${(responseTime / 1000).toFixed(2)}s)`
+    );
 
     res.json({ 
       reply: aiReply,
@@ -446,6 +368,8 @@ export default async function handler(req, res) {
         usage: usage
       }
     });
+
+    updateAnalyticsAsync(db, widgetId, conversation, conversation.isNew);
 
   } catch (error) {
     console.error('❌ Error in /api/respond (Responses API):', error);
@@ -481,10 +405,59 @@ export default async function handler(req, res) {
   }
 }
 
+function extractResponseData(response) {
+  if (!response) {
+    throw new Error('No response received from OpenAI Responses API');
+  }
+
+  let aiReply = null;
+
+  if (typeof response.output_text === 'string' && response.output_text.trim().length > 0) {
+    aiReply = response.output_text;
+  } else if (Array.isArray(response.output)) {
+    const messageOutput = response.output.find(output => output.type === 'message');
+
+    if (messageOutput && Array.isArray(messageOutput.content)) {
+      const textContent = messageOutput.content.find(
+        contentItem => contentItem?.type === 'output_text' || contentItem?.type === 'text'
+      );
+      if (textContent) {
+        aiReply = textContent.text || textContent.content || '';
+      }
+
+      if (!aiReply && messageOutput.content[0]) {
+        const firstContent = messageOutput.content[0];
+        if (typeof firstContent === 'string') {
+          aiReply = firstContent;
+        } else if (typeof firstContent.text === 'string') {
+          aiReply = firstContent.text;
+        }
+      }
+    }
+
+    if (!aiReply) {
+      const outputText = response.output.find(output => output.type === 'output_text');
+      if (outputText && typeof outputText.text === 'string') {
+        aiReply = outputText.text;
+      }
+    }
+  }
+
+  if (!aiReply || aiReply.length === 0) {
+    throw new Error('No message output found in Responses API response');
+  }
+
+  const responseId = response.id || `resp_${Date.now()}`;
+  const usage = response.usage || { total_tokens: 0 };
+
+  return { aiReply, responseId, usage };
+}
+
 // Helper function to update analytics
 async function updateAnalytics(db, widgetId, conversation, isNewConversation = false) {
   const analytics = db.collection('analytics');
-  const date = new Date(conversation.startTime);
+  const baseDate = conversation.startTime || conversation.createdAt || new Date();
+  const date = new Date(baseDate);
   const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
   
   // IMPORTANT: Always convert widgetId to string for consistency
@@ -503,18 +476,9 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
   const hasAssistantMessage = conversation.messages?.some(msg => msg.type === 'assistant') || false;
   const shouldCountConversation = isNewConversation && messageCount > 0 && hasAssistantMessage;
   
-  // Calculate unique users for this widget on this date
-  // Only count from conversations with assistant messages
-  const uniqueUsersToday = await db.collection('conversations').distinct('sessionId', {
-    widgetId: widgetId,
-    createdAt: {
-      $gte: new Date(dateKey),
-      $lt: new Date(new Date(dateKey).getTime() + 24 * 60 * 60 * 1000)
-    },
-    messageCount: { $gt: 0 },
-    'messages.type': 'assistant'
-  });
-  
+  const sessionId = conversation.sessionId ? String(conversation.sessionId) : null;
+  const hourKey = date.getHours().toString();
+
   // Get or create analytics document for this day
   const existingDoc = await analytics.findOne({ 
     agentId: agentIdString, 
@@ -523,24 +487,38 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
   
   if (existingDoc) {
     // Update existing document
+    const updates = {
+      $inc: {
+        'metrics.messages': messageCount
+      },
+      $set: {
+        'metrics.avgResponseTime': Math.round(((existingDoc.metrics?.avgResponseTime || 0) + avgResponseTime) / 2),
+        [`hourly.${hourKey}`]: ((existingDoc.hourly && existingDoc.hourly[hourKey]) || 0) + 1,
+        updatedAt: new Date()
+      }
+    };
+
+    if (shouldCountConversation) {
+      updates.$inc['metrics.conversations'] = 1;
+    }
+
+    if (sessionId) {
+      const alreadyCounted = Array.isArray(existingDoc.sessionIds) && existingDoc.sessionIds.includes(sessionId);
+      if (!alreadyCounted) {
+        updates.$addToSet = { sessionIds: sessionId };
+        updates.$inc['metrics.uniqueUsers'] = 1;
+      }
+    }
+
     await analytics.updateOne(
       { _id: existingDoc._id },
-      {
-        $inc: {
-          'metrics.conversations': shouldCountConversation ? 1 : 0,
-          'metrics.messages': messageCount
-        },
-        $set: {
-          'metrics.avgResponseTime': Math.round((existingDoc.metrics.avgResponseTime + avgResponseTime) / 2),
-          'metrics.uniqueUsers': uniqueUsersToday.length, // Update with actual count
-          [`hourly.${date.getHours()}`]: (existingDoc.hourly[date.getHours().toString()] || 0) + 1
-        }
-      }
+      updates
     );
   } else {
     // Create new analytics document
     const hourly = Array(24).fill(0);
     hourly[date.getHours()] = 1;
+    const uniqueUsersCount = sessionId ? 1 : 0;
     
     await analytics.insertOne({
       agentId: agentIdString,
@@ -548,7 +526,7 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
       metrics: {
         conversations: shouldCountConversation ? 1 : 0,
         messages: messageCount,
-        uniqueUsers: uniqueUsersToday.length, // Use actual count
+        uniqueUsers: uniqueUsersCount,
         responseRate: 100,
         avgResponseTime: Math.round(avgResponseTime),
         satisfaction: null
@@ -557,9 +535,11 @@ async function updateAnalytics(db, widgetId, conversation, isNewConversation = f
         acc[hour.toString()] = count;
         return acc;
       }, {}),
-      createdAt: new Date()
+      sessionIds: sessionId ? [sessionId] : [],
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
   }
   
-  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey, 'with', uniqueUsersToday.length, 'unique users', shouldCountConversation ? '(counted conversation)' : '(did not count conversation)');
+  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey, shouldCountConversation ? '(counted conversation)' : '(did not count conversation)');
 }
