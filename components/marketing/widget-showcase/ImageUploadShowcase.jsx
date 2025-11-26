@@ -10,7 +10,7 @@ const conversation = [
   {
     id: 'user-1',
     sender: 'user',
-    text: 'Hej Elva, jeg har lige taget et billede af min nuværende løsning. Kan du se hvilket produkt jeg bruger?',
+    text: 'Kan du se hvilket produkt jeg bruger?',
     delay: 1200,
   },
   {
@@ -33,7 +33,6 @@ const conversation = [
   {
     id: 'assistant-3',
     sender: 'assistant',
-    title: 'Analyse færdig ☕️',
     text: 'Det ligner en Barista Classic fra 2019-serien. Jeg anbefaler en Elva Brew Pro – den passer til dine eksisterende filtre og reducerer energiforbruget med 18%.',
     delay: 1400,
   },
@@ -41,7 +40,7 @@ const conversation = [
     id: 'assistant-4',
     sender: 'assistant',
     text: 'Vil du have en hurtig sammenligning eller skal jeg sende linket direkte til checkout?',
-    delay: 1300,
+    delay: 3000,
   },
 ];
 
