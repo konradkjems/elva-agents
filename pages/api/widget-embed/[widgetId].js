@@ -1470,7 +1470,7 @@ export default async function handler(req, res) {
         }
       </div>
       <div>
-        <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant'}</div>
+        <div style="font-weight: 600; font-size: 16px;">\${WIDGET_CONFIG.branding.title || WIDGET_CONFIG.name || 'AI Assistant'}</div>
         <div id="available-now-text_\${WIDGET_CONFIG.widgetId}" style="font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 6px;">
           <div style="width: 6px; height: 6px; background: \${WIDGET_CONFIG.appearance.onlineIndicatorColor}; border-radius: 50%; animation: pulse 2s infinite;"></div>
           \${(WIDGET_CONFIG.messages.availableNowText !== null && WIDGET_CONFIG.messages.availableNowText !== undefined && WIDGET_CONFIG.messages.availableNowText !== '') ? WIDGET_CONFIG.messages.availableNowText : 'Tilgængelig nu'}
