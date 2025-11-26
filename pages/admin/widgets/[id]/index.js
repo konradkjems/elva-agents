@@ -63,7 +63,7 @@ export default function WidgetEditor() {
 
   const fetchWidget = async () => {
     if (!id) return;
-    
+
     try {
       const response = await fetch(`/api/admin/widgets/${id}`);
       if (!response.ok) {
@@ -88,19 +88,19 @@ export default function WidgetEditor() {
   const handleSave = async () => {
     setSaving(true);
     setSaveStatus(null);
-    
-    
+
+
     try {
       const response = await fetch(`/api/admin/widgets/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to save widget');
       }
-      
+
       const updatedWidget = await response.json();
       setWidget(updatedWidget);
       setLastSavedSettings(settings); // Remember what we just saved
@@ -110,12 +110,12 @@ export default function WidgetEditor() {
 
       // Reset justSaved flag after a short delay to allow normal change detection again
       setTimeout(() => setJustSaved(false), 2000);
-      
+
       toast({
         title: "Widget saved successfully",
         description: "Your changes have been saved.",
       });
-      
+
       // Auto-hide success message after 3 seconds
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (error) {
@@ -162,32 +162,32 @@ export default function WidgetEditor() {
               <Skeleton className="h-4 w-72" />
             </div>
           </div>
-          
-           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-12rem)]">
-             <Card className="lg:col-span-3">
-               <CardHeader>
-                 <Skeleton className="h-6 w-32" />
-                 <Skeleton className="h-4 w-48" />
-               </CardHeader>
-               <CardContent className="space-y-4">
-                 <Skeleton className="h-8 w-full" />
-                 <Skeleton className="h-8 w-full" />
-                 <Skeleton className="h-8 w-full" />
-                 <Skeleton className="h-8 w-full" />
-                 <Skeleton className="h-8 w-full" />
-               </CardContent>
-             </Card>
-             
-             <Card className="lg:col-span-2">
-               <CardHeader>
-                 <Skeleton className="h-6 w-32" />
-                 <Skeleton className="h-4 w-48" />
-               </CardHeader>
-               <CardContent>
-                 <Skeleton className="h-64 w-full" />
-               </CardContent>
-             </Card>
-           </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-12rem)]">
+            <Card className="lg:col-span-3">
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-48" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-64 w-full" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </ModernLayout>
     );
@@ -237,7 +237,7 @@ export default function WidgetEditor() {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {/* Save Status Indicator */}
             {saveStatus && (
@@ -255,7 +255,7 @@ export default function WidgetEditor() {
                 )}
               </Badge>
             )}
-            
+
             {/* Unsaved Changes Indicator */}
             {hasUnsavedChanges && !saveStatus && (
               <Badge variant="secondary">
@@ -263,16 +263,16 @@ export default function WidgetEditor() {
                 Unsaved changes
               </Badge>
             )}
-            
+
             {/* Embed Code Button */}
             <Button variant="outline" onClick={handleCopyEmbedCode}>
               <Share className="w-4 h-4 mr-2" />
               Embed Code
             </Button>
-            
+
             {/* Save Button - Only show for admin/owner */}
             {!isReadOnly && (
-              <Button 
+              <Button
                 onClick={handleSave}
                 disabled={saving || !hasUnsavedChanges}
                 className="min-w-[120px]"
@@ -304,46 +304,46 @@ export default function WidgetEditor() {
           </Alert>
         )}
 
-         {/* Main Content */}
-         <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 h-[calc(100vh-12rem)]">
-           {/* Settings Panel - Takes up 2 columns */}
-           <Card className="flex flex-col lg:col-span-3">
-             <CardHeader className="flex-shrink-0">
-               <CardTitle className="flex items-center gap-2">
-                 <SettingsIcon className="h-5 w-5" />
-                 Widget Settings
-               </CardTitle>
-               <CardDescription>
-                 Configure your widget's appearance and behavior
-               </CardDescription>
-             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-0 max-h-[calc(150vh-16rem)]">
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 h-[calc(100vh-12rem)]">
+          {/* Settings Panel - Takes up 3 columns */}
+          <Card className="lg:col-span-3 flex flex-col h-full overflow-hidden">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle className="flex items-center gap-2">
+                <SettingsIcon className="h-5 w-5" />
+                Widget Settings
+              </CardTitle>
+              <CardDescription>
+                Configure your widget's appearance and behavior
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-0">
               <SettingsPanel
                 settings={settings}
-                onChange={isReadOnly ? () => {} : setSettings}
+                onChange={isReadOnly ? () => { } : setSettings}
                 onSave={handleSave}
                 saving={saving}
                 disabled={isReadOnly}
               />
             </CardContent>
-           </Card>
-           
-           {/* Preview Panel - Takes up 3 columns for more space */}
-           <Card className="flex flex-col lg:col-span-3">
-             <CardHeader className="flex-shrink-0">
-               <CardTitle className="flex items-center gap-2">
-                 <Eye className="h-5 w-5" />
-                 Live Preview
-               </CardTitle>
-               <CardDescription>
-                 See your changes in real-time. Click the chat button to test interactions.
-               </CardDescription>
-             </CardHeader>
-             <CardContent className="flex-1 overflow-visible">
-               <LivePreview widget={widget} settings={settings} showMobilePreview={false} />
-             </CardContent>
-           </Card>
-         </div>
+          </Card>
+
+          {/* Preview Panel - Takes up 3 columns for more space */}
+          <Card className="lg:col-span-3 flex flex-col h-full overflow-hidden">
+            <CardHeader className="flex-shrink-0">
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Live Preview
+              </CardTitle>
+              <CardDescription>
+                See your changes in real-time. Click the chat button to test interactions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-hidden p-0">
+              <LivePreview widget={widget} settings={settings} showMobilePreview={false} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </ModernLayout>
   );

@@ -1,27 +1,34 @@
+"use client"
+
 import { useState } from 'react';
-import { Switch } from '@headlessui/react';
 import {
-  PaintBrushIcon,
-  ChatBubbleLeftRightIcon,
-  BuildingOfficeIcon,
-  Cog6ToothIcon,
-  CodeBracketIcon,
-  InformationCircleIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  DocumentDuplicateIcon,
-  ArrowsPointingOutIcon,
-  MagnifyingGlassIcon,
-  StarIcon,
-  ClipboardDocumentListIcon,
-  ShieldCheckIcon
-} from '@heroicons/react/24/outline';
+  Palette,
+  MessageCircle,
+  Building2,
+  Settings,
+  Code,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Copy,
+  Maximize2,
+  ZoomIn,
+  Star,
+  ClipboardList,
+  ShieldCheck,
+  ChevronDown,
+  ChevronRight
+} from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import ColorPicker from './ColorPicker';
 import FileUpload from './FileUpload';
 import AdvancedSettings from './AdvancedSettings';
@@ -249,8 +256,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
   const getLanguagePackValue = (langCode, field) => {
     // Først tjek brugerdefinerede værdier, derefter default værdier
     return settings.messages?.languagePacks?.[langCode]?.[field] ??
-           defaultLanguagePacks[langCode]?.[field] ??
-           '';
+      defaultLanguagePacks[langCode]?.[field] ??
+      '';
   };
 
   const updateSetting = (section, key, value) => {
@@ -274,7 +281,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
   const validateField = (section, key, value) => {
     const fieldId = `${section}.${key}`;
-    
+
     // Basic validation rules
     if (key === 'width' && (value < 300 || value > 800)) {
       setValidationErrors(prev => ({
@@ -283,7 +290,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
       }));
       return false;
     }
-    
+
     if (key === 'height' && (value < 400 || value > 800)) {
       setValidationErrors(prev => ({
         ...prev,
@@ -291,7 +298,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
       }));
       return false;
     }
-    
+
     if (key === 'borderRadius' && (value < 0 || value > 50)) {
       setValidationErrors(prev => ({
         ...prev,
@@ -299,7 +306,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
       }));
       return false;
     }
-    
+
     if (key === 'popupDelay' && (value < 0 || value > 30000)) {
       setValidationErrors(prev => ({
         ...prev,
@@ -307,7 +314,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
       }));
       return false;
     }
-    
+
     return true;
   };
 
@@ -317,275 +324,144 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
   };
 
   return (
-    <div className="h-full bg-white dark:bg-gray-900">
-      <div className="px-6 py-6">
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Widget Settings
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Customize your widget's appearance, behavior, and integration
-          </p>
-        </div>
-        
-        <Accordion type="single" collapsible defaultValue="appearance" className="space-y-4">
-          <AccordionItem value="appearance" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+    <div className="h-full bg-white dark:bg-[#111]">
+      <Accordion type="single" collapsible defaultValue="appearance" className="divide-y divide-slate-100 dark:divide-slate-800">
+          <AccordionItem value="appearance" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <PaintBrushIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Appearance</span>
+                <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                  <Palette className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Appearance</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
+            <AccordionContent className="px-5 pb-5 pt-0">
               {/* Appearance Settings */}
-              <div className="space-y-8">
+              <div className="space-y-5">
                 {/* Color Settings */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <PaintBrushIcon className="w-5 h-5 mr-2 text-blue-600" />
-                    Color Scheme
-                  </h4>
-                  
-                  <div className="max-w-md">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                      Primary Theme Color
-                    </label>
-                      <div className="flex items-center space-x-3">
-                        <div className="relative">
-                          <div
-                            className="w-14 h-14 rounded-xl border-2 border-gray-300 dark:border-gray-600 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
-                            style={{ backgroundColor: settings.appearance?.themeColor || '#3b82f6' }}
-                            onClick={() => document.getElementById('themeColor').click()}
-                          />
-                          <input
-                            id="themeColor"
-                            type="color"
-                            value={settings.appearance?.themeColor || '#3b82f6'}
-                            onChange={(e) => handleFieldChange('appearance', 'themeColor', e.target.value)}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-xl"
-                          />
-                        </div>
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Primary Brand Color
+                  </label>
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Theme Color</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-mono text-slate-400 uppercase">{settings.appearance?.themeColor || '#3b82f6'}</span>
+                      <div className="relative overflow-hidden w-8 h-8 rounded-full shadow-sm ring-1 ring-slate-200 dark:ring-slate-700 cursor-pointer hover:scale-105 transition-transform">
+                        <div 
+                          className="absolute inset-0"
+                          style={{ backgroundColor: settings.appearance?.themeColor || '#3b82f6' }}
+                        />
                         <input
-                          type="text"
+                          id="themeColor"
+                          type="color"
                           value={settings.appearance?.themeColor || '#3b82f6'}
                           onChange={(e) => handleFieldChange('appearance', 'themeColor', e.target.value)}
-                          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm hover:shadow-md transition-shadow"
-                          placeholder="#3b82f6"
+                          className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] cursor-pointer p-0 border-0"
                         />
                       </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Theme Settings */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <PaintBrushIcon className="w-5 h-5 mr-2 text-green-600" />
-                    Theme Mode
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Widget Theme
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { value: 'light', label: 'Light', icon: '☀️', description: 'Clean light theme' },
-                          { value: 'dark', label: 'Dark', icon: '🌙', description: 'Dark mode theme' },
-                          { value: 'auto', label: 'Auto', icon: '🔄', description: 'Follows system preference' }
-                        ].map((theme) => (
-                          <button
-                            key={theme.value}
-                            type="button"
-                            onClick={() => handleFieldChange('appearance', 'theme', theme.value)}
-                            className={
-                              `p-4 rounded-lg border-2 transition-all duration-200 ` +
-                              (
-                              settings.appearance?.theme === theme.value
-                                  ? `
-                                      border-blue-500 
-                                      bg-blue-50 text-blue-700 
-                                      dark:border-blue-400
-                                      dark:bg-blue-950
-                                      dark:text-blue-200
-                                    `
-                                  : `
-                                      border-gray-200 
-                                      bg-white text-gray-700 
-                                      hover:border-gray-300 hover:bg-gray-50
-                                      dark:border-gray-700
-                                      dark:bg-gray-900
-                                      dark:text-gray-200
-                                      dark:hover:border-gray-500
-                                      dark:hover:bg-gray-800
-                                    `
-                              )
-                            }
-                          >
-                            <div className="text-center">
-                              <div className="text-2xl mb-2">{theme.icon}</div>
-                              <div className="font-medium text-sm">{theme.label}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{theme.description}</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
-                      <strong>Note:</strong> Theme affects the overall appearance of the widget. 
-                      Light theme uses light backgrounds, Dark theme uses dark backgrounds, 
-                      and Auto theme follows the user's system preference.
-                    </div>
+                {/* Theme Mode */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Widget Theme
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'light', label: 'Light', icon: '☀️' },
+                      { value: 'dark', label: 'Dark', icon: '🌙' },
+                      { value: 'auto', label: 'Auto', icon: '🔄' }
+                    ].map((theme) => (
+                      <button
+                        key={theme.value}
+                        type="button"
+                        onClick={() => handleFieldChange('appearance', 'theme', theme.value)}
+                        className={`p-3 rounded-lg border transition-all duration-200 ${
+                          settings.appearance?.theme === theme.value
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                            : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-lg mb-1">{theme.icon}</div>
+                          <div className="text-xs font-medium">{theme.label}</div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 {/* Visual Effects */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <PaintBrushIcon className="w-5 h-5 mr-2 text-purple-600" />
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
                     Visual Effects
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Use Gradient Colors
-                          </Switch.Label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Creates a smooth gradient between primary and secondary colors
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.appearance?.useGradient !== false}
-                          onChange={(checked) => handleFieldChange('appearance', 'useGradient', checked)}
-                          className={`${
-                            settings.appearance?.useGradient !== false ? 'bg-blue-600' : 'bg-gray-200'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-                        >
-                          <span
-                            className={`${
-                              settings.appearance?.useGradient !== false ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                          />
-                        </Switch>
-                      </div>
-                    </Switch.Group>
-
-                    <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Enable backdrop blur effect
-                          </Switch.Label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Adds a subtle blur effect behind the widget
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.appearance?.backdropBlur || false}
-                          onChange={(checked) => handleFieldChange('appearance', 'backdropBlur', checked)}
-                          className={`${
-                            settings.appearance?.backdropBlur ? 'bg-blue-600' : 'bg-gray-200'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-                        >
-                          <span
-                            className={`${
-                              settings.appearance?.backdropBlur ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                          />
-                        </Switch>
-                      </div>
-                    </Switch.Group>
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2.5 px-1">
+                      <span className="text-sm text-slate-700 dark:text-slate-300">Use Gradient Colors</span>
+                      <Switch
+                        checked={settings.appearance?.useGradient !== false}
+                        onCheckedChange={(checked) => handleFieldChange('appearance', 'useGradient', checked)}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between py-2.5 px-1">
+                      <span className="text-sm text-slate-700 dark:text-slate-300">Backdrop Blur Effect</span>
+                      <Switch
+                        checked={settings.appearance?.backdropBlur || false}
+                        onCheckedChange={(checked) => handleFieldChange('appearance', 'backdropBlur', checked)}
+                      />
+                    </div>
                   </div>
                 </div>
 
                 {/* Dimensions */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <PaintBrushIcon className="w-5 h-5 mr-2 text-green-600" />
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
                     Dimensions & Layout
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Width (px)
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Width (px)</label>
+                      <Input
                         type="number"
                         value={settings.appearance?.width || 450}
                         onChange={(e) => handleFieldChange('appearance', 'width', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
-                          validationErrors['appearance.width'] ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${validationErrors['appearance.width'] ? 'border-red-300 dark:border-red-600' : ''}`}
                         min="300"
                         max="800"
                       />
-                      {validationErrors['appearance.width'] && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
-                          <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
-                          {validationErrors['appearance.width']}
-                        </p>
-                      )}
                     </div>
-                    
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Height (px)
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Height (px)</label>
+                      <Input
                         type="number"
                         value={settings.appearance?.height || 600}
                         onChange={(e) => handleFieldChange('appearance', 'height', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
-                          validationErrors['appearance.height'] ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${validationErrors['appearance.height'] ? 'border-red-300 dark:border-red-600' : ''}`}
                         min="400"
                         max="800"
                       />
-                      {validationErrors['appearance.height'] && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
-                          <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
-                          {validationErrors['appearance.height']}
-                        </p>
-                      )}
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Border Radius (px)
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Border Radius</label>
+                      <Input
                         type="number"
                         value={settings.appearance?.borderRadius || 20}
                         onChange={(e) => handleFieldChange('appearance', 'borderRadius', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
-                          validationErrors['appearance.borderRadius']
-                            ? 'border-red-300 dark:border-red-600'
-                            : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${validationErrors['appearance.borderRadius'] ? 'border-red-300 dark:border-red-600' : ''}`}
                         min="0"
                         max="50"
                       />
-                      {validationErrors['appearance.borderRadius'] && (
-                        <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
-                          <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
-                          {validationErrors['appearance.borderRadius']}
-                        </p>
-                      )}
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Placement
-                      </label>
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Placement</label>
                       <select
                         value={settings.appearance?.placement || 'bottom-right'}
                         onChange={(e) => handleFieldChange('appearance', 'placement', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 dark:text-slate-200"
                       >
                         <option value="bottom-right">Bottom Right</option>
                         <option value="bottom-left">Bottom Left</option>
@@ -593,237 +469,144 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         <option value="top-left">Top Left</option>
                       </select>
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Animation Speed
-                      </label>
-                      <select
-                        value={settings.appearance?.animationSpeed || 'normal'}
-                        onChange={(e) => handleFieldChange('appearance', 'animationSpeed', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      >
-                        <option value="slow">Slow</option>
-                        <option value="normal">Normal</option>
-                        <option value="fast">Fast</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
 
                 {/* Custom CSS */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <CodeBracketIcon className="w-5 h-5 mr-2 text-indigo-600" />
-                    Custom Styling
-                  </h4>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Custom CSS
-                    </label>
-                    <textarea
-                      value={settings.appearance?.customCSS || ''}
-                      onChange={(e) => handleFieldChange('appearance', 'customCSS', e.target.value)}
-                      rows={6}
-                      className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm font-mono text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      placeholder="/* Add custom CSS here */&#10;.widget-container {&#10;  /* Your custom styles */&#10;}"
-                    />
-                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Add custom CSS to further customize your widget's appearance. Use classes like <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">.widget-container</code> to target specific elements.
-                    </p>
-                  </div>
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Custom CSS
+                  </label>
+                  <Textarea
+                    value={settings.appearance?.customCSS || ''}
+                    onChange={(e) => handleFieldChange('appearance', 'customCSS', e.target.value)}
+                    rows={4}
+                    className="w-full font-mono text-xs bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                    placeholder="/* Add custom CSS here */&#10;.widget-container { }"
+                  />
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    Use classes like <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">.widget-container</code> to target elements.
+                  </p>
                 </div>
               </div>
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="messages" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+          <AccordionItem value="messages" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <ChatBubbleLeftRightIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Messages</span>
+                <div className="p-1.5 rounded-md bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Messages & Texts</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
+            <AccordionContent className="px-5 pb-5 pt-0">
               {/* Message Settings */}
-              <div className="space-y-8">
-                {/* Welcome & Initial Messages */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-green-600" />
-                    Welcome & Initial Messages
-                  </h4>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Welcome Message
-                      </label>
-                      <textarea
-                        value={settings.messages?.welcomeMessage || ''}
-                        onChange={(e) => handleFieldChange('messages', 'welcomeMessage', e.target.value)}
-                        rows={3}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="Hej! 😊 Jeg er kundeservice agent for Elva Solutions. Du kan spørge mig om hvad som helst."
-                      />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        This message appears when users first open the chat
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Input Placeholder
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.messages?.inputPlaceholder || ''}
-                        onChange={(e) => handleFieldChange('messages', 'inputPlaceholder', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="Skriv en besked her"
-                      />
-                    </div>
+              <div className="space-y-5">
+                {/* Welcome Message */}
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Welcome Message
+                  </label>
+                  <Textarea
+                    value={settings.messages?.welcomeMessage || ''}
+                    onChange={(e) => handleFieldChange('messages', 'welcomeMessage', e.target.value)}
+                    rows={3}
+                    className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                    placeholder="Hej! 😊 Hvordan kan jeg hjælpe dig i dag?"
+                  />
+                  <p className="text-[10px] text-slate-400">This message appears when users first open the chat</p>
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Banner Text
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.messages?.bannerText || ''}
-                        onChange={(e) => handleFieldChange('messages', 'bannerText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="Velkommen til vores kundeservice chat!"
-                      />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Optional banner text shown at the top of the chat widget
-                      </p>
-                    </div>
+                {/* Input Placeholder */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Input Placeholder
+                  </label>
+                  <Input
+                    type="text"
+                    value={settings.messages?.inputPlaceholder || ''}
+                    onChange={(e) => handleFieldChange('messages', 'inputPlaceholder', e.target.value)}
+                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    placeholder="Skriv din besked her..."
+                  />
+                </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Typing Indicator Text
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.messages?.typingText || ''}
-                        onChange={(e) => handleFieldChange('messages', 'typingText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="AI tænker..."
-                      />
-                    </div>
+                {/* Banner Text */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Banner Text
+                  </label>
+                  <Input
+                    type="text"
+                    value={settings.messages?.bannerText || ''}
+                    onChange={(e) => handleFieldChange('messages', 'bannerText', e.target.value)}
+                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    placeholder="Velkommen til vores kundeservice chat!"
+                  />
+                </div>
 
-                    <div>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={settings.messages?.showTypingText !== false}
-                          onChange={(e) => handleFieldChange('messages', 'showTypingText', e.target.checked)}
-                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-300 dark:focus:border-blue-600 focus:ring focus:ring-blue-200 dark:focus:ring-blue-800 focus:ring-opacity-50"
-                        />
-                        <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Show typing text with dots
-                        </span>
-                      </label>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        When disabled, only animated dots will be shown without any text
-                      </p>
-                    </div>
+                {/* Typing Indicator */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Typing Indicator
+                  </label>
+                  <Input
+                    type="text"
+                    value={settings.messages?.typingText || ''}
+                    onChange={(e) => handleFieldChange('messages', 'typingText', e.target.value)}
+                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    placeholder="AI tænker..."
+                  />
+                  <div className="flex items-center justify-between py-2 px-1">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Show typing text</span>
+                    <Switch
+                      checked={settings.messages?.showTypingText !== false}
+                      onCheckedChange={(checked) => handleFieldChange('messages', 'showTypingText', checked)}
+                    />
                   </div>
                 </div>
 
                 {/* Popup Settings */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-blue-600" />
+                <div className="space-y-3 pt-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
                     Popup Behavior
-                  </h4>
-                  
-                  <div className="space-y-6">
+                  </label>
+                  <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Popup Message
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Popup Message</label>
+                      <Input
                         type="text"
                         value={settings.messages?.popupMessage || ''}
                         onChange={(e) => handleFieldChange('messages', 'popupMessage', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                         placeholder="Hej! 👋 Har du brug for hjælp?"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Message shown in the popup bubble when widget is closed
-                      </p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Banner Text
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.messages?.bannerText || ''}
-                        onChange={(e) => handleFieldChange('messages', 'bannerText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="X-Virksomhed står ikke til ansvar for svarene, der kun er vejledende."
-                      />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Disclaimer text shown under the header (optional)
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Disclaimer Text
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Disclaimer Text</label>
+                      <Input
                         type="text"
                         value={settings.messages?.disclaimerText || ''}
                         onChange={(e) => handleFieldChange('messages', 'disclaimerText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                         placeholder="Opgiv ikke personlige oplysninger"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Warning text shown above the input field
-                      </p>
                     </div>
 
                     {/* Custom Language Toggle */}
-                    <div>
-                      <Switch.Group>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Custom Language Mode
-                            </Switch.Label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Disable automatic language detection and use only manually defined labels
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.messages?.customLanguage || false}
-                            onChange={(checked) => handleFieldChange('messages', 'customLanguage', checked)}
-                            className={`${
-                              settings.messages?.customLanguage ? 'bg-purple-600' : 'bg-gray-200'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
-                          >
-                            <span
-                              className={`${
-                                settings.messages?.customLanguage ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                            />
-                          </Switch>
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between py-2 px-1">
+                        <div>
+                          <span className="text-sm text-slate-700 dark:text-slate-300">Custom Language Mode</span>
+                          <p className="text-[10px] text-slate-400 mt-0.5">Disable auto-detection</p>
                         </div>
-                      </Switch.Group>
-                      {settings.messages?.customLanguage && (
-                        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                          <p className="text-xs text-blue-800 dark:text-blue-300">
-                            When enabled, the widget will not automatically detect and apply language-specific labels.
-                            All labels must be manually defined above.
-                          </p>
-                        </div>
-                      )}
+                        <Switch
+                          checked={settings.messages?.customLanguage || false}
+                          onCheckedChange={(checked) => handleFieldChange('messages', 'customLanguage', checked)}
+                        />
+                      </div>
 
                       {/* Enabled Languages Section */}
                       {settings.messages?.customLanguage && (
@@ -849,7 +632,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                 <div key={lang.code} className="flex items-center space-x-2">
                                   <Switch
                                     checked={isEnabled}
-                                    onChange={(checked) => {
+                                    onCheckedChange={(checked) => {
                                       const currentEnabled = settings.messages?.enabledLanguages || defaultEnabledLanguages;
                                       let newEnabled;
 
@@ -865,16 +648,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
                                       handleFieldChange('messages', 'enabledLanguages', newEnabled);
                                     }}
-                                    className={`${
-                                      isEnabled ? 'bg-green-600' : 'bg-gray-200'
-                                    } relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
-                                  >
-                                    <span
-                                      className={`${
-                                        isEnabled ? 'translate-x-5' : 'translate-x-1'
-                                      } inline-block h-3 w-3 transform rounded-full bg-white transition-transform`}
-                                    />
-                                  </Switch>
+                                  />
                                   <span className="text-sm text-gray-700 dark:text-gray-300">
                                     {lang.name}
                                   </span>
@@ -916,7 +690,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                       Welcome Message
                                     </label>
-                                    <input
+                                    <Input
                                       type="text"
                                       value={getLanguagePackValue(langCode, 'welcomeMessage')}
                                       onChange={(e) => handleFieldChange('messages', 'languagePacks', {
@@ -926,7 +700,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                           welcomeMessage: e.target.value
                                         }
                                       })}
-                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      className="block w-full"
                                       placeholder="Welcome message..."
                                     />
                                   </div>
@@ -935,7 +709,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                       Input Placeholder
                                     </label>
-                                    <input
+                                    <Input
                                       type="text"
                                       value={getLanguagePackValue(langCode, 'inputPlaceholder')}
                                       onChange={(e) => handleFieldChange('messages', 'languagePacks', {
@@ -945,7 +719,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                           inputPlaceholder: e.target.value
                                         }
                                       })}
-                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      className="block w-full"
                                       placeholder="Type your message..."
                                     />
                                   </div>
@@ -954,7 +728,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                       Typing Text
                                     </label>
-                                    <input
+                                    <Input
                                       type="text"
                                       value={getLanguagePackValue(langCode, 'typingText')}
                                       onChange={(e) => handleFieldChange('messages', 'languagePacks', {
@@ -964,7 +738,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                           typingText: e.target.value
                                         }
                                       })}
-                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      className="block w-full"
                                       placeholder="AI is thinking..."
                                     />
                                   </div>
@@ -973,7 +747,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                       Disclaimer Text
                                     </label>
-                                    <input
+                                    <Input
                                       type="text"
                                       value={getLanguagePackValue(langCode, 'disclaimerText')}
                                       onChange={(e) => handleFieldChange('messages', 'languagePacks', {
@@ -983,7 +757,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                           disclaimerText: e.target.value
                                         }
                                       })}
-                                      className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                      className="block w-full"
                                       placeholder="Disclaimer text..."
                                     />
                                   </div>
@@ -1005,7 +779,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                           {labelKey.replace(/([A-Z])/g, ' $1').toLowerCase()}
                                         </label>
                                         {labelKey === 'suggestedResponses' ? (
-                                          <textarea
+                                          <Textarea
                                             value={Array.isArray(getLanguagePackValue(langCode, labelKey))
                                               ? getLanguagePackValue(langCode, labelKey).join('\n')
                                               : ''}
@@ -1020,11 +794,11 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                               });
                                             }}
                                             rows={4}
-                                            className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono"
+                                            className="block w-full font-mono text-xs"
                                             placeholder="Enter one suggestion per line..."
                                           />
                                         ) : (
-                                          <input
+                                          <Input
                                             type="text"
                                             value={getLanguagePackValue(langCode, labelKey)}
                                             onChange={(e) => handleFieldChange('messages', 'languagePacks', {
@@ -1034,8 +808,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                                 [labelKey]: e.target.value
                                               }
                                             })}
-                                            className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                            placeholder={`${labelKey}...`}
+                                            className="block w-full"
+                                            placeholder={`Label for ${labelKey}...`}
                                           />
                                         )}
                                       </div>
@@ -1240,11 +1014,11 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                   "Samtale slettet" Label
                                 </label>
-                                <input
+                                <Input
                                   type="text"
                                   value={settings.messages?.conversationDeletedLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'conversationDeletedLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full"
                                   placeholder="Samtale slettet"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1256,11 +1030,11 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                   "New conversation started" Label
                                 </label>
-                                <input
+                                <Input
                                   type="text"
                                   value={settings.messages?.newConversationStartedLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'newConversationStartedLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full"
                                   placeholder="New conversation started"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1277,19 +1051,17 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Popup Delay (milliseconds)
                       </label>
-                      <input
+                      <Input
                         type="number"
                         value={settings.messages?.popupDelay || 5000}
                         onChange={(e) => handleFieldChange('messages', 'popupDelay', parseInt(e.target.value))}
-                        className={`block w-full rounded-lg border shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
-                          validationErrors['messages.popupDelay'] ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
-                        }`}
+                        className={`block w-full ${validationErrors['messages.popupDelay'] ? 'border-red-300 dark:border-red-500' : ''}`}
                         min="0"
                         max="30000"
                       />
                       {validationErrors['messages.popupDelay'] && (
                         <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
-                          <ExclamationTriangleIcon className="w-4 h-4 mr-1" />
+                          <AlertTriangle className="w-4 h-4 mr-1" />
                           {validationErrors['messages.popupDelay']}
                         </p>
                       )}
@@ -1303,20 +1075,20 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Suggested Responses */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-purple-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-purple-600" />
                     Suggested Responses (Max 5)
                   </h4>
-                  
+
                   <div className="space-y-3">
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       These quick response buttons appear when the chat starts
                     </p>
-                    
+
                     {/* Suggested Responses List */}
                     <div className="space-y-2">
                       {(settings.messages?.suggestedResponses || ['']).map((response, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <input
+                          <Input
                             type="text"
                             value={response}
                             onChange={(e) => {
@@ -1324,7 +1096,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                               responses[index] = e.target.value;
                               handleFieldChange('messages', 'suggestedResponses', responses);
                             }}
-                            className="flex-1 rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="flex-1"
                             placeholder={`Suggested response ${index + 1}...`}
                           />
                           {(settings.messages?.suggestedResponses || ['']).length > 1 && (
@@ -1345,7 +1117,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Add Response Button */}
                     {(settings.messages?.suggestedResponses || ['']).length < 5 && (
                       <button
@@ -1362,7 +1134,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         Add Response
                       </button>
                     )}
-                    
+
                     {/* Max limit notice */}
                     {(settings.messages?.suggestedResponses || ['']).length >= 5 && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
@@ -1375,46 +1147,35 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Behavior Settings */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-orange-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-orange-600" />
                     Behavior Settings
                   </h4>
-                  
+
                   <div className="space-y-4">
-                    <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Auto-close after inactivity
-                          </Switch.Label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Automatically close the chat widget after a period of inactivity
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.messages?.autoClose || false}
-                          onChange={(checked) => handleFieldChange('messages', 'autoClose', checked)}
-                          className={`${
-                            settings.messages?.autoClose ? 'bg-blue-600' : 'bg-gray-200'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-                        >
-                          <span
-                            className={`${
-                              settings.messages?.autoClose ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                          />
-                        </Switch>
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Auto-close after inactivity
+                        </Label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Automatically close the chat widget after a period of inactivity
+                        </p>
                       </div>
-                    </Switch.Group>
+                      <Switch
+                        checked={settings.messages?.autoClose || false}
+                        onCheckedChange={(checked) => handleFieldChange('messages', 'autoClose', checked)}
+                      />
+                    </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Close Button Text
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={settings.messages?.closeButtonText || 'Close'}
                         onChange={(e) => handleFieldChange('messages', 'closeButtonText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="block w-full"
                         placeholder="Close"
                       />
                     </div>
@@ -1424,40 +1185,29 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Voice Input Settings */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-indigo-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-indigo-600" />
                     Voice Input (Diktering)
                   </h4>
-                  
+
                   <div className="space-y-6">
                     {/* Enable Voice Input */}
-                    <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Enable Voice Input
-                          </Switch.Label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Allow users to dictate messages using their microphone
-                          </p>
-              </div>
-                        <Switch
-                          checked={settings.messages?.voiceInput?.enabled !== false}
-                          onChange={(checked) => handleFieldChange('messages', 'voiceInput', {
-                            ...settings.messages?.voiceInput,
-                            enabled: checked
-                          })}
-                          className={`${
-                            settings.messages?.voiceInput?.enabled !== false ? 'bg-indigo-600' : 'bg-gray-200'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
-                        >
-                          <span
-                            className={`${
-                              settings.messages?.voiceInput?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                          />
-                        </Switch>
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Enable Voice Input
+                        </Label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Allow users to dictate messages using their microphone
+                        </p>
                       </div>
-                    </Switch.Group>
+                      <Switch
+                        checked={settings.messages?.voiceInput?.enabled !== false}
+                        onCheckedChange={(checked) => handleFieldChange('messages', 'voiceInput', {
+                          ...settings.messages?.voiceInput,
+                          enabled: checked
+                        })}
+                      />
+                    </div>
 
                     {/* Voice Input Configuration */}
                     {settings.messages?.voiceInput?.enabled !== false && (
@@ -1508,70 +1258,48 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           </p>
                         </div>
 
-                        <Switch.Group>
-                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <div>
-                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Continuous Recording
-                              </Switch.Label>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Keep recording until manually stopped
-                              </p>
-                            </div>
-                            <Switch
-                              checked={settings.messages?.voiceInput?.continuousRecording || false}
-                              onChange={(checked) => handleFieldChange('messages', 'voiceInput', {
-                                ...settings.messages?.voiceInput,
-                                continuousRecording: checked
-                              })}
-                              className={`${
-                                settings.messages?.voiceInput?.continuousRecording ? 'bg-indigo-600' : 'bg-gray-200'
-                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
-                            >
-                              <span
-                                className={`${
-                                  settings.messages?.voiceInput?.continuousRecording ? 'translate-x-6' : 'translate-x-1'
-                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                              />
-                            </Switch>
+                        <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <div className="space-y-0.5">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Continuous Recording
+                            </Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Keep recording until manually stopped
+                            </p>
                           </div>
-                        </Switch.Group>
+                          <Switch
+                            checked={settings.messages?.voiceInput?.continuousRecording || false}
+                            onCheckedChange={(checked) => handleFieldChange('messages', 'voiceInput', {
+                              ...settings.messages?.voiceInput,
+                              continuousRecording: checked
+                            })}
+                          />
+                        </div>
 
-                        <Switch.Group>
-                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <div>
-                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Auto-send on Complete
-                              </Switch.Label>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Automatically send message when voice input stops
-                              </p>
-                            </div>
-                            <Switch
-                              checked={settings.messages?.voiceInput?.autoSendOnComplete || false}
-                              onChange={(checked) => handleFieldChange('messages', 'voiceInput', {
-                                ...settings.messages?.voiceInput,
-                                autoSendOnComplete: checked
-                              })}
-                              className={`${
-                                settings.messages?.voiceInput?.autoSendOnComplete ? 'bg-indigo-600' : 'bg-gray-200'
-                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
-                            >
-                              <span
-                                className={`${
-                                  settings.messages?.voiceInput?.autoSendOnComplete ? 'translate-x-6' : 'translate-x-1'
-                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                              />
-                            </Switch>
+                        <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <div className="space-y-0.5">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Auto-send on Complete
+                            </Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Automatically send message when voice input stops
+                            </p>
                           </div>
-                        </Switch.Group>
+                          <Switch
+                            checked={settings.messages?.voiceInput?.autoSendOnComplete || false}
+                            onCheckedChange={(checked) => handleFieldChange('messages', 'voiceInput', {
+                              ...settings.messages?.voiceInput,
+                              autoSendOnComplete: checked
+                            })}
+                          />
+                        </div>
                       </div>
                     )}
 
                     {/* Information Panel */}
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                       <div className="flex items-start">
-                        <InformationCircleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
+                        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
                         <div className="text-sm text-blue-800 dark:text-blue-300">
                           <p className="font-medium mb-1">Voice Input Information</p>
                           <ul className="space-y-1 text-xs">
@@ -1590,42 +1318,31 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Image Upload Settings */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-purple-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-purple-600" />
                     Image Upload (GPT-4.1 Vision)
                   </h4>
-                  
+
                   <div className="space-y-6">
                     {/* Enable Image Upload */}
-                    <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Enable Image Upload
-                          </Switch.Label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Allow users to upload images for AI analysis (requires GPT-4.1 or vision-capable model)
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.imageUpload?.enabled || settings.imageupload?.enabled || false}
-                          onChange={(checked) => handleFieldChange('imageupload', 'enabled', checked)}
-                          className={`${
-                            settings.imageUpload?.enabled || settings.imageupload?.enabled ? 'bg-purple-600' : 'bg-gray-200'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
-                        >
-                          <span
-                            className={`${
-                              settings.imageUpload?.enabled || settings.imageupload?.enabled ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                          />
-                        </Switch>
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Enable Image Upload
+                        </Label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Allow users to upload images for AI analysis (requires GPT-4.1 or vision-capable model)
+                        </p>
                       </div>
-                    </Switch.Group>
+                      <Switch
+                        checked={settings.imageUpload?.enabled || settings.imageupload?.enabled || false}
+                        onCheckedChange={(checked) => handleFieldChange('imageupload', 'enabled', checked)}
+                      />
+                    </div>
 
                     {/* Information Panel */}
                     <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
                       <div className="flex items-start">
-                        <InformationCircleIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 mr-3 flex-shrink-0" />
+                        <Info className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 mr-3 flex-shrink-0" />
                         <div className="text-sm text-purple-800 dark:text-purple-300">
                           <p className="font-medium mb-1">Image Upload Information</p>
                           <ul className="space-y-1 text-xs">
@@ -1645,40 +1362,29 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Product Cards Settings */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ChatBubbleLeftRightIcon className="w-5 h-5 mr-2 text-emerald-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-emerald-600" />
                     Product Recommendation Cards
                   </h4>
-                  
+
                   <div className="space-y-6">
                     {/* Enable Product Cards */}
-                    <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Enable Product Cards
-                          </Switch.Label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Allow AI to display product recommendations as visual cards
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.messages?.productCards?.enabled !== false}
-                          onChange={(checked) => handleFieldChange('messages', 'productCards', {
-                            ...settings.messages?.productCards,
-                            enabled: checked
-                          })}
-                          className={`${
-                            settings.messages?.productCards?.enabled !== false ? 'bg-emerald-600' : 'bg-gray-200'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2`}
-                        >
-                          <span
-                            className={`${
-                              settings.messages?.productCards?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                          />
-                        </Switch>
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Enable Product Cards
+                        </Label>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Allow AI to display product recommendations as visual cards
+                        </p>
                       </div>
-                    </Switch.Group>
+                      <Switch
+                        checked={settings.messages?.productCards?.enabled !== false}
+                        onCheckedChange={(checked) => handleFieldChange('messages', 'productCards', {
+                          ...settings.messages?.productCards,
+                          enabled: checked
+                        })}
+                      />
+                    </div>
 
                     {/* Product Cards Configuration */}
                     {settings.messages?.productCards?.enabled !== false && (
@@ -1709,7 +1415,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                               Cards per Row
                             </label>
-                            <input
+                            <Input
                               type="number"
                               min="1"
                               max="4"
@@ -1718,7 +1424,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                 ...settings.messages?.productCards,
                                 cardsPerRow: parseInt(e.target.value)
                               })}
-                              className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              className="block w-full"
                             />
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                               Maximum cards per row (for grid layout)
@@ -1752,14 +1458,14 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                               Price Currency
                             </label>
-                            <input
+                            <Input
                               type="text"
                               value={settings.messages?.productCards?.priceCurrency || 'kr.'}
                               onChange={(e) => handleFieldChange('messages', 'productCards', {
                                 ...settings.messages?.productCards,
                                 priceCurrency: e.target.value
                               })}
-                              className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              className="block w-full"
                               placeholder="kr."
                             />
                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1768,70 +1474,48 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                           </div>
                         </div>
 
-                        <Switch.Group>
-                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <div>
-                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Show Price
-                              </Switch.Label>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Display product prices on cards
-                              </p>
-                            </div>
-                            <Switch
-                              checked={settings.messages?.productCards?.showPrice !== false}
-                              onChange={(checked) => handleFieldChange('messages', 'productCards', {
-                                ...settings.messages?.productCards,
-                                showPrice: checked
-                              })}
-                              className={`${
-                                settings.messages?.productCards?.showPrice !== false ? 'bg-emerald-600' : 'bg-gray-200'
-                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2`}
-                            >
-                              <span
-                                className={`${
-                                  settings.messages?.productCards?.showPrice !== false ? 'translate-x-6' : 'translate-x-1'
-                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                              />
-                            </Switch>
+                        <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <div className="space-y-0.5">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Show Price
+                            </Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Display product prices on cards
+                            </p>
                           </div>
-                        </Switch.Group>
+                          <Switch
+                            checked={settings.messages?.productCards?.showPrice !== false}
+                            onCheckedChange={(checked) => handleFieldChange('messages', 'productCards', {
+                              ...settings.messages?.productCards,
+                              showPrice: checked
+                            })}
+                          />
+                        </div>
 
-                        <Switch.Group>
-                          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                            <div>
-                              <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Auto-fetch Product Data
-                              </Switch.Label>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Automatically fetch product images and details from URLs
-                              </p>
-                            </div>
-                            <Switch
-                              checked={settings.messages?.productCards?.autoFetchProductData || false}
-                              onChange={(checked) => handleFieldChange('messages', 'productCards', {
-                                ...settings.messages?.productCards,
-                                autoFetchProductData: checked
-                              })}
-                              className={`${
-                                settings.messages?.productCards?.autoFetchProductData ? 'bg-emerald-600' : 'bg-gray-200'
-                              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2`}
-                            >
-                              <span
-                                className={`${
-                                  settings.messages?.productCards?.autoFetchProductData ? 'translate-x-6' : 'translate-x-1'
-                                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                              />
-                            </Switch>
+                        <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <div className="space-y-0.5">
+                            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Auto-fetch Product Data
+                            </Label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Automatically fetch product images and details from URLs
+                            </p>
                           </div>
-                        </Switch.Group>
+                          <Switch
+                            checked={settings.messages?.productCards?.autoFetchProductData || false}
+                            onCheckedChange={(checked) => handleFieldChange('messages', 'productCards', {
+                              ...settings.messages?.productCards,
+                              autoFetchProductData: checked
+                            })}
+                          />
+                        </div>
                       </div>
                     )}
 
                     {/* Information Panel */}
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
                       <div className="flex items-start">
-                        <InformationCircleIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
+                        <Info className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5 mr-3 flex-shrink-0" />
                         <div className="text-sm text-emerald-800 dark:text-emerald-300">
                           <p className="font-medium mb-1">Product Cards Information</p>
                           <ul className="space-y-1 text-xs">
@@ -1850,164 +1534,108 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="branding" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+          <AccordionItem value="branding" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <BuildingOfficeIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Branding</span>
+                <div className="p-1.5 rounded-md bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Branding</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
+            <AccordionContent className="px-5 pb-5 pt-0">
               {/* Branding Settings */}
-              <div className="space-y-8">
+              <div className="space-y-5">
                 {/* Company Information */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <BuildingOfficeIcon className="w-5 h-5 mr-2 text-purple-600" />
+                <div className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
                     Company Information
-                  </h4>
-                  
-                  <div className="space-y-6">
+                  </label>
+                  <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Widget Title
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Widget Title</label>
+                      <Input
                         type="text"
                         value={settings.branding?.title || ''}
                         onChange={(e) => handleFieldChange('branding', 'title', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="Elva AI kundeservice Agent"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        placeholder="AI Assistant"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Main title displayed in the widget header
-                      </p>
                     </div>
-                    
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Assistant Name
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Assistant Name</label>
+                      <Input
                         type="text"
                         value={settings.branding?.assistantName || ''}
                         onChange={(e) => handleFieldChange('branding', 'assistantName', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="Elva Assistant"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        placeholder="Elva"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Name of your AI assistant
-                      </p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Company Name
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Company Name</label>
+                      <Input
                         type="text"
                         value={settings.branding?.companyName || ''}
                         onChange={(e) => handleFieldChange('branding', 'companyName', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                         placeholder="Elva Solutions"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Your company or organization name
-                      </p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        "Drevet af" Text
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">"Powered by" Text</label>
+                      <Input
                         type="text"
                         value={settings.branding?.poweredByText || ''}
                         onChange={(e) => handleFieldChange('branding', 'poweredByText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                         placeholder="Powered by Elva"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Text shown as the attribution line (e.g., "Drevet af Elva")
-                      </p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        "Tilgængelig nu" Text
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">"Available now" Text</label>
+                      <Input
                         type="text"
                         value={settings.messages?.availableNowText || ''}
                         onChange={(e) => handleFieldChange('messages', 'availableNowText', e.target.value)}
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="Available now"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        placeholder="Tilgængelig nu"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Text shown when agent is online (e.g., "Tilgængelig nu")
-                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Visual Assets */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <BuildingOfficeIcon className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
-                    <span className="text-gray-900 dark:text-gray-100">Visual Assets</span>
-                  </h4>
-                  
-                  <div className="space-y-6">
+                <div className="space-y-3 pt-2">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-400 uppercase tracking-wide">
+                    Visual Assets
+                  </label>
+                  <div className="space-y-4">
                     <FileUpload
                       currentUrl={settings.branding?.avatarUrl || ''}
                       onUpload={(url) => handleFieldChange('branding', 'avatarUrl', url)}
                       onRemove={() => handleFieldChange('branding', 'avatarUrl', '')}
                       label="Assistant Avatar"
                       aspectRatio="1:1"
-                      labelClassName="text-gray-800 dark:text-gray-100"
+                      labelClassName="text-xs text-slate-600 dark:text-slate-400"
                     />
 
                     {/* Avatar Background Color */}
-                    <div className="space-y-3">
-                      <Switch.Group>
-                        <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                          <div>
-                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Use Avatar Background Color
-                            </Switch.Label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Show background color behind avatar (even when image is uploaded)
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.branding?.useAvatarBackgroundColor !== false}
-                            onChange={(checked) => handleFieldChange('branding', 'useAvatarBackgroundColor', checked)}
-                            className={`${
-                              settings.branding?.useAvatarBackgroundColor !== false ? 'bg-blue-600' : 'bg-gray-200'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-                          >
-                            <span
-                              className={`${
-                                settings.branding?.useAvatarBackgroundColor !== false ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                            />
-                          </Switch>
-                        </div>
-                      </Switch.Group>
-
-                      {settings.branding?.useAvatarBackgroundColor !== false && (
-                        <div>
-                          <ColorPicker
-                            label="Avatar Background Color"
-                            color={settings.branding?.avatarBackgroundColor || settings.appearance?.themeColor || '#4f46e5'}
-                            onChange={(color) => handleFieldChange('branding', 'avatarBackgroundColor', color)}
-                          />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                            Background color for avatar circle
-                          </p>
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between py-2 px-1">
+                      <span className="text-sm text-slate-700 dark:text-slate-300">Avatar Background</span>
+                      <Switch
+                        checked={settings.branding?.useAvatarBackgroundColor !== false}
+                        onCheckedChange={(checked) => handleFieldChange('branding', 'useAvatarBackgroundColor', checked)}
+                      />
                     </div>
+
+                    {settings.branding?.useAvatarBackgroundColor !== false && (
+                      <ColorPicker
+                        label="Avatar Background Color"
+                        color={settings.branding?.avatarBackgroundColor || settings.appearance?.themeColor || '#4f46e5'}
+                        onChange={(color) => handleFieldChange('branding', 'avatarBackgroundColor', color)}
+                      />
+                    )}
 
                     <FileUpload
                       currentUrl={settings.branding?.logoUrl || ''}
@@ -2015,196 +1643,94 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       onRemove={() => handleFieldChange('branding', 'logoUrl', '')}
                       label="Company Logo"
                       aspectRatio="16:9"
-                      labelClassName="text-gray-800 dark:text-gray-100"
+                      labelClassName="text-xs text-slate-600 dark:text-slate-400"
                     />
 
-                    {/* Image Zoom Customization */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-100 mb-3">
-                        Image Zoom & Position
-                      </label>
-                      <button
-                        onClick={() => setIsImageZoomModalOpen(true)}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center justify-center space-x-2"
-                      >
-                        <MagnifyingGlassIcon className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-100">Customize Image Zoom</span>
-                      </button>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        Adjust zoom level and positioning of uploaded images
-                      </p>
-                    </div>
+                    {/* Image Zoom */}
+                    <button
+                      onClick={() => setIsImageZoomModalOpen(true)}
+                      className="w-full px-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <ZoomIn className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm text-slate-600 dark:text-slate-300">Customize Image Zoom</span>
+                    </button>
                   </div>
                 </div>
 
                 {/* Branding Options */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <BuildingOfficeIcon className="w-5 h-5 mr-2 text-green-600" />
-                    Branding Options
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <Switch.Group>
-                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                        <div>
-                          <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Show branding elements
-                          </Switch.Label>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Display company logo and branding in the widget
-                          </p>
-                        </div>
-                        <Switch
-                          checked={settings.branding?.showBranding !== false}
-                          onChange={(checked) => handleFieldChange('branding', 'showBranding', checked)}
-                          className={`${
-                            settings.branding?.showBranding !== false ? 'bg-blue-600' : 'bg-gray-200'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
-                        >
-                          <span
-                            className={`${
-                              settings.branding?.showBranding !== false ? 'translate-x-6' : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                          />
-                        </Switch>
-                      </div>
-                    </Switch.Group>
-                  </div>
+                <div className="flex items-center justify-between py-2 px-1">
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Show Branding</span>
+                  <Switch
+                    checked={settings.branding?.showBranding !== false}
+                    onCheckedChange={(checked) => handleFieldChange('branding', 'showBranding', checked)}
+                  />
                 </div>
               </div>
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="privacy" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+          <AccordionItem value="privacy" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <ShieldCheckIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Privacy & Cookies</span>
+                <div className="p-1.5 rounded-md bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Privacy & Cookies</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
-              {/* Cookie Consent Banner Settings */}
-              <div className="space-y-8">
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ShieldCheckIcon className="w-5 h-5 mr-2 text-purple-600" />
-                    Cookie Consent Banner
-                  </h4>
+            <AccordionContent className="px-5 pb-5 pt-0">
+              <div className="space-y-5">
+                {/* Enable Cookie Banner */}
+                <div className="flex items-center justify-between py-2 px-1">
+                  <div>
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Cookie Consent Banner</span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">GDPR-compliant consent</p>
+                  </div>
+                  <Switch
+                    checked={settings.consent?.enabled !== false}
+                    onCheckedChange={(checked) => handleFieldChange('consent', 'enabled', checked)}
+                  />
+                </div>
 
-                  <div className="space-y-6">
-                    {/* Enable Cookie Banner */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Banner Title</label>
+                    <Input
+                      type="text"
+                      value={settings.consent?.title || '🍪 Vi respekterer dit privatliv'}
+                      onChange={(e) => handleFieldChange('consent', 'title', e.target.value)}
+                      className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Description</label>
+                    <Textarea
+                      value={settings.consent?.description || 'Vi bruger localStorage til at gemme din samtalehistorik...'}
+                      onChange={(e) => handleFieldChange('consent', 'description', e.target.value)}
+                      rows={2}
+                      className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Switch.Group>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Enable Cookie Consent Banner
-                            </Switch.Label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Show GDPR-compliant cookie consent banner to users
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.consent?.enabled !== false}
-                            onChange={(checked) => handleFieldChange('consent', 'enabled', checked)}
-                            className={`${
-                              settings.consent?.enabled !== false ? 'bg-purple-600' : 'bg-gray-200'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
-                          >
-                            <span
-                              className={`${
-                                settings.consent?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                            />
-                          </Switch>
-                        </div>
-                      </Switch.Group>
-                    </div>
-
-                    {/* Banner Title */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Banner Title
-                      </label>
-                      <input
-                        type="text"
-                        value={settings.consent?.title || '🍪 Vi respekterer dit privatliv'}
-                        onChange={(e) => handleFieldChange('consent', 'title', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="🍪 Vi respekterer dit privatliv"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Main title shown in the cookie consent banner
-                      </p>
-                    </div>
-
-                    {/* Banner Description */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Banner Description
-                      </label>
-                      <textarea
-                        value={settings.consent?.description || 'Vi bruger localStorage til at gemme din samtalehistorik, så du kan fortsætte hvor du slap. Vi indsamler ikke personlige oplysninger uden din tilladelse.'}
-                        onChange={(e) => handleFieldChange('consent', 'description', e.target.value)}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="Vi bruger localStorage til at gemme din samtalehistorik..."
-                      />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Description text explaining cookie usage
-                      </p>
-                    </div>
-
-                    {/* Privacy Policy URL */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Privacy Policy URL
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Privacy URL</label>
+                      <Input
                         type="url"
-                        value={settings.consent?.privacyUrl || 'https://elva-solutions.com/privacy'}
+                        value={settings.consent?.privacyUrl || ''}
                         onChange={(e) => handleFieldChange('consent', 'privacyUrl', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="https://your-website.com/privacy"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        placeholder="https://..."
                       />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Link to your privacy policy page
-                      </p>
                     </div>
-
-                    {/* Cookie Policy URL */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Cookie Policy URL
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Cookie URL</label>
+                      <Input
                         type="url"
-                        value={settings.consent?.cookiesUrl || 'https://elva-solutions.com/cookies'}
+                        value={settings.consent?.cookiesUrl || ''}
                         onChange={(e) => handleFieldChange('consent', 'cookiesUrl', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="https://your-website.com/cookies"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        placeholder="https://..."
                       />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Link to your cookie policy page
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Information Panel */}
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                  <div className="flex items-start">
-                    <InformationCircleIcon className="w-5 h-5 text-purple-600 mt-0.5 mr-3 flex-shrink-0" />
-                    <div className="text-sm text-purple-800">
-                      <p className="font-medium mb-1">Cookie Consent Banner Information</p>
-                      <ul className="space-y-1 text-xs">
-                        <li>• Banner appears automatically when users first visit</li>
-                        <li>• Users can accept all cookies, select specific cookies, or reject non-essential cookies</li>
-                        <li>• Consent is stored for 30 days and automatically renewed</li>
-                        <li>• Only functional cookies (conversation history) are used by default</li>
-                        <li>• Analytics cookies can be enabled for usage tracking</li>
-                      </ul>
                     </div>
                   </div>
                 </div>
@@ -2212,872 +1738,314 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="satisfaction" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+          <AccordionItem value="satisfaction" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <StarIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Satisfaction Rating</span>
+                <div className="p-1.5 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+                  <Star className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Satisfaction Rating</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
-              {/* Satisfaction Rating Settings */}
-              <div className="space-y-8">
-                {/* Satisfaction Rating Configuration */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <StarIcon className="w-5 h-5 mr-2 text-yellow-600" />
-                    Satisfaction Rating
-                  </h4>
-                  
-                  <div className="space-y-6">
-                    {/* Enable Satisfaction Rating */}
-                    <div>
-                      <Switch.Group>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Enable Satisfaction Rating
-                            </Switch.Label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Allow users to rate their conversation experience
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.satisfaction?.enabled !== false}
-                            onChange={(checked) => handleFieldChange('satisfaction', 'enabled', checked)}
-                            className={`${
-                              settings.satisfaction?.enabled !== false ? 'bg-yellow-600' : 'bg-gray-200'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2`}
-                          >
-                            <span
-                              className={`${
-                                settings.satisfaction?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                            />
-                          </Switch>
-                        </div>
-                      </Switch.Group>
+            <AccordionContent className="px-5 pb-5 pt-0">
+              <div className="space-y-5">
+                {/* Enable Satisfaction Rating */}
+                <div className="flex items-center justify-between py-2 px-1">
+                  <div>
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Enable Rating</span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Let users rate conversations</p>
+                  </div>
+                  <Switch
+                    checked={settings.satisfaction?.enabled !== false}
+                    onCheckedChange={(checked) => handleFieldChange('satisfaction', 'enabled', checked)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Trigger After</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={settings.satisfaction?.triggerAfter || 3}
+                      onChange={(e) => handleFieldChange('satisfaction', 'triggerAfter', parseInt(e.target.value))}
+                      className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                      placeholder="3 messages"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Delay (sec)</label>
+                    <Input
+                      type="number"
+                      min="5"
+                      max="300"
+                      value={settings.satisfaction?.inactivityDelay ? settings.satisfaction.inactivityDelay / 1000 : 30}
+                      onChange={(e) => handleFieldChange('satisfaction', 'inactivityDelay', parseInt(e.target.value) * 1000)}
+                      className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                      placeholder="30"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-600 dark:text-slate-400 mb-1.5">Prompt Text</label>
+                  <Input
+                    type="text"
+                    value={settings.satisfaction?.promptText || 'How would you rate this conversation?'}
+                    onChange={(e) => handleFieldChange('satisfaction', 'promptText', e.target.value)}
+                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                  />
+                </div>
+
+                {/* Rating Scale Preview */}
+                <div className="flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <span className="text-lg">🙁</span>
+                  <span className="text-lg">😞</span>
+                  <span className="text-lg">😐</span>
+                  <span className="text-lg">😊</span>
+                  <span className="text-lg">🤩</span>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="support" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-md bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400">
+                  <ClipboardList className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Support Request</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-5 pb-5 pt-0">
+              <div className="space-y-5">
+                {/* Enable Support Request */}
+                <div className="flex items-center justify-between py-2 px-1">
+                  <div>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Enable Support Request</span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Allow users to contact your team</p>
+                  </div>
+                  <Switch
+                    checked={settings.manualReview?.enabled !== false}
+                    onCheckedChange={(checked) => handleFieldChange('manualReview', 'enabled', checked)}
+                  />
+                </div>
+
+                {/* Support Request Settings */}
+                {settings.manualReview?.enabled !== false && (
+                  <div className="space-y-3">
+                    {/* Enable Live Chat */}
+                    <div className="flex items-center justify-between py-2 px-1">
+                      <div>
+                        <span className="text-sm text-slate-600 dark:text-slate-300">Enable Live Chat</span>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Real-time agent support</p>
+                      </div>
+                      <Switch
+                        checked={settings.manualReview?.liveChatEnabled !== false}
+                        onCheckedChange={(checked) => handleFieldChange('manualReview', 'liveChatEnabled', checked)}
+                      />
                     </div>
 
-                    {/* Trigger Settings */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Trigger After Messages
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="10"
-                          value={settings.satisfaction?.triggerAfter || 3}
-                          onChange={(e) => handleFieldChange('satisfaction', 'triggerAfter', parseInt(e.target.value))}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          placeholder="3"
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Minimum messages before rating can appear
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Inactivity Delay (seconds)
-                        </label>
-                        <input
-                          type="number"
-                          min="5"
-                          max="300"
-                          value={settings.satisfaction?.inactivityDelay ? settings.satisfaction.inactivityDelay / 1000 : 30}
-                          onChange={(e) => handleFieldChange('satisfaction', 'inactivityDelay', parseInt(e.target.value) * 1000)}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          placeholder="30"
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          Seconds of inactivity before showing rating
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Prompt Text */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Rating Prompt Text
-                      </label>
-                      <input
+                      <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Button Text</label>
+                      <Input
                         type="text"
-                        value={settings.satisfaction?.promptText || 'How would you rate this conversation so far?'}
-                        onChange={(e) => handleFieldChange('satisfaction', 'promptText', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                        placeholder="How would you rate this conversation so far?"
+                        value={settings.manualReview?.buttonText || 'Request Support'}
+                        onChange={(e) => handleFieldChange('manualReview', 'buttonText', e.target.value)}
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                        placeholder="Request Support"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        The question shown to users when asking for a rating
-                      </p>
                     </div>
 
-
-                    {/* Rating Scale Preview */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Rating Scale
-                      </label>
-                      <div className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Poor</span>
-                        <div className="flex gap-2">
-                          <span className="text-2xl">🙁</span>
-                          <span className="text-2xl">😞</span>
-                          <span className="text-2xl">😐</span>
-                          <span className="text-2xl">😊</span>
-                          <span className="text-2xl">🤩</span>
+                      <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Form Title</label>
+                      <Input
+                        type="text"
+                        value={settings.manualReview?.formTitle || 'Request Support'}
+                        onChange={(e) => handleFieldChange('manualReview', 'formTitle', e.target.value)}
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                        placeholder="Request Support"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Form Description</label>
+                      <Textarea
+                        value={settings.manualReview?.formDescription || 'Please provide your contact information...'}
+                        onChange={(e) => handleFieldChange('manualReview', 'formDescription', e.target.value)}
+                        rows={2}
+                        className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg resize-none"
+                        placeholder="Please provide your contact information..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Success Message</label>
+                      <Textarea
+                        value={settings.manualReview?.successMessage || 'Thank you for your request!'}
+                        onChange={(e) => handleFieldChange('manualReview', 'successMessage', e.target.value)}
+                        rows={2}
+                        className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg resize-none"
+                        placeholder="Thank you for your request!"
+                      />
+                    </div>
+
+                    {/* Email Support Labels */}
+                    <details className="pt-2">
+                      <summary className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-700 dark:hover:text-slate-300">
+                        Email Support Labels
+                      </summary>
+                      <div className="space-y-3 mt-3">
+                        <div>
+                          <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Email Button Text</label>
+                          <Input
+                            type="text"
+                            value={settings.manualReview?.emailSupportButtonText || '📧 Email Support'}
+                            onChange={(e) => handleFieldChange('manualReview', 'emailSupportButtonText', e.target.value)}
+                            className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                          />
                         </div>
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Excellent</span>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        5-point emoji rating scale (not configurable)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Information Panel */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <div className="flex items-start">
-                    <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-                    <div>
-                      <h5 className="text-sm font-medium text-blue-900 mb-2">
-                        How Satisfaction Rating Works
-                      </h5>
-                      <ul className="text-xs text-blue-800 space-y-1">
-                        <li>• Rating appears as an AI message after the specified inactivity period</li>
-                        <li>• Users can rate with emojis and optionally provide text feedback</li>
-                        <li>• Ratings are automatically aggregated for analytics</li>
-                        <li>• Data helps improve conversation quality and user experience</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="support" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
-              <div className="flex items-center gap-3">
-                <ClipboardDocumentListIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Support Request</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
-              {/* Manual Review Settings */}
-              <div className="space-y-8">
-                {/* Manual Review Configuration */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <ClipboardDocumentListIcon className="w-5 h-5 mr-2 text-red-600" />
-                    Manual Review System
-                  </h4>
-                  
-                  <div className="space-y-6">
-                    {/* Enable Manual Review */}
-                    <div>
-                      <Switch.Group>
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Enable Support Request
-                            </Switch.Label>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                              Allow users to request support from your team
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.manualReview?.enabled !== false}
-                            onChange={(checked) => handleFieldChange('manualReview', 'enabled', checked)}
-                            className={`${
-                              settings.manualReview?.enabled !== false ? 'bg-red-600' : 'bg-gray-200'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2`}
-                          >
-                            <span
-                              className={`${
-                                settings.manualReview?.enabled !== false ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Name Label</label>
+                            <Input
+                              type="text"
+                              value={settings.manualReview?.nameLabel || 'Dit navn'}
+                              onChange={(e) => handleFieldChange('manualReview', 'nameLabel', e.target.value)}
+                              className="w-full h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
                             />
-                          </Switch>
-                        </div>
-                      </Switch.Group>
-                    </div>
-
-                    {/* Support Request Settings */}
-                    {settings.manualReview?.enabled !== false && (
-                      <div className="space-y-4">
-                        {/* Enable Live Chat */}
-                        <div>
-                          <Switch.Group>
-                            <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                              <div>
-                                <Switch.Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                  Enable Live Chat
-                                </Switch.Label>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  Allow users to request live chat with an agent in addition to email support
-                                </p>
-                              </div>
-                              <Switch
-                                checked={settings.manualReview?.liveChatEnabled !== false}
-                                onChange={(checked) => handleFieldChange('manualReview', 'liveChatEnabled', checked)}
-                                className={`${
-                                  settings.manualReview?.liveChatEnabled !== false ? 'bg-green-600' : 'bg-gray-200'
-                                } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
-                              >
-                                <span
-                                  className={`${
-                                    settings.manualReview?.liveChatEnabled !== false ? 'translate-x-6' : 'translate-x-1'
-                                  } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                                />
-                              </Switch>
-                            </div>
-                          </Switch.Group>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Button Text
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.manualReview?.buttonText || 'Request Support'}
-                            onChange={(e) => handleFieldChange('manualReview', 'buttonText', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Request Support"
-                          />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Text displayed on the support request button
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Form Title
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.manualReview?.formTitle || 'Request Support'}
-                            onChange={(e) => handleFieldChange('manualReview', 'formTitle', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Request Support"
-                          />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Title displayed at the top of the contact form
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Form Description
-                          </label>
-                          <textarea
-                            value={settings.manualReview?.formDescription || 'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.'}
-                            onChange={(e) => handleFieldChange('manualReview', 'formDescription', e.target.value)}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Please provide your contact information and describe what you need help with..."
-                          />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Description shown above the contact form
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Success Message
-                          </label>
-                          <textarea
-                            value={settings.manualReview?.successMessage || 'Thank you for your request! Our team will review your conversation and contact you within 24 hours.'}
-                            onChange={(e) => handleFieldChange('manualReview', 'successMessage', e.target.value)}
-                            rows={2}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            placeholder="Thank you for your request! Our team will review..."
-                          />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Message shown after successful submission
-                          </p>
-                        </div>
-
-                        {/* Email Support Labels */}
-                        <div className="border-t pt-4 mt-4">
-                          <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                            Email Support Labels
-                          </h5>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Email Support Button Text
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'emailSupportButtonText', supportRequestLabels[e.target.value]?.emailSupportButtonText || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.emailSupportButtonText || '📧 Email Support'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'emailSupportButtonText', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="📧 Email Support"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Attachment Notice Text
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'attachmentNoticeText', supportRequestLabels[e.target.value]?.attachmentNoticeText || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.attachmentNoticeText || 'Samtalen vedhæftes: Din nuværende samtale med AI\'en vil automatisk blive vedhæftet til denne anmodning.'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'attachmentNoticeText', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Samtalen vedhæftes: ..."
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Name Label
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'nameLabel', supportRequestLabels[e.target.value]?.nameLabel || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.nameLabel || 'Dit navn (valgfri)'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'nameLabel', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Dit navn (valgfri)"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Name Placeholder
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'namePlaceholder', supportRequestLabels[e.target.value]?.namePlaceholder || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.namePlaceholder || 'Skriv dit navn her'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'namePlaceholder', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Skriv dit navn her"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Email Label
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'emailLabel', supportRequestLabels[e.target.value]?.emailLabel || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.emailLabel || 'Din email'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'emailLabel', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Din email"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Email Placeholder
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'emailPlaceholder', supportRequestLabels[e.target.value]?.emailPlaceholder || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.emailPlaceholder || 'Skriv din email her'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'emailPlaceholder', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Skriv din email her"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Message Label
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'messageLabel', supportRequestLabels[e.target.value]?.messageLabel || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.messageLabel || 'Efterlad en besked (valgfri)'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'messageLabel', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Efterlad en besked (valgfri)"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Message Placeholder
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'messagePlaceholder', supportRequestLabels[e.target.value]?.messagePlaceholder || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.messagePlaceholder || 'Skriv din besked her'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'messagePlaceholder', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Skriv din besked her"
-                                />
-                              </div>
-                            </div>
                           </div>
-                        </div>
-
-                        {/* Live Chat Labels */}
-                        {settings.manualReview?.liveChatEnabled !== false && (
-                          <div className="border-t pt-4 mt-4">
-                            <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                              Live Chat Labels
-                            </h5>
-                            <div className="space-y-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                  Live Chat Button Text
-                                </label>
-                                <div className="flex gap-2">
-                                  <select
-                                    onChange={(e) => {
-                                      if (e.target.value !== 'custom') {
-                                        handleFieldChange('manualReview', 'liveChatButtonText', supportRequestLabels[e.target.value]?.liveChatButtonText || '');
-                                      }
-                                    }}
-                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                  >
-                                    <option value="custom">Custom</option>
-                                    <option value="da">Dansk</option>
-                                    <option value="en">English</option>
-                                    <option value="de">Deutsch</option>
-                                    <option value="sv">Svenska</option>
-                                    <option value="no">Norsk</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    value={settings.manualReview?.liveChatButtonText || '💬 Live Chat'}
-                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatButtonText', e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                    placeholder="💬 Live Chat"
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                  Live Chat Notice Text
-                                </label>
-                                <div className="flex gap-2">
-                                  <select
-                                    onChange={(e) => {
-                                      if (e.target.value !== 'custom') {
-                                        handleFieldChange('manualReview', 'liveChatNoticeText', supportRequestLabels[e.target.value]?.liveChatNoticeText || '');
-                                      }
-                                    }}
-                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                  >
-                                    <option value="custom">Custom</option>
-                                    <option value="da">Dansk</option>
-                                    <option value="en">English</option>
-                                    <option value="de">Deutsch</option>
-                                    <option value="sv">Svenska</option>
-                                    <option value="no">Norsk</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    value={settings.manualReview?.liveChatNoticeText || 'Live Chat: En agent vil tage over samtalen og chatte med dig i real-time.'}
-                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatNoticeText', e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                    placeholder="Live Chat: En agent vil tage over samtalen..."
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                  Reason Label
-                                </label>
-                                <div className="flex gap-2">
-                                  <select
-                                    onChange={(e) => {
-                                      if (e.target.value !== 'custom') {
-                                        handleFieldChange('manualReview', 'liveChatReasonLabel', supportRequestLabels[e.target.value]?.liveChatReasonLabel || '');
-                                      }
-                                    }}
-                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                  >
-                                    <option value="custom">Custom</option>
-                                    <option value="da">Dansk</option>
-                                    <option value="en">English</option>
-                                    <option value="de">Deutsch</option>
-                                    <option value="sv">Svenska</option>
-                                    <option value="no">Norsk</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    value={settings.manualReview?.liveChatReasonLabel || 'Hvorfor har du brug for live chat? (valgfri)'}
-                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonLabel', e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                    placeholder="Hvorfor har du brug for live chat? (valgfri)"
-                                  />
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                  Reason Placeholder
-                                </label>
-                                <div className="flex gap-2">
-                                  <select
-                                    onChange={(e) => {
-                                      if (e.target.value !== 'custom') {
-                                        handleFieldChange('manualReview', 'liveChatReasonPlaceholder', supportRequestLabels[e.target.value]?.liveChatReasonPlaceholder || '');
-                                      }
-                                    }}
-                                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                  >
-                                    <option value="custom">Custom</option>
-                                    <option value="da">Dansk</option>
-                                    <option value="en">English</option>
-                                    <option value="de">Deutsch</option>
-                                    <option value="sv">Svenska</option>
-                                    <option value="no">Norsk</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    value={settings.manualReview?.liveChatReasonPlaceholder || 'Forklar hvorfor du gerne vil tale med en person...'}
-                                    onChange={(e) => handleFieldChange('manualReview', 'liveChatReasonPlaceholder', e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                    placeholder="Forklar hvorfor du gerne vil tale med en person..."
-                                  />
-                                </div>
-                              </div>
-                            </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Email Label</label>
+                            <Input
+                              type="text"
+                              value={settings.manualReview?.emailLabel || 'Din email'}
+                              onChange={(e) => handleFieldChange('manualReview', 'emailLabel', e.target.value)}
+                              className="w-full h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                            />
                           </div>
-                        )}
-
-                        {/* Common Form Labels */}
-                        <div className="border-t pt-4 mt-4">
-                          <h5 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                            Form Buttons
-                          </h5>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Cancel Button Text
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'cancelButtonText', supportRequestLabels[e.target.value]?.cancelButtonText || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.cancelButtonText || 'Annuller'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'cancelButtonText', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Annuller"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Submit Button Text
-                              </label>
-                              <div className="flex gap-2">
-                                <select
-                                  onChange={(e) => {
-                                    if (e.target.value !== 'custom') {
-                                      handleFieldChange('manualReview', 'submitButtonText', supportRequestLabels[e.target.value]?.submitButtonText || '');
-                                    }
-                                  }}
-                                  className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-                                >
-                                  <option value="custom">Custom</option>
-                                  <option value="da">Dansk</option>
-                                  <option value="en">English</option>
-                                  <option value="de">Deutsch</option>
-                                  <option value="sv">Svenska</option>
-                                  <option value="no">Norsk</option>
-                                </select>
-                                <input
-                                  type="text"
-                                  value={settings.manualReview?.submitButtonText || 'Send anmodning'}
-                                  onChange={(e) => handleFieldChange('manualReview', 'submitButtonText', e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                                  placeholder="Send anmodning"
-                                />
-                              </div>
-                            </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Cancel Button</label>
+                            <Input
+                              type="text"
+                              value={settings.manualReview?.cancelButtonText || 'Annuller'}
+                              onChange={(e) => handleFieldChange('manualReview', 'cancelButtonText', e.target.value)}
+                              className="w-full h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">Submit Button</label>
+                            <Input
+                              type="text"
+                              value={settings.manualReview?.submitButtonText || 'Send'}
+                              onChange={(e) => handleFieldChange('manualReview', 'submitButtonText', e.target.value)}
+                              className="w-full h-8 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg"
+                            />
                           </div>
                         </div>
                       </div>
-                    )}
-
-                    {/* Information Panel */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-start">
-                        <InformationCircleIcon className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-                        <div className="text-sm text-blue-800">
-                          <p className="font-medium mb-1">How Support Requests Work</p>
-                          <ul className="space-y-1 text-xs">
-                            <li>• Users can request support from any conversation</li>
-                            <li>• Contact form collects name, email, and phone number</li>
-                            <li>• Full conversation history is sent to your team</li>
-                            <li>• Requests appear in the admin dashboard for review</li>
-                            <li>• You can track status: pending, in review, completed</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
+                    </details>
                   </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="advanced" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-md bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
+                  <Settings className="w-4 h-4" />
                 </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Advanced Settings</span>
               </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-5 pb-5 pt-0">
+              <AdvancedSettings settings={settings} onChange={onChange} />
             </AccordionContent>
           </AccordionItem>
 
-          <AccordionItem value="advanced" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
+          <AccordionItem value="embed" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <Cog6ToothIcon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Advanced Settings</span>
+                <div className="p-1.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                  <Code className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Embed Code</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
-              {/* Advanced Settings */}
-              <div className="space-y-6">
-                <AdvancedSettings settings={settings} onChange={onChange} />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="embed" className="border rounded-lg bg-white dark:bg-gray-800">
-            <AccordionTrigger className="px-6 py-4 hover:no-underline">
-              <div className="flex items-center gap-3">
-                <CodeBracketIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">Embed Code</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6">
-              {/* Embed Code Settings */}
-              <div className="space-y-8">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center">
-                    <CodeBracketIcon className="w-6 h-6 mr-2" />
-                    Widget Integration
-                  </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-6">
-                    Copy the code below and add it to your website before the closing &lt;/body&gt; tag.
+            <AccordionContent className="px-5 pb-5 pt-0">
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Add this code before the closing &lt;/body&gt; tag on your website.
                   </p>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Widget ID
-                      </label>
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="text"
-                          value={settings._id || 'widget-id'}
-                          readOnly
-                          className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm font-mono text-gray-900 dark:text-gray-100"
-                        />
-                        <button
-                          onClick={() => navigator.clipboard.writeText(settings._id || 'widget-id')}
-                          className="px-4 py-3 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center"
-                        >
-                          <DocumentDuplicateIcon className="w-4 h-4 mr-2" />
-                          Copy ID
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                        Embed Code
-                      </label>
-                      <div className="relative">
-                        <textarea
-                          readOnly
-                          value={`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`}
-                          rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-sm font-mono resize-none text-gray-900 dark:text-gray-100"
-                        />
-                        <button
-                          onClick={() => {
-                            const code = `<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`;
-                            navigator.clipboard.writeText(code);
-                          }}
-                          className="absolute top-3 right-3 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors flex items-center"
-                        >
-                          <DocumentDuplicateIcon className="w-3 h-3 mr-1" />
-                          Copy
-                        </button>
-                      </div>
-                    </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Widget ID</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={settings._id || 'widget-id'}
+                      readOnly
+                      className="flex-1 h-9 px-3 text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300"
+                    />
+                    <button
+                      onClick={() => navigator.clipboard.writeText(settings._id || 'widget-id')}
+                      className="h-9 px-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg text-xs transition-colors flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      Copy
+                    </button>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <h4 className="font-semibold text-green-900 mb-3 flex items-center">
-                      <CheckCircleIcon className="w-5 h-5 mr-2" />
-                      Integration Steps
-                    </h4>
-                    <ol className="text-sm text-green-800 space-y-2 list-decimal list-inside">
-                      <li>Copy the embed code above</li>
-                      <li>Paste it before the closing &lt;/body&gt; tag on your website</li>
-                      <li>Save and publish your website</li>
-                      <li>The chat widget will appear in the bottom-right corner</li>
+
+                <div>
+                  <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1.5">Embed Code</label>
+                  <div className="relative">
+                    <textarea
+                      readOnly
+                      value={`<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`}
+                      rows={3}
+                      className="w-full px-3 py-2 text-xs font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-300 resize-none"
+                    />
+                    <button
+                      onClick={() => {
+                        const code = `<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`;
+                        navigator.clipboard.writeText(code);
+                      }}
+                      className="absolute top-2 right-2 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] transition-colors flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" />
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Steps</span>
+                    </div>
+                    <ol className="text-[10px] text-emerald-600 dark:text-emerald-400 space-y-0.5 list-decimal list-inside">
+                      <li>Copy embed code</li>
+                      <li>Paste before &lt;/body&gt;</li>
+                      <li>Save & publish</li>
                     </ol>
                   </div>
-                  
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                    <h4 className="font-semibold text-yellow-900 mb-3 flex items-center">
-                      <InformationCircleIcon className="w-5 h-5 mr-2" />
-                      Pro Tips
-                    </h4>
-                    <ul className="text-sm text-yellow-800 space-y-2 list-disc list-inside">
-                      <li>Test the widget on a staging site first</li>
-                      <li>Make sure your domain is whitelisted in OpenAI settings</li>
-                      <li>The widget automatically adapts to mobile devices</li>
-                      <li>Changes to widget settings take effect immediately</li>
+                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span className="text-xs font-medium text-amber-700 dark:text-amber-300">Tips</span>
+                    </div>
+                    <ul className="text-[10px] text-amber-600 dark:text-amber-400 space-y-0.5 list-disc list-inside">
+                      <li>Test on staging first</li>
+                      <li>Mobile-responsive</li>
+                      <li>Instant updates</li>
                     </ul>
                   </div>
                 </div>
@@ -3085,7 +2053,6 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </div>
 
       {/* Image Zoom Modal */}
       <ImageZoomModal
