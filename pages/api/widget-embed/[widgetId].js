@@ -522,6 +522,7 @@ export default async function handler(req, res) {
     },
     apiUrl: process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 'https://www.elva-agents.com/',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
+    streaming: widget.settings?.streaming?.enabled !== false, // Enable streaming by default
     openai: useResponsesAPI ? {
       promptId: widget.openai.promptId,
       version: widget.openai.version || 'latest'
@@ -5293,7 +5294,14 @@ export default async function handler(req, res) {
     messages.appendChild(typingDiv);
     messages.scrollTop = messages.scrollHeight;
 
-    // Use appropriate API endpoint based on widget type
+    // Check if streaming is enabled
+    if (WIDGET_CONFIG.streaming) {
+      // Use streaming endpoint for real-time response
+      await sendMessageStreaming(msg, typingDiv);
+      return;
+    }
+
+    // Use appropriate API endpoint based on widget type (non-streaming fallback)
     const apiEndpoint = WIDGET_CONFIG.apiType === 'responses' ? 
       \`\${WIDGET_CONFIG.apiUrl}/api/respond-responses\` : 
       \`\${WIDGET_CONFIG.apiUrl}/api/respond\`;
@@ -5506,6 +5514,394 @@ export default async function handler(req, res) {
       addMessage('assistant', errorMessage);
     } finally {
       isSending = false;
+    }
+  }
+
+  // Streaming message function - displays AI response in real-time as it's generated
+  async function sendMessageStreaming(msg, typingDiv) {
+    const streamingEndpoint = \`\${WIDGET_CONFIG.apiUrl}/api/respond-stream\`;
+    
+    console.log('🌊 Starting streaming request to:', streamingEndpoint);
+    
+    // GDPR: Send consent status to backend
+    const analyticsConsent = ElvaConsent.hasConsent('analytics');
+    
+    const requestBody = {
+      widgetId: WIDGET_CONFIG.widgetId,
+      message: msg,
+      userId,
+      conversationId: currentConversationId
+    };
+
+    // Add image URL if there's an attachment
+    if (currentImageAttachment) {
+      requestBody.imageUrl = currentImageAttachment;
+    }
+    
+    try {
+      const response = await fetch(streamingEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Elva-Consent-Analytics': analyticsConsent ? 'true' : 'false'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        // Handle error response
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Streaming request failed');
+      }
+      
+      // Keep typing indicator visible until first token arrives
+      // We'll create the streaming bubble when we receive the first delta
+      let messageDiv = null;
+      let textElement = null;
+      let cursorElement = null;
+      let streamingBubbleCreated = false;
+      
+      // Read the SSE stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let buffer = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log('🏁 Stream complete');
+          break;
+        }
+        
+        // Decode the chunk and add to buffer
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE events from buffer
+        const lines = buffer.split('\\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6); // Remove 'data: ' prefix
+            if (!jsonStr.trim()) continue;
+            
+            try {
+              const event = JSON.parse(jsonStr);
+              
+              switch (event.type) {
+                case 'conversation':
+                  // Update conversation ID if new conversation was created
+                  if (event.conversationId && event.conversationId !== currentConversationId) {
+                    console.log('🆕 New conversation created:', event.conversationId);
+                    currentConversationId = event.conversationId;
+                    satisfactionRatingShown = false;
+                    if (inactivityTimer) {
+                      clearTimeout(inactivityTimer);
+                      inactivityTimer = null;
+                    }
+                    manualReviewFormOpen = false;
+                    checkAndStartLiveChatSSE();
+                  }
+                  break;
+                  
+                case 'delta':
+                  // On first delta, remove typing indicator and create streaming bubble
+                  if (!streamingBubbleCreated) {
+                    // Remove typing indicator now that we have content
+                    if (typingDiv && typingDiv.parentNode) {
+                      messages.removeChild(typingDiv);
+                    }
+                    
+                    // Create the streaming message container
+                    const bubble = createStreamingMessageBubble();
+                    messageDiv = bubble.messageDiv;
+                    textElement = bubble.textElement;
+                    cursorElement = bubble.cursorElement;
+                    messages.appendChild(messageDiv);
+                    streamingBubbleCreated = true;
+                  }
+                  
+                  // Append new content with smooth animation
+                  fullContent += event.content;
+                  updateStreamingContent(textElement, fullContent);
+                  messages.scrollTop = messages.scrollHeight;
+                  break;
+                  
+                case 'done':
+                  console.log('✅ Streaming done:', event);
+                  // Finalize the message if bubble was created
+                  if (streamingBubbleCreated && messageDiv) {
+                    finalizeStreamingMessage(messageDiv, textElement, cursorElement, fullContent);
+                  }
+                  
+                  // Update conversation ID if provided in done event
+                  if (event.conversationId && event.conversationId !== currentConversationId) {
+                    currentConversationId = event.conversationId;
+                  }
+                  break;
+                  
+                case 'error':
+                  console.error('❌ Stream error:', event.error);
+                  // Remove typing indicator if still showing
+                  if (!streamingBubbleCreated && typingDiv && typingDiv.parentNode) {
+                    messages.removeChild(typingDiv);
+                  }
+                  if (!fullContent) {
+                    // If no content yet, show error message using regular addMessage
+                    addMessage('assistant', event.error || 'An error occurred');
+                  } else if (textElement) {
+                    // If we have some content, append error notice
+                    updateStreamingContent(textElement, fullContent + '\\n\\n[Error: ' + (event.error || 'Connection interrupted') + ']');
+                  }
+                  break;
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE event:', parseError, jsonStr);
+            }
+          }
+        }
+      }
+      
+      // Store the message in conversation history
+      currentConversationMessages.push({
+        role: 'assistant',
+        content: fullContent,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Clear image attachment after successful send
+      if (currentImageAttachment) {
+        currentImageAttachment = null;
+        const preview = inputContainer.querySelector('.elva-image-preview');
+        if (preview) preview.remove();
+      }
+      
+      // Check if we should show satisfaction rating
+      checkAndShowSatisfactionRating();
+      
+      // Save conversation to history
+      const allMessages = currentConversationMessages.map(m => {
+        let cleanContent = m.content;
+        if (m.role === 'assistant') {
+          cleanContent = m.content.replace(/^ECottonshoppen Ai-Kundeservice/, '').trim();
+        }
+        const messageData = { role: m.role, content: cleanContent || '' };
+        if (m.imageUrl) messageData.imageUrl = m.imageUrl;
+        return messageData;
+      }).filter(m => m.content && m.content.trim());
+      
+      if (allMessages.length > 0) {
+        saveConversationToHistory(currentConversationId, allMessages);
+      }
+      
+    } catch (error) {
+      console.error('❌ Streaming error:', error);
+      
+      // Remove typing indicator if still present
+      if (typingDiv && typingDiv.parentNode) {
+        messages.removeChild(typingDiv);
+      }
+      
+      // Show error message
+      addMessage('assistant', 'Sorry, I encountered a connection error. Please try again.');
+    } finally {
+      isSending = false;
+    }
+  }
+  
+  // Create a message bubble for streaming content
+  function createStreamingMessageBubble() {
+    const messageDiv = document.createElement("div");
+    messageDiv.style.cssText = \`
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      animation: slideIn 0.3s ease-out;
+    \`;
+    
+    // Create timestamp
+    const timestamp = document.createElement("div");
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('da-DK', { 
+      hour: '2-digit', 
+      minute: '2-digit'
+    });
+    timestamp.textContent = timeString;
+    timestamp.style.cssText = \`
+      font-size: 10px;
+      color: \${themeColors.textColor};
+      opacity: 0.5;
+      margin: 6px 8px 4px 44px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    \`;
+    
+    // Create message content container
+    const messageContentDiv = document.createElement("div");
+    messageContentDiv.style.cssText = \`
+      display: flex;
+      justify-content: flex-start;
+      width: 100%;
+    \`;
+    
+    // Assistant container with avatar
+    const assistantContainer = document.createElement("div");
+    assistantContainer.style.cssText = \`
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    \`;
+    
+    const avatar = document.createElement("div");
+    avatar.style.cssText = \`
+      width: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
+      height: \${WIDGET_CONFIG.branding?.iconSizes?.messageAvatar || 32}px;
+      background: \${WIDGET_CONFIG.branding?.useAvatarBackgroundColor ? (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5') : (WIDGET_CONFIG.branding?.avatarUrl ? 'transparent' : (WIDGET_CONFIG.branding?.avatarBackgroundColor || WIDGET_CONFIG.theme.buttonColor || '#4f46e5'))};
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    \`;
+    avatar.innerHTML = WIDGET_CONFIG.branding?.avatarUrl ? 
+      \`<img src="\${WIDGET_CONFIG.branding.avatarUrl}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; transform: scale(\${WIDGET_CONFIG.branding?.imageSettings?.avatarZoom || 1}) translate(\${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetX || 0}px, \${WIDGET_CONFIG.branding?.imageSettings?.avatarOffsetY || 0}px); transform-origin: center center;" />\` : 
+      \`<span style="color: white; font-size: 12px; font-weight: 600;">\${generateAIIcon(WIDGET_CONFIG.name, WIDGET_CONFIG.branding?.title)}</span>\`;
+    
+    const messageContent = document.createElement("div");
+    messageContent.style.cssText = \`
+      display: flex;
+      flex-direction: column;
+    \`;
+    
+    const nameLabel = document.createElement("div");
+    nameLabel.style.cssText = \`
+      font-size: 12px;
+      color: \${themeColors.textColor};
+      margin-bottom: 8px;
+      font-weight: 500;
+      opacity: 0.7;
+    \`;
+    nameLabel.textContent = WIDGET_CONFIG.branding.assistantName || WIDGET_CONFIG.branding.title || 'AI Assistant';
+    
+    const messageBubble = document.createElement("div");
+    messageBubble.style.cssText = \`
+      background: \${themeColors.messageBg};
+      padding: 12px 4px 12px 16px;
+      border-radius: 18px 18px 18px 4px;
+      font-size: 14px;
+      max-width: 320px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border: 1px solid \${themeColors.borderColor};
+      word-wrap: break-word;
+      line-height: 1.5;
+      position: relative;
+      color: \${themeColors.textColor};
+    \`;
+    messageBubble.className = 'messageBubble streaming-bubble';
+    
+    // Text element for streaming content
+    const textElement = document.createElement("span");
+    textElement.className = 'streaming-text';
+    
+    // Blinking cursor element
+    const cursorElement = document.createElement("span");
+    cursorElement.className = 'streaming-cursor';
+    cursorElement.style.cssText = \`
+      display: inline-block;
+      width: 2px;
+      height: 16px;
+      background: \${themeColors.textColor};
+      margin-left: 2px;
+      animation: blink 0.7s infinite;
+      vertical-align: middle;
+    \`;
+    
+    messageBubble.appendChild(textElement);
+    messageBubble.appendChild(cursorElement);
+    
+    messageContent.appendChild(nameLabel);
+    messageContent.appendChild(messageBubble);
+    
+    assistantContainer.appendChild(avatar);
+    assistantContainer.appendChild(messageContent);
+    messageContentDiv.appendChild(assistantContainer);
+    
+    messageDiv.appendChild(messageContentDiv);
+    messageDiv.appendChild(timestamp);
+    
+    return { messageDiv, textElement, cursorElement, messageBubble };
+  }
+  
+  // Update streaming content with formatting
+  function updateStreamingContent(textElement, content) {
+    // Apply formatting to the content (same as formatMessage)
+    textElement.innerHTML = formatMessage(content);
+  }
+  
+  // Finalize the streaming message (remove cursor, apply final formatting)
+  function finalizeStreamingMessage(messageDiv, textElement, cursorElement, content) {
+    // Remove the cursor
+    if (cursorElement && cursorElement.parentNode) {
+      cursorElement.remove();
+    }
+    
+    // Apply final formatting
+    textElement.innerHTML = formatMessage(content);
+    
+    // Store original content for history
+    messageDiv.setAttribute('data-original-content', content);
+    messageDiv.setAttribute('data-role', 'assistant');
+    
+    // Check for product cards
+    if (WIDGET_CONFIG.messages.productCards.enabled) {
+      const parsed = parseProductCards(content);
+      if (parsed.products.length > 0) {
+        const messageBubble = textElement.parentElement;
+        const messageContentContainer = messageBubble.parentElement;
+        
+        // Update text with cleaned content
+        textElement.innerHTML = formatMessage(parsed.cleanText);
+        
+        // Add product cards
+        const cardsContainer = createProductCardsContainer(
+          parsed.products,
+          WIDGET_CONFIG.messages.productCards.layout
+        );
+        messageContentContainer.appendChild(cardsContainer);
+      }
+    }
+    
+    // Check for images in content
+    const imageUrls = extractImageUrls(content);
+    if (imageUrls.length > 0) {
+      const messageBubble = textElement.parentElement;
+      const messageContentContainer = messageBubble.parentElement;
+      
+      const imagesContainer = document.createElement("div");
+      imagesContainer.style.cssText = \`
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+      \`;
+      
+      imageUrls.forEach(url => {
+        const img = document.createElement("img");
+        img.src = url;
+        img.style.cssText = \`
+          max-width: 280px;
+          border-radius: 8px;
+          cursor: pointer;
+        \`;
+        img.onclick = () => window.open(url, '_blank');
+        imagesContainer.appendChild(img);
+      });
+      
+      messageContentContainer.appendChild(imagesContainer);
     }
   }
 
