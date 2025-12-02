@@ -1450,6 +1450,9 @@ export default async function handler(req, res) {
 
   // Create header matching LivePreview structure
   const header = document.createElement("div");
+  // Check if mobile to set appropriate border radius
+  const isMobileDevice = isMobile();
+  const headerBorderRadius = isMobileDevice ? '0' : \`\${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0\`;
   header.style.cssText = \`
     background: linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}, \${adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)});
     color: white;
@@ -1457,7 +1460,7 @@ export default async function handler(req, res) {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0;
+    border-radius: \${headerBorderRadius};
     position: relative;
     overflow: visible;
   \`;
@@ -2341,6 +2344,8 @@ export default async function handler(req, res) {
 
   // Create history header
   const historyHeader = document.createElement("div");
+  // Use same border radius logic as main header (no rounded corners on mobile)
+  const historyHeaderBorderRadius = isMobileDevice ? '0' : \`\${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0\`;
   historyHeader.style.cssText = \`
     background: linear-gradient(135deg, \${WIDGET_CONFIG.theme.buttonColor || '#4f46e5'}, \${adjustColor(WIDGET_CONFIG.theme.buttonColor || '#4f46e5', -20)});
     color: white;
@@ -2348,7 +2353,7 @@ export default async function handler(req, res) {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-radius: \${WIDGET_CONFIG.theme.borderRadius || 20}px \${WIDGET_CONFIG.theme.borderRadius || 20}px 0 0;
+    border-radius: \${historyHeaderBorderRadius};
     position: relative;
     overflow: hidden;
   \`;
@@ -3001,12 +3006,23 @@ export default async function handler(req, res) {
 
     if (isChatVisible || isHistoryVisible) {
       // Hide animation
+      const mobile = isMobile();
       if (isChatVisible) {
-        chatBox.style.transform = 'scale(0.95) translateY(10px)';
+        if (mobile) {
+          chatBox.style.transformOrigin = 'top center';
+          chatBox.style.transform = 'translateY(-100%)';
+        } else {
+          chatBox.style.transform = 'scale(0.95) translateY(10px)';
+        }
         chatBox.style.opacity = '0';
       }
       if (isHistoryVisible) {
-        historyView.style.transform = 'scale(0.95) translateY(10px)';
+        if (mobile) {
+          historyView.style.transformOrigin = 'top center';
+          historyView.style.transform = 'translateY(-100%)';
+        } else {
+          historyView.style.transform = 'scale(0.95) translateY(10px)';
+        }
         historyView.style.opacity = '0';
       }
       
@@ -3046,7 +3062,14 @@ export default async function handler(req, res) {
       chatBox.style.display = "flex";
       updatePositioning(); // Update positioning when opening
       requestAnimationFrame(() => {
-        chatBox.style.transform = 'scale(1) translateY(0)';
+        // For mobile, ensure transform starts from top
+        const mobile = isMobile();
+        if (mobile) {
+          chatBox.style.transformOrigin = 'top center';
+          chatBox.style.transform = 'translateY(0)';
+        } else {
+          chatBox.style.transform = 'scale(1) translateY(0)';
+        }
         chatBox.style.opacity = '1';
       });
 
@@ -6054,11 +6077,13 @@ export default async function handler(req, res) {
       @keyframes mobileSlideIn {
         from {
           opacity: 0;
-          transform: translateY(100%);
+          transform: translateY(-100%);
+          transform-origin: top center;
         }
         to {
           opacity: 1;
           transform: translateY(0);
+          transform-origin: top center;
         }
       }
       
@@ -6066,10 +6091,12 @@ export default async function handler(req, res) {
         from {
           opacity: 1;
           transform: translateY(0);
+          transform-origin: top center;
         }
         to {
           opacity: 0;
-          transform: translateY(100%);
+          transform: translateY(-100%);
+          transform-origin: top center;
         }
       }
       
@@ -6251,32 +6278,35 @@ export default async function handler(req, res) {
       const availableHeight = vh - (topMargin + bottomMargin + buttonSize + 20);
       
       // For mobile, use viewport height units for true responsive height
-      const mobileHeightVh = 95; // Use 95% of viewport height
+      const mobileHeightVh = 98; // Use 98% of viewport height - fills more of the screen
       
       // Set responsive dimensions
       chatBox.style.width = \`\${Math.min(availableWidth, 400)}px\`;
-      // Height will be set later for mobile bottom sheet
+      // Height will be set later for mobile top sheet
       historyView.style.width = \`\${Math.min(availableWidth, 400)}px\`;
-      // Height will be set later for mobile bottom sheet
+      // Height will be set later for mobile top sheet
       
-      // Mobile bottom sheet positioning (always at bottom for mobile)
-      chatBox.style.borderRadius = '20px 20px 0 0'; // Bottom sheet style
-      chatBox.style.bottom = '0'; // Always at bottom for mobile
+      // Mobile top sheet positioning (always at top for mobile)
+      // Position from top to fill 98% of viewport height, leaving 2% at bottom
+      chatBox.style.borderRadius = '0'; // No rounded corners for mobile - full width
+      chatBox.style.top = '0'; // Always at top for mobile
       chatBox.style.left = '0';
       chatBox.style.right = '0';
-      chatBox.style.top = 'auto';
+      chatBox.style.bottom = 'auto';
       chatBox.style.width = '100%';
-      chatBox.style.height = \`\${mobileHeightVh}vh\`; // Use viewport height units
+      chatBox.style.height = \`\${mobileHeightVh}vh\`; // Use viewport height units (98vh)
       chatBox.style.maxHeight = 'none'; // Remove max-height constraint for mobile
+      chatBox.style.transformOrigin = 'top center'; // Ensure scaling/animation starts from top
       
-      historyView.style.borderRadius = '20px 20px 0 0';
-      historyView.style.bottom = '0';
+      historyView.style.borderRadius = '0';
+      historyView.style.top = '0';
       historyView.style.left = '0';
       historyView.style.right = '0';
-      historyView.style.top = 'auto';
+      historyView.style.bottom = 'auto';
       historyView.style.width = '100%';
       historyView.style.height = \`\${mobileHeightVh}vh\`;
       historyView.style.maxHeight = 'none'; // Remove max-height constraint for mobile
+      historyView.style.transformOrigin = 'top center'; // Ensure scaling/animation starts from top
       
       // Bottom sheet handle removed per user request
       
@@ -6344,6 +6374,12 @@ export default async function handler(req, res) {
     const mobile = isMobile();
     
     if (mobile) {
+      // Update header borderRadius for top sheet (no rounded corners on mobile)
+      const header = chatBox.querySelector('.elva-chat-header') || chatBox.querySelector('.header');
+      if (header) {
+        header.style.borderRadius = '0'; // No rounded corners for mobile
+      }
+      
       // Enhanced mobile dropdown adjustments
       menuDropdown.style.minWidth = '240px';
       menuDropdown.style.right = '-10px';

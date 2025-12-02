@@ -33,6 +33,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import {
   Menu,
   Search,
@@ -55,6 +56,7 @@ import {
 
 export default function ModernLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState('system'); // 'light', 'dark', 'system'
   const [searchOpen, setSearchOpen] = useState(false);
@@ -526,9 +528,16 @@ export default function ModernLayout({ children }) {
        </DialogContent>
      </Dialog>
 
-      <ModernSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+      <ModernSidebar 
+        open={sidebarOpen} 
+        setOpen={setSidebarOpen}
+        onCollapsedChange={setSidebarCollapsed}
+      />
       
-      <div className="lg:pl-64">
+      <div className={cn(
+        "transition-all duration-300",
+        sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
+      )}>
         {/* Top Header */}
         <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
           <Button

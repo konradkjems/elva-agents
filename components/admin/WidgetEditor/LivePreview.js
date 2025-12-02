@@ -27,12 +27,49 @@ export default function LivePreview({ widget, settings }) {
   const [showPopup, setShowPopup] = useState(true);
   const [deviceView, setDeviceView] = useState('desktop');
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [autoZoom, setAutoZoom] = useState(100);
   const [showWebsiteBackground, setShowWebsiteBackground] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
   const previewRef = useRef(null);
+  const containerRef = useRef(null);
   
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
   const [showConversationHistory, setShowConversationHistory] = useState(false);
+
+  // Calculate optimal zoom based on container size
+  useEffect(() => {
+    const calculateAutoZoom = () => {
+      if (!containerRef.current) return;
+      
+      const container = containerRef.current;
+      const containerWidth = container.clientWidth - 64; // padding
+      const containerHeight = container.clientHeight - 80; // toolbar + padding
+      
+      // Device dimensions
+      const deviceWidth = deviceView === 'mobile' ? 390 : 1200;
+      const deviceHeight = deviceView === 'mobile' ? 844 : 800;
+      
+      // Calculate scale to fit
+      const scaleX = containerWidth / deviceWidth;
+      const scaleY = containerHeight / deviceHeight;
+      const optimalScale = Math.min(scaleX, scaleY, 1) * 100; // Cap at 100%
+      
+      // Round to nearest 5%
+      const roundedZoom = Math.floor(optimalScale / 5) * 5;
+      setAutoZoom(Math.max(40, Math.min(100, roundedZoom)));
+      setZoomLevel(Math.max(40, Math.min(100, roundedZoom)));
+    };
+
+    calculateAutoZoom();
+    
+    // Recalculate on resize
+    const resizeObserver = new ResizeObserver(calculateAutoZoom);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    return () => resizeObserver.disconnect();
+  }, [deviceView]);
 
   // Helper function to get theme colors based on theme mode
   const getThemeColors = () => {
@@ -271,7 +308,7 @@ export default function LivePreview({ widget, settings }) {
   const useGradient = settings.appearance?.useGradient !== false;
 
   return (
-    <div className="relative h-full flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 overflow-hidden" style={{ minHeight: 0 }}>
+    <div ref={containerRef} className="relative h-full flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 overflow-hidden" style={{ minHeight: 0 }}>
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl" />
@@ -367,10 +404,14 @@ export default function LivePreview({ widget, settings }) {
             <RefreshCw size={16} />
           </button>
 
-          {/* Fullscreen */}
+          {/* Fit to Window */}
           <button
-            onClick={() => setZoomLevel(100)}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            onClick={() => setZoomLevel(autoZoom)}
+            className={`p-2 rounded-lg transition-colors ${
+              zoomLevel === autoZoom 
+                ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' 
+                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+            }`}
             title="Tilpas til vindue"
           >
             <Maximize2 size={16} />
@@ -381,15 +422,31 @@ export default function LivePreview({ widget, settings }) {
       {/* Preview Canvas */}
       <div 
         ref={previewRef}
-        className="flex-1 flex items-center justify-center p-4 overflow-auto"
-        style={{ transform: `scale(${zoomLevel / 100})`, transition: 'transform 0.3s ease', minHeight: 0 }}
+        className="flex-1 flex items-center justify-center p-4 pt-16 overflow-auto"
+        style={{ minHeight: 0 }}
       >
         <div
-          className={`relative transition-all duration-500 ease-out ${
-            deviceView === 'mobile'
-              ? 'w-[390px] h-[844px]'
-              : 'w-[1200px] h-[800px]'
-          }`}
+          className="relative transition-all duration-500 ease-out"
+          style={{
+            width: deviceView === 'mobile' ? '390px' : '1200px',
+            height: deviceView === 'mobile' ? '844px' : '800px',
+            transform: `scale(${zoomLevel / 100})`,
+            transformOrigin: 'center center',
+            // Shrink the space the element takes up when scaled down
+            marginTop: deviceView === 'mobile' 
+              ? `${(844 * (zoomLevel / 100 - 1)) / 2}px`
+              : `${(800 * (zoomLevel / 100 - 1)) / 2}px`,
+            marginBottom: deviceView === 'mobile' 
+              ? `${(844 * (zoomLevel / 100 - 1)) / 2}px`
+              : `${(800 * (zoomLevel / 100 - 1)) / 2}px`,
+            marginLeft: deviceView === 'mobile' 
+              ? `${(390 * (zoomLevel / 100 - 1)) / 2}px`
+              : `${(1200 * (zoomLevel / 100 - 1)) / 2}px`,
+            marginRight: deviceView === 'mobile' 
+              ? `${(390 * (zoomLevel / 100 - 1)) / 2}px`
+              : `${(1200 * (zoomLevel / 100 - 1)) / 2}px`,
+            transition: 'transform 0.3s ease, margin 0.3s ease'
+          }}
         >
           {/* Device Frame */}
           {deviceView === 'mobile' ? (

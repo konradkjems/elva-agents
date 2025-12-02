@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
 import { Dialog, Transition } from '@headlessui/react';
@@ -13,6 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
   Home,
@@ -24,7 +30,9 @@ import {
   User,
   LogOut,
   ClipboardList,
-  UserCircle
+  UserCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const getNavigationForRole = (session) => {
@@ -88,10 +96,29 @@ const getNavigationForRole = (session) => {
   return [...allUsersNav, ...adminOnlyNav];
 };
 
-export default function ModernSidebar({ open, setOpen }) {
+export default function ModernSidebar({ open, setOpen, onCollapsedChange }) {
   const router = useRouter();
   const { data: session } = useSession();
   const navigation = getNavigationForRole(session);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Load collapsed state from localStorage on mount
+  useEffect(() => {
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
+    if (savedCollapsed !== null) {
+      const isCollapsed = savedCollapsed === 'true';
+      setCollapsed(isCollapsed);
+      onCollapsedChange?.(isCollapsed);
+    }
+  }, [onCollapsedChange]);
+
+  // Save collapsed state to localStorage and notify parent
+  const toggleCollapsed = () => {
+    const newCollapsed = !collapsed;
+    setCollapsed(newCollapsed);
+    localStorage.setItem('sidebarCollapsed', newCollapsed.toString());
+    onCollapsedChange?.(newCollapsed);
+  };
 
   const getInitials = (name) => {
     if (!name) return '?';
@@ -104,11 +131,18 @@ export default function ModernSidebar({ open, setOpen }) {
   };
 
   const SidebarContent = () => (
-    <div className="flex h-full flex-col">
+    <TooltipProvider delayDuration={300}>
+      <div className="flex h-full flex-col">
       {/* Logo and Brand */}
-      <div className="flex h-16 shrink-0 items-center border-b px-6">
-        <div className="flex items-center space-x-3">
-          <div className="flex h-10 w-10 items-center justify-center">
+      <div className={cn(
+        "flex h-16 shrink-0 items-center border-b transition-all duration-300",
+        collapsed ? "px-0 justify-center" : "px-6"
+      )}>
+        <div className={cn(
+          "flex items-center",
+          collapsed ? "justify-center" : "space-x-3 w-full"
+        )}>
+          <div className="flex h-10 w-10 items-center justify-center shrink-0">
             <a href="https://elva-solutions.com" target="_blank" rel="noopener noreferrer">
               {/* Light mode logo */}
               <img 
@@ -124,10 +158,12 @@ export default function ModernSidebar({ open, setOpen }) {
               />
             </a>
           </div>
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">Elva-Agents</h1>
-            <p className="text-xs text-muted-foreground">AI Chat Platform</p>
-          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold text-foreground truncate">Elva-Agents</h1>
+              <p className="text-xs text-muted-foreground truncate">AI Chat Platform</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -138,12 +174,13 @@ export default function ModernSidebar({ open, setOpen }) {
             const isActive = router.pathname === item.href || 
               (item.href !== '/admin' && router.pathname.startsWith(item.href));
             
-            return (
+            const buttonContent = (
               <Button
                 key={item.name}
                 variant={isActive ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start h-auto p-3 text-left",
+                  "w-full h-auto text-left transition-all duration-200",
+                  collapsed ? "justify-center p-3" : "justify-start p-3",
                   isActive && "bg-secondary text-secondary-foreground"
                 )}
                 onClick={() => {
@@ -151,49 +188,93 @@ export default function ModernSidebar({ open, setOpen }) {
                   setOpen?.(false);
                 }}
               >
-                <item.icon className="mr-3 h-5 w-5" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{item.name}</span>
-                    {item.badge && (
-                      <Badge variant="secondary" className="ml-2 text-xs">
-                        {item.badge}
-                      </Badge>
-                    )}
+                <item.icon className={cn("h-5 w-5 shrink-0", !collapsed && "mr-3")} />
+                {!collapsed && (
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{item.name}</span>
+                      {item.badge && (
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          {item.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {item.description}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {item.description}
-                  </p>
-                </div>
+                )}
               </Button>
             );
+
+            if (collapsed) {
+              return (
+                <Tooltip key={item.name}>
+                  <TooltipTrigger asChild>
+                    {buttonContent}
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="ml-2">
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return buttonContent;
           })}
         </div>
       </nav>
 
       {/* User Profile Section */}
-      <div className="border-t p-3">
+      <div className="border-t p-3 space-y-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="w-full justify-start h-auto p-3 hover:bg-secondary"
-            >
-              <Avatar className="h-9 w-9 mr-3">
-                <AvatarImage src={session?.user?.image} alt={session?.user?.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
-                  {getInitials(session?.user?.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-medium truncate">
-                  {session?.user?.name || 'User'}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {session?.user?.email}
-                </p>
-              </div>
-            </Button>
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center h-auto p-3 hover:bg-secondary"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={session?.user?.image} alt={session?.user?.name} />
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
+                        {getInitials(session?.user?.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="ml-2">
+                  <div>
+                    <p className="font-medium">{session?.user?.name || 'User'}</p>
+                    <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full justify-start h-auto p-3 hover:bg-secondary"
+              >
+                <Avatar className="h-9 w-9 mr-3">
+                  <AvatarImage src={session?.user?.image} alt={session?.user?.name} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
+                    {getInitials(session?.user?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium truncate">
+                    {session?.user?.name || 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {session?.user?.email}
+                  </p>
+                </div>
+              </Button>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => router.push('/admin/profile')}>
@@ -214,8 +295,38 @@ export default function ModernSidebar({ open, setOpen }) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        
+        {/* Collapse Toggle Button */}
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCollapsed}
+                className="w-full justify-center hover:bg-secondary transition-all duration-200"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="ml-2">
+              <p>Expand sidebar</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleCollapsed}
+            className="w-full justify-start hover:bg-secondary transition-all duration-200"
+          >
+            <ChevronLeft className="h-5 w-5 mr-2" />
+            <span className="text-sm">Collapse</span>
+          </Button>
+        )}
       </div>
     </div>
+    </TooltipProvider>
   );
 
   return (
@@ -278,7 +389,10 @@ export default function ModernSidebar({ open, setOpen }) {
       </Transition.Root>
 
       {/* Static sidebar for desktop */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
+      <div className={cn(
+        "hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300",
+        collapsed ? "lg:w-20" : "lg:w-64"
+      )}>
         <div className="flex grow flex-col overflow-y-auto bg-card border-r">
           <SidebarContent />
         </div>
