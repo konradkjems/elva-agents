@@ -1,16 +1,14 @@
 import { randomUUID } from 'crypto';
 import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { fromRow } from '../../../lib/supabase/transform';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]';
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isUuid(v) {
   return typeof v === 'string' && UUID_RE.test(v);
 }
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getSessionContext(req, res);
 
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });

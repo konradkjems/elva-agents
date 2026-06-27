@@ -1,6 +1,5 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
 import { admin } from '../../../../lib/supabase/admin';
+import { getSessionContext } from '../../../../lib/supabase/session';
 import { getUsageStats } from '../../../../lib/quota.js';
 
 export default async function handler(req, res) {
@@ -12,7 +11,7 @@ export default async function handler(req, res) {
 
   try {
     // Authenticate user
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

@@ -6,7 +6,7 @@
  * GDPR Accountability requirement (Article 5(2))
  */
 
-import { getToken } from 'next-auth/jwt';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { admin } from '../../../lib/supabase/admin';
 import { fromRows } from '../../../lib/supabase/transform';
 
@@ -18,9 +18,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const session = await getSessionContext(req, res);
 
-    if (!token) {
+    if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 

@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut } from '@/lib/supabase/auth-context';
 import { Dialog, Transition } from '@headlessui/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -177,11 +177,13 @@ export default function ModernSidebar({ open, setOpen, onCollapsedChange }) {
             const buttonContent = (
               <Button
                 key={item.name}
-                variant={isActive ? "secondary" : "ghost"}
+                variant="ghost"
                 className={cn(
                   "w-full h-auto text-left transition-all duration-200",
                   collapsed ? "justify-center p-3" : "justify-start p-3",
-                  isActive && "bg-secondary text-secondary-foreground"
+                  isActive
+                    ? "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                    : "text-foreground/70 hover:text-foreground"
                 )}
                 onClick={() => {
                   router.push(item.href);
@@ -241,7 +243,7 @@ export default function ModernSidebar({ open, setOpen, onCollapsedChange }) {
                   >
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={session?.user?.image} alt={session?.user?.name} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                         {getInitials(session?.user?.name)}
                       </AvatarFallback>
                     </Avatar>
@@ -261,7 +263,7 @@ export default function ModernSidebar({ open, setOpen, onCollapsedChange }) {
               >
                 <Avatar className="h-9 w-9 mr-3">
                   <AvatarImage src={session?.user?.image} alt={session?.user?.name} />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-semibold">
                     {getInitials(session?.user?.name)}
                   </AvatarFallback>
                 </Avatar>

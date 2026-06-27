@@ -1,8 +1,7 @@
 import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { fromRow, fromRows } from '../../../lib/supabase/transform';
 import { withAdmin } from '../../../lib/auth';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
 import { requireRole } from '../../../lib/roleCheck';
 import { getCache, setCache, generateCacheKey } from '../../../lib/cache.js';
 
@@ -267,7 +266,7 @@ const mockWidgets = [
 async function handler(req, res) {
   try {
     // Get session for organization context
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
     if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

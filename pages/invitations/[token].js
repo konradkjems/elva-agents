@@ -6,7 +6,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -165,13 +166,13 @@ export default function InvitationPage() {
       }
 
       // Sign in with the new credentials
-      const result = await signIn('credentials', {
-        redirect: false,
-        email: invitation?.invitation?.email,
+      const supabase = getSupabaseBrowserClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: invitation?.invitation?.email?.toLowerCase(),
         password: accountData.password,
       });
 
-      if (result.error) {
+      if (signInError) {
         setError('Account created but failed to sign in. Please try logging in.');
         setProcessing(false);
         return;
@@ -194,7 +195,7 @@ export default function InvitationPage() {
   };
 
   const handleSignInInstead = () => {
-    signIn(undefined, { callbackUrl: `/invitations/${token}` });
+    router.push(`/admin/login?redirect=${encodeURIComponent(`/invitations/${token}`)}`);
   };
 
   const handleDecline = async () => {
@@ -459,7 +460,7 @@ export default function InvitationPage() {
                     type="button"
                     variant="outline"
                     className="w-full"
-                    onClick={() => signIn('google', { callbackUrl: `/invitations/${token}` })}
+                    onClick={() => getSupabaseBrowserClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/invitations/${token}` } })}
                     disabled={processing}
                   >
                     <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">

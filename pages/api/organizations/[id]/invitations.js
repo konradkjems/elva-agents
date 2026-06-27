@@ -5,10 +5,8 @@
  * GET /api/organizations/[id]/invitations - List invitations (implemented in [id]/index.js)
  * DELETE /api/organizations/[id]/invitations/[invitationId] - Cancel invitation
  */
-
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
 import { admin } from '../../../../lib/supabase/admin';
+import { getSessionContext } from '../../../../lib/supabase/session';
 import { fromRow } from '../../../../lib/supabase/transform';
 import { getUserTeamRole } from '../../../../lib/roleCheck';
 import crypto from 'crypto';
@@ -27,7 +25,7 @@ async function isPlatformAdmin(userId) {
 export default async function handler(req, res) {
   try {
     // Check authentication
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
     if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

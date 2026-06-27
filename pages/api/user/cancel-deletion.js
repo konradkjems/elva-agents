@@ -5,7 +5,7 @@
  * POST /api/user/cancel-deletion - Restore account from pending deletion
  */
 
-import { getSession } from 'next-auth/react';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { admin } from '../../../lib/supabase/admin';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const session = await getSession({ req });
+    const session = await getSessionContext(req, res);
 
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });

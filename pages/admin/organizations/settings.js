@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 import { useRouter } from 'next/router';
 import ModernLayout from '@/components/admin/ModernLayout';
 import InviteMemberModal from '@/components/admin/InviteMemberModal';
@@ -555,7 +555,7 @@ export default function OrganizationSettings() {
         {/* Header */}
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+            <div className="p-2 rounded-lg bg-primary">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -798,7 +798,7 @@ export default function OrganizationSettings() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
                             <AvatarImage src={member.user?.image} alt={member.user?.name} />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                            <AvatarFallback className="bg-primary text-primary-foreground">
                               {getInitials(member.user?.name)}
                             </AvatarFallback>
                           </Avatar>
@@ -1258,7 +1258,7 @@ export default function OrganizationSettings() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
+              <Calendar className="h-5 w-5 text-primary" />
               Update Billing Cycle
             </AlertDialogTitle>
             <AlertDialogDescription>

@@ -1,8 +1,6 @@
 import { admin } from '../../../../lib/supabase/admin';
+import { getSessionContext } from '../../../../lib/supabase/session';
 import { fromRow } from '../../../../lib/supabase/transform';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
-
 /**
  * Update Organization Billing Cycle
  *
@@ -16,7 +14,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
 
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });

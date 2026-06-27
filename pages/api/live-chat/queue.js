@@ -1,10 +1,8 @@
 import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { fromRow, fromRows } from '../../../lib/supabase/transform';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]';
-
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getSessionContext(req, res);
 
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });

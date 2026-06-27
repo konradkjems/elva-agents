@@ -5,10 +5,8 @@
  * POST /api/invitations/[token]/accept - Accept invitation
  * POST /api/invitations/[token]/decline - Decline invitation
  */
-
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
 import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { fromRow } from '../../../lib/supabase/transform';
 
 export default async function handler(req, res) {
@@ -105,7 +103,7 @@ export default async function handler(req, res) {
     // ========================================
     if (req.method === 'POST') {
       // Check authentication
-      const session = await getServerSession(req, res, authOptions);
+      const session = await getSessionContext(req, res);
       if (!session) {
         return res.status(401).json({ error: 'You must be logged in to accept invitations' });
       }

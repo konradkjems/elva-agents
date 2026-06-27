@@ -31,9 +31,9 @@ export default function CookiePolicy() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-gray-300 px-4 py-2">next-auth.session-token</td>
-                  <td className="border border-gray-300 px-4 py-2">Autentifikation</td>
-                  <td className="border border-gray-300 px-4 py-2">24 timer</td>
+                  <td className="border border-gray-300 px-4 py-2">sb-&lt;projekt&gt;-auth-token</td>
+                  <td className="border border-gray-300 px-4 py-2">Autentifikation (Supabase)</td>
+                  <td className="border border-gray-300 px-4 py-2">1 time (fornyes automatisk)</td>
                 </tr>
               </tbody>
             </table>

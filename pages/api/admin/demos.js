@@ -1,9 +1,7 @@
 import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { fromRow } from '../../../lib/supabase/transform';
 import { withAdmin } from '../../../lib/auth';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Demos expose their custom string legacy_id as the public `_id` (used in demo
@@ -18,7 +16,7 @@ export default async function handler(req, res) {
   console.log('📝 Demos API called:', req.method, req.url);
 
   // Authentication - Check for platform admin
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getSessionContext(req, res);
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });
   }

@@ -1,9 +1,9 @@
-import { getSession } from 'next-auth/react';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { admin } from '../../../lib/supabase/admin';
 import { fromRow } from '../../../lib/supabase/transform';
 
 export default async function handler(req, res) {
-  const session = await getSession({ req });
+  const session = await getSessionContext(req, res);
 
   if (!session) {
     return res.status(401).json({ message: 'Unauthorized' });

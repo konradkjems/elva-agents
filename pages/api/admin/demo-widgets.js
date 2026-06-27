@@ -1,8 +1,6 @@
 import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
 import { fromRow } from '../../../lib/supabase/transform';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
-
 // Demo widgets live in the widgets table (is_demo_mode = true). Their custom
 // string legacy_id is exposed as the public `_id`.
 function serializeDemo(row) {
@@ -17,7 +15,7 @@ export default async function handler(req, res) {
   }
 
   // Authentication - Check for platform admin
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getSessionContext(req, res);
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });
   }

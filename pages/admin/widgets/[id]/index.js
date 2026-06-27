@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 import ModernLayout from '../../../../components/admin/ModernLayout';
 import LivePreview from '../../../../components/admin/WidgetEditor/LivePreview';
 import SettingsPanel from '../../../../components/admin/WidgetEditor/SettingsPanel';

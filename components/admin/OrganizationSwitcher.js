@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 import { useRouter } from 'next/router';
 import {
   DropdownMenu,
@@ -162,7 +162,7 @@ export default function OrganizationSwitcher({ onCreateClick }) {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Avatar className="h-6 w-6">
               <AvatarImage src={currentOrg.logo} alt={currentOrg.name} />
-              <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground font-semibold">
                 {getInitials(currentOrg.name)}
               </AvatarFallback>
             </Avatar>
@@ -203,7 +203,7 @@ export default function OrganizationSwitcher({ onCreateClick }) {
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={org.logo} alt={org.name} />
-                  <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                  <AvatarFallback className="text-xs bg-primary text-primary-foreground font-semibold">
                     {getInitials(org.name)}
                   </AvatarFallback>
                 </Avatar>

@@ -1,12 +1,11 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from './auth/[...nextauth]';
 import { admin } from '../../lib/supabase/admin';
+import { getSessionContext } from '../../lib/supabase/session';
 import { fromRow, fromRows } from '../../lib/supabase/transform';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getSessionContext(req, res);
 
   if (!session) {
     return res.status(401).json({ error: 'Not authenticated' });

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 import { useRouter } from 'next/router';
 import ModernLayout from '@/components/admin/ModernLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -234,7 +234,7 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center text-center space-y-4">
                 <Avatar className="h-24 w-24 ring-4 ring-background shadow-lg">
                   <AvatarImage src={session.user?.image} alt={session.user?.name} />
-                  <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                  <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                     {getInitials(session.user?.name)}
                   </AvatarFallback>
                 </Avatar>
