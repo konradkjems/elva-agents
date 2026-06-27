@@ -41,6 +41,8 @@ async function main() {
         logo: o.logo || null,
         primary_color: o.primaryColor || null,
         domain: o.domain || null,
+        last_edited_at: toDate(o.lastEditedAt),
+        use_custom_theme: o.useCustomTheme ?? null,
         created_at: toDate(o.createdAt),
         updated_at: toDate(o.updatedAt),
         deleted_at: toDate(o.deletedAt),
@@ -78,14 +80,17 @@ async function main() {
     for (const o of orgs) {
       const orgId = ref(orgMap, o._id);
       const ownerId = ref(userMap, o.ownerId);
-      if (orgId && ownerId) {
-        const { error } = await supabase.from('organizations')
-          .update({ owner_id: ownerId }).eq('id', orgId);
+      const lastEditedBy = ref(userMap, o.lastEditedBy);
+      if (orgId && (ownerId || lastEditedBy)) {
+        const patch = {};
+        if (ownerId) patch.owner_id = ownerId;
+        if (lastEditedBy) patch.last_edited_by = lastEditedBy;
+        const { error } = await supabase.from('organizations').update(patch).eq('id', orgId);
         if (error) throw error;
         ownerUpdates++;
       }
     }
-    console.log(`   ✅ owner_id set on ${ownerUpdates} organizations`);
+    console.log(`   ✅ owner_id/last_edited_by set on ${ownerUpdates} organizations`);
 
     // ─────────────────────────────────────────────────────────── team_members
     console.log('📦 team_members');
@@ -122,6 +127,14 @@ async function main() {
         branding: w.branding || {},
         advanced: w.advanced || {},
         analytics: w.analytics || {},
+        behavior: w.behavior || {},
+        consent: w.consent || {},
+        demo_settings: w.demoSettings || {},
+        imageupload: w.imageupload || {},
+        integrations: w.integrations || {},
+        manual_review: w.manualReview || {},
+        satisfaction: w.satisfaction || {},
+        timezone: typeof w.timezone === 'string' ? w.timezone : null,
         prompt: typeof w.prompt === 'string' ? w.prompt : null,
         theme: w.theme || null,
         created_by: ref(userMap, w.createdBy),

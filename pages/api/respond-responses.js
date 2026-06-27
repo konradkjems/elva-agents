@@ -1,6 +1,7 @@
 import OpenAI from "openai";
-import { ObjectId } from "mongodb";
-import clientPromise from "../../lib/mongodb";
+import { randomUUID } from "crypto";
+import { admin } from "../../lib/supabase/admin";
+import { fromRow } from "../../lib/supabase/transform";
 import { getCountryFromIP, hasAnalyticsConsent } from "../../lib/privacy";
 import { widgetLimiter, runMiddleware } from "../../lib/rate-limit";
 
@@ -9,11 +10,16 @@ if (process.env.NODE_ENV === 'development') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-const openai = new OpenAI({ 
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   timeout: 30000,
   maxRetries: 2
 });
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v) {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
 
 const widgetCache = new Map();
 const WIDGET_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -26,10 +32,10 @@ const runInBackground = (fn) => {
   }
 };
 
-function updateAnalyticsAsync(db, widgetId, conversation, isNewConversation = false) {
+function updateAnalyticsAsync(widgetUuid, conversation, isNewConversation = false) {
   runInBackground(async () => {
     try {
-      await updateAnalytics(db, widgetId, conversation, isNewConversation);
+      await updateAnalytics(widgetUuid, conversation, isNewConversation);
     } catch (analyticsError) {
       console.error('Analytics update error (background):', analyticsError);
     }
@@ -53,17 +59,23 @@ function getCachedWidget(widgetId) {
   return cached.widget;
 }
 
-async function getWidgetWithCache(db, queryId) {
-  const cacheKey = String(queryId);
+// The embed sends the widget's public id (now stored as legacy_id). Fall back
+// to the uuid id for callers using the new identifier.
+async function getWidgetWithCache(widgetId) {
+  const cacheKey = String(widgetId);
   const cachedWidget = getCachedWidget(cacheKey);
   if (cachedWidget) {
     return cachedWidget;
   }
 
-  const widget = await db.collection("widgets").findOne({ _id: queryId });
-  if (widget) {
-    cacheWidget(cacheKey, widget);
+  let { data } = await admin.from('widgets').select('*').eq('legacy_id', cacheKey).maybeSingle();
+  if (!data && isUuid(cacheKey)) {
+    ({ data } = await admin.from('widgets').select('*').eq('id', cacheKey).maybeSingle());
   }
+  if (!data) return null;
+
+  const widget = fromRow(data);
+  cacheWidget(cacheKey, widget);
   return widget;
 }
 
@@ -73,7 +85,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-elva-consent-analytics, x-elva-consent-functional');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -88,7 +100,7 @@ export default async function handler(req, res) {
   try {
     await runMiddleware(req, res, widgetLimiter);
   } catch (error) {
-    return res.status(429).json({ 
+    return res.status(429).json({
       error: 'Too many requests, please slow down',
       retryAfter: '60 seconds'
     });
@@ -96,7 +108,7 @@ export default async function handler(req, res) {
 
   try {
     const { widgetId, message, userId, conversationId, imageUrl } = req.body;
-    
+
     console.log('📥 Received request:', {
       widgetId,
       message: message ? message.substring(0, 50) + '...' : 'null',
@@ -111,22 +123,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields: widgetId, message, userId' });
     }
 
-    const client = await clientPromise;
-    const db = client.db("elva-agents");
-    
-    // Convert string ID to ObjectId if it's a valid ObjectId string
-    let queryId = widgetId;
-    if (ObjectId.isValid(widgetId)) {
-      queryId = new ObjectId(widgetId);
-    }
-    
-    // Get widget configuration
-    const widget = await getWidgetWithCache(db, queryId);
+    // Get widget configuration (looked up by legacy embed id)
+    const widget = await getWidgetWithCache(widgetId);
     if (!widget) {
       console.log('❌ Widget not found:', widgetId);
       return res.status(404).json({ error: "Widget not found" });
     }
-    
+
     console.log('✅ Widget found:', {
       id: widget._id,
       hasOpenAI: !!widget.openai,
@@ -136,31 +139,30 @@ export default async function handler(req, res) {
 
     // Check if widget has OpenAI prompt configuration for Responses API
     if (!widget.openai || !widget.openai.promptId) {
-      return res.status(400).json({ 
-        error: "Widget not configured for Responses API", 
-        details: "Widget must have openai.promptId field. Please update widget configuration." 
+      return res.status(400).json({
+        error: "Widget not configured for Responses API",
+        details: "Widget must have openai.promptId field. Please update widget configuration."
       });
     }
 
     // Validate prompt ID format
     if (!widget.openai.promptId.startsWith('pmpt_')) {
-      return res.status(400).json({ 
-        error: "Invalid prompt ID format", 
-        details: "Prompt ID must start with 'pmpt_'" 
+      return res.status(400).json({
+        error: "Invalid prompt ID format",
+        details: "Prompt ID must start with 'pmpt_'"
       });
     }
 
     // Check quota before allowing new conversations
     if (!conversationId && widget.organizationId) {
       const { checkQuota } = await import('../../lib/quota.js');
-      // Convert organizationId to string to avoid ObjectId errors
       const orgIdString = String(widget.organizationId);
       const quotaCheck = await checkQuota(orgIdString);
-      
+
       if (quotaCheck.blocked) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'Quota exceeded',
-          message: quotaCheck.message || (quotaCheck.reason === 'trial_expired' 
+          message: quotaCheck.message || (quotaCheck.reason === 'trial_expired'
             ? 'Gratis prøveperiode udløbet. Opgrader for at fortsætte.'
             : 'Månedlig samtalekvote nået. Opgrader for at fortsætte.')
         });
@@ -169,60 +171,65 @@ export default async function handler(req, res) {
 
     // Get or create conversation
     let conversation;
-    if (conversationId) {
-      try {
-        conversation = await db.collection("conversations").findOne({ 
-          _id: new ObjectId(conversationId) 
-        });
-      } catch (error) {
-        // Invalid ObjectId format, create new conversation
-        conversation = null;
-      }
+    if (conversationId && isUuid(conversationId)) {
+      const { data } = await admin.from('conversations').select('*').eq('id', conversationId).maybeSingle();
+      if (data) conversation = fromRow(data);
     }
-    
+
     if (!conversation) {
       // GDPR COMPLIANCE: Check if user has given analytics consent
       const analyticsConsent = req.headers['x-elva-consent-analytics'] === 'true';
-      
+
       // Only collect country data if consent given
       const rawIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '';
       const country = analyticsConsent ? await getCountryFromIP(rawIP) : null;
-      
+      const sessionId = `session_${Date.now()}`;
+
       // Create new conversation with proper schema
-      const newConversation = {
-        widgetId,
-        organizationId: widget.organizationId || null,
-        sessionId: `session_${Date.now()}`,
-        userId: userId || null,
-        startTime: new Date(),
-        endTime: null,
-        messageCount: 0,
+      const newRow = {
+        widget_id: widget._id,
+        widget_legacy_id: widget.legacyId || String(widgetId),
+        organization_id: widget.organizationId || null,
+        session_id: sessionId,
+        user_id: userId || null,
+        start_time: new Date().toISOString(),
+        message_count: 0,
         messages: [],
         satisfaction: null,
         tags: [],
         metadata: {
           userAgent: req.headers['user-agent'] || '',
-          // ✅ GDPR FIX: Only collect if consent given
           country: country,
           referrer: analyticsConsent ? (req.headers['referer'] || null) : null,
           consentGiven: analyticsConsent
         },
         openai: {
           lastResponseId: null,
-          conversationHistory: [] // Store response IDs for debugging
+          conversationHistory: []
         },
-        createdAt: new Date(),
-        updatedAt: new Date()
+        last_response_id: null
       };
-      const result = await db.collection("conversations").insertOne(newConversation);
-      conversation = { ...newConversation, _id: result.insertedId };
+      const { data: inserted, error: convErr } = await admin
+        .from('conversations').insert(newRow).select('id').single();
+      if (convErr) throw convErr;
+
+      conversation = {
+        _id: inserted.id,
+        widgetId: widget._id,
+        organizationId: widget.organizationId || null,
+        sessionId,
+        startTime: new Date(),
+        messageCount: 0,
+        messages: [],
+        openai: { lastResponseId: null, conversationHistory: [] },
+        isNew: true
+      };
       console.log('✅ New conversation created (Responses API):', conversation._id, 'Consent:', analyticsConsent);
-      
+
       // Increment conversation quota count
       if (widget.organizationId) {
         try {
           const { incrementConversationCount } = await import('../../lib/quota.js');
-          // Convert organizationId to string to avoid ObjectId errors
           const orgIdString = String(widget.organizationId);
           await incrementConversationCount(orgIdString);
         } catch (quotaError) {
@@ -230,9 +237,6 @@ export default async function handler(req, res) {
           // Don't fail the conversation if quota increment fails
         }
       }
-      
-      // Track that this is a new conversation for analytics
-      conversation.isNew = true;
     }
 
     // Prepare the Responses API call
@@ -290,9 +294,18 @@ export default async function handler(req, res) {
       hadImage: !!imageUrl
     });
 
+    // Ensure messages/openai exist on the local conversation object
+    if (!Array.isArray(conversation.messages)) conversation.messages = [];
+    if (!conversation.openai) {
+      conversation.openai = { lastResponseId: null, conversationHistory: [] };
+    }
+    if (!conversation.openai.conversationHistory) {
+      conversation.openai.conversationHistory = [];
+    }
+
     // Add user message to conversation
     const userMessage = {
-      id: new ObjectId().toString(),
+      id: randomUUID(),
       type: "user",
       content: message,
       imageUrl: imageUrl || null,
@@ -304,7 +317,7 @@ export default async function handler(req, res) {
 
     // Add AI response to conversation
     const aiMessage = {
-      id: new ObjectId().toString(),
+      id: randomUUID(),
       type: "assistant",
       content: aiReply,
       timestamp: new Date(),
@@ -320,34 +333,17 @@ export default async function handler(req, res) {
     conversation.messages.push(aiMessage);
 
     // Update conversation history tracking
-    if (!conversation.openai) {
-      conversation.openai = {
-        lastResponseId: null,
-        conversationHistory: []
-      };
-    }
-    if (!conversation.openai.conversationHistory) {
-      conversation.openai.conversationHistory = [];
-    }
     conversation.openai.conversationHistory.push(responseId);
     conversation.openai.lastResponseId = responseId;
-
     conversation.messageCount = conversation.messages.length;
-    conversation.updatedAt = new Date();
 
     // Update conversation in database
-    await db.collection("conversations").updateOne(
-      { _id: conversation._id },
-      { 
-        $set: { 
-          messages: conversation.messages,
-          messageCount: conversation.messageCount,
-          updatedAt: conversation.updatedAt,
-          "openai.lastResponseId": conversation.openai.lastResponseId,
-          "openai.conversationHistory": conversation.openai.conversationHistory
-        } 
-      }
-    );
+    await admin.from('conversations').update({
+      messages: conversation.messages,
+      message_count: conversation.messageCount,
+      openai: conversation.openai,
+      last_response_id: conversation.openai.lastResponseId
+    }).eq('id', conversation._id);
     console.log(
       '📝 Conversation updated (Responses API):',
       conversation._id,
@@ -358,9 +354,9 @@ export default async function handler(req, res) {
       `(${(responseTime / 1000).toFixed(2)}s)`
     );
 
-    res.json({ 
+    res.json({
       reply: aiReply,
-      conversationId: conversation._id.toString(),
+      conversationId: conversation._id,
       metadata: {
         responseId: responseId,
         promptId: widget.openai.promptId,
@@ -369,7 +365,7 @@ export default async function handler(req, res) {
       }
     });
 
-    updateAnalyticsAsync(db, widgetId, conversation, conversation.isNew);
+    updateAnalyticsAsync(widget._id, conversation, conversation.isNew);
 
   } catch (error) {
     console.error('❌ Error in /api/respond (Responses API):', error);
@@ -379,11 +375,11 @@ export default async function handler(req, res) {
       widgetId: req.body.widgetId,
       hasImage: !!req.body.imageUrl
     });
-    
+
     // Provide more specific error messages for common issues
     let errorMessage = 'Internal server error';
     let errorDetails = undefined;
-    
+
     if (error.message?.includes('prompt not found')) {
       errorMessage = 'Prompt ID not found';
       errorDetails = 'The prompt ID configured for this widget was not found on OpenAI platform';
@@ -397,8 +393,8 @@ export default async function handler(req, res) {
       errorMessage = 'Vision not enabled';
       errorDetails = 'Your OpenAI prompt/assistant does not have vision capabilities enabled. Please enable vision on platform.openai.com';
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? (errorDetails || error.message) : errorDetails
     });
@@ -453,93 +449,41 @@ function extractResponseData(response) {
   return { aiReply, responseId, usage };
 }
 
-// Helper function to update analytics
-async function updateAnalytics(db, widgetId, conversation, isNewConversation = false) {
-  const analytics = db.collection('analytics');
+// Helper function to update analytics via the atomic record_analytics_event RPC.
+async function updateAnalytics(widgetUuid, conversation, isNewConversation = false) {
+  if (!widgetUuid) return; // orphaned/unknown widget — nothing to roll up
+
   const baseDate = conversation.startTime || conversation.createdAt || new Date();
   const date = new Date(baseDate);
   const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-  
-  // IMPORTANT: Always convert widgetId to string for consistency
-  const agentIdString = typeof widgetId === 'object' ? widgetId.toString() : String(widgetId);
-  
+
   // Calculate metrics for this conversation
   const messageCount = conversation.messageCount || conversation.messages?.length || 0;
   const responseTimes = conversation.messages?.filter(m => m.responseTime && m.type === 'assistant').map(m => m.responseTime) || [];
-  const avgResponseTime = responseTimes.length > 0 
-    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
+  const avgResponseTime = responseTimes.length > 0
+    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
     : 0;
-  
-  // Only count conversations that have:
-  // 1. At least one message (messageCount > 0)
-  // 2. At least one assistant message (handled by OpenAI API)
+
+  // Only count conversations that have at least one assistant message
   const hasAssistantMessage = conversation.messages?.some(msg => msg.type === 'assistant') || false;
   const shouldCountConversation = isNewConversation && messageCount > 0 && hasAssistantMessage;
-  
+
   const sessionId = conversation.sessionId ? String(conversation.sessionId) : null;
-  const hourKey = date.getHours().toString();
+  const hour = date.getHours();
 
-  // Get or create analytics document for this day
-  const existingDoc = await analytics.findOne({ 
-    agentId: agentIdString, 
-    date: new Date(dateKey) 
+  const { error } = await admin.rpc('record_analytics_event', {
+    p_widget_id: widgetUuid,
+    p_date: dateKey,
+    p_hour: hour,
+    p_message_count: messageCount,
+    p_avg_response_time: avgResponseTime,
+    p_count_conversation: shouldCountConversation,
+    p_session_id: sessionId
   });
-  
-  if (existingDoc) {
-    // Update existing document
-    const updates = {
-      $inc: {
-        'metrics.messages': messageCount
-      },
-      $set: {
-        'metrics.avgResponseTime': Math.round(((existingDoc.metrics?.avgResponseTime || 0) + avgResponseTime) / 2),
-        [`hourly.${hourKey}`]: ((existingDoc.hourly && existingDoc.hourly[hourKey]) || 0) + 1,
-        updatedAt: new Date()
-      }
-    };
-
-    if (shouldCountConversation) {
-      updates.$inc['metrics.conversations'] = 1;
-    }
-
-    if (sessionId) {
-      const alreadyCounted = Array.isArray(existingDoc.sessionIds) && existingDoc.sessionIds.includes(sessionId);
-      if (!alreadyCounted) {
-        updates.$addToSet = { sessionIds: sessionId };
-        updates.$inc['metrics.uniqueUsers'] = 1;
-      }
-    }
-
-    await analytics.updateOne(
-      { _id: existingDoc._id },
-      updates
-    );
-  } else {
-    // Create new analytics document
-    const hourly = Array(24).fill(0);
-    hourly[date.getHours()] = 1;
-    const uniqueUsersCount = sessionId ? 1 : 0;
-    
-    await analytics.insertOne({
-      agentId: agentIdString,
-      date: new Date(dateKey),
-      metrics: {
-        conversations: shouldCountConversation ? 1 : 0,
-        messages: messageCount,
-        uniqueUsers: uniqueUsersCount,
-        responseRate: 100,
-        avgResponseTime: Math.round(avgResponseTime),
-        satisfaction: null
-      },
-      hourly: hourly.reduce((acc, count, hour) => {
-        acc[hour.toString()] = count;
-        return acc;
-      }, {}),
-      sessionIds: sessionId ? [sessionId] : [],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+  if (error) {
+    console.error('❌ Analytics RPC error:', error.message);
+    return;
   }
-  
-  console.log('📊 Analytics updated for', agentIdString, 'on', dateKey, shouldCountConversation ? '(counted conversation)' : '(did not count conversation)');
+
+  console.log('📊 Analytics updated for', widgetUuid, 'on', dateKey, shouldCountConversation ? '(counted conversation)' : '(did not count conversation)');
 }

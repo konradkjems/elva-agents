@@ -1,5 +1,6 @@
-import clientPromise from '../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -7,7 +8,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-elva-consent-analytics, x-elva-consent-functional');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -22,42 +23,44 @@ export default async function handler(req, res) {
     const { conversationId, widgetId, rating, feedback } = req.body;
 
     if (!conversationId || !widgetId || !rating) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: conversationId, widgetId, rating' 
+      return res.status(400).json({
+        error: 'Missing required fields: conversationId, widgetId, rating'
       });
     }
 
     // Validate rating
     if (rating < 1 || rating > 5 || !Number.isInteger(rating)) {
-      return res.status(400).json({ 
-        error: 'Rating must be an integer between 1 and 5' 
+      return res.status(400).json({
+        error: 'Rating must be an integer between 1 and 5'
       });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    
-    // Update conversation with rating
-    const result = await db.collection('conversations').updateOne(
-      { _id: new ObjectId(conversationId) },
-      { 
-        $set: { 
-          satisfaction: {
-            rating: rating,
-            feedback: feedback || '',
-            submittedAt: new Date(),
-            context: 'user_triggered'
-          }
-        }
-      }
-    );
-
-    if (result.matchedCount === 0) {
+    if (!UUID_RE.test(conversationId)) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    // Update satisfaction analytics
-    await updateSatisfactionAnalytics(db, widgetId, rating);
+    // Update conversation with rating
+    const { data: updated, error: updErr } = await admin
+      .from('conversations')
+      .update({
+        satisfaction: {
+          rating: rating,
+          feedback: feedback || '',
+          submittedAt: new Date().toISOString(),
+          context: 'user_triggered'
+        }
+      })
+      .eq('id', conversationId)
+      .select('id')
+      .maybeSingle();
+    if (updErr) throw updErr;
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // Update satisfaction analytics (resolve widget uuid from embed id first)
+    await updateSatisfactionAnalytics(widgetId, rating);
 
     console.log('✅ Satisfaction rating submitted:', {
       conversationId,
@@ -66,11 +69,11 @@ export default async function handler(req, res) {
       hasFeedback: !!feedback
     });
 
-    res.status(200).json({ 
+    res.status(200).json({
       success: true,
       message: 'Rating submitted successfully'
     });
-    
+
   } catch (error) {
     console.error('Rating submission error:', error);
     console.error('Error details:', {
@@ -80,69 +83,39 @@ export default async function handler(req, res) {
       widgetId: req.body.widgetId,
       rating: req.body.rating
     });
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to submit rating',
-      details: error.message 
+      details: error.message
     });
   }
 }
 
-async function updateSatisfactionAnalytics(db, widgetId, rating) {
+async function resolveWidgetUuid(widgetId) {
+  let { data } = await admin.from('widgets').select('id').eq('legacy_id', String(widgetId)).maybeSingle();
+  if (!data && UUID_RE.test(widgetId)) {
+    ({ data } = await admin.from('widgets').select('id').eq('id', widgetId).maybeSingle());
+  }
+  return data?.id || null;
+}
+
+async function updateSatisfactionAnalytics(widgetId, rating) {
   try {
+    const widgetUuid = await resolveWidgetUuid(widgetId);
+    if (!widgetUuid) {
+      console.warn('Satisfaction analytics: widget not found for', widgetId);
+      return;
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    // Get or create today's analytics record
-    const analyticsRecord = await db.collection('satisfaction_analytics').findOne({
-      widgetId: new ObjectId(widgetId),
-      date: today
+    const dateKey = today.toISOString().split('T')[0];
+
+    const { error } = await admin.rpc('record_satisfaction_rating', {
+      p_widget_id: widgetUuid,
+      p_date: dateKey,
+      p_rating: rating
     });
-
-    if (analyticsRecord) {
-      // Update existing record
-      const updateData = {
-        $inc: {
-          'ratings.total': 1,
-          [`ratings.distribution.${rating}`]: 1
-        }
-      };
-
-      // Recalculate average
-      const newTotal = analyticsRecord.ratings.total + 1;
-      const newSum = (analyticsRecord.ratings.average * analyticsRecord.ratings.total) + rating;
-      updateData.$set = {
-        'ratings.average': newSum / newTotal
-      };
-
-      await db.collection('satisfaction_analytics').updateOne(
-        { _id: analyticsRecord._id },
-        updateData
-      );
-    } else {
-      // Create new record
-      await db.collection('satisfaction_analytics').insertOne({
-        widgetId: new ObjectId(widgetId),
-        date: today,
-        ratings: {
-          total: 1,
-          average: rating,
-          distribution: {
-            1: rating === 1 ? 1 : 0,
-            2: rating === 2 ? 1 : 0,
-            3: rating === 3 ? 1 : 0,
-            4: rating === 4 ? 1 : 0,
-            5: rating === 5 ? 1 : 0
-          }
-        },
-        trends: {
-          daily: [],
-          weekly: [],
-          monthly: []
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-    }
+    if (error) console.error('Satisfaction RPC error:', error.message);
   } catch (error) {
     console.error('Failed to update satisfaction analytics:', error);
     // Don't throw error - analytics failure shouldn't break rating submission

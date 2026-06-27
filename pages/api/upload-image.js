@@ -1,8 +1,10 @@
 import { IncomingForm } from 'formidable';
 import { uploadToCloudinary } from '../../lib/cloudinary';
-import clientPromise from '../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../lib/supabase/admin';
+import { fromRow } from '../../lib/supabase/transform';
 import { widgetLimiter, runMiddleware } from '../../lib/rate-limit';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Disable body parser for multipart/form-data
 export const config = {
@@ -54,19 +56,16 @@ export default async function handler(req, res) {
     }
 
     // Get widget configuration to check if image upload is enabled
-    const client = await clientPromise;
-    const db = client.db("elva-agents");
-    
-    let queryId = widgetId;
-    if (ObjectId.isValid(widgetId)) {
-      queryId = new ObjectId(widgetId);
+    // (looked up by the embed id stored as legacy_id, falling back to uuid)
+    let { data: widgetRow } = await admin.from('widgets').select('*').eq('legacy_id', String(widgetId)).maybeSingle();
+    if (!widgetRow && UUID_RE.test(widgetId)) {
+      ({ data: widgetRow } = await admin.from('widgets').select('*').eq('id', widgetId).maybeSingle());
     }
-    
-    const widget = await db.collection("widgets").findOne({ _id: queryId });
-    
-    if (!widget) {
+
+    if (!widgetRow) {
       return res.status(404).json({ error: 'Widget not found' });
     }
+    const widget = fromRow(widgetRow);
 
     // Check if image upload is enabled for this widget (check multiple possible locations)
     const imageUploadEnabled = widget.settings?.imageUpload?.enabled || 

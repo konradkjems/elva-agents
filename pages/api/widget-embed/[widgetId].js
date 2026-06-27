@@ -1,6 +1,7 @@
-import clientPromise from '../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow } from '../../../lib/supabase/transform';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -25,30 +26,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Widget ID is required' });
     }
 
-    // Try to get widget from database
+    // Try to get widget from database (looked up by legacy embed id, then uuid)
     let widget;
-    let db; // Hoist db declaration for quota check below
     try {
-      const client = await clientPromise;
-      db = client.db('elva-agents');
-      
-      // Convert string ID to ObjectId if it's a valid ObjectId string
-      let queryId = widgetId;
-      if (ObjectId.isValid(widgetId)) {
-        queryId = new ObjectId(widgetId);
+      let { data } = await admin.from('widgets').select('*').eq('legacy_id', widgetId).maybeSingle();
+      if (!data && UUID_RE.test(widgetId)) {
+        ({ data } = await admin.from('widgets').select('*').eq('id', widgetId).maybeSingle());
       }
-      
-      // First try to find in widgets collection
-      widget = await db.collection('widgets').findOne({ _id: queryId });
-      
+
       // If not found in widgets, try demos collection
-      if (!widget) {
-        widget = await db.collection('demos').findOne({ _id: widgetId });
+      if (!data) {
+        const demoRes = await admin.from('demos').select('*').eq('legacy_id', widgetId).maybeSingle();
         console.log('📝 Widget not found in widgets collection, checking demos collection...');
-        if (widget) {
-          console.log('📝 Found widget in demos collection:', widget.name);
+        if (demoRes.data) {
+          data = demoRes.data;
+          console.log('📝 Found widget in demos collection:', data.name);
         }
       }
+
+      widget = data ? fromRow(data) : null;
     } catch (dbError) {
       console.log('Database error, using fallback widget data:', dbError.message);
       // Fallback to mock data if database fails
@@ -88,12 +84,14 @@ export default async function handler(req, res) {
     // Check if widget should be blocked due to quota
     let isBlocked = false;
     let blockReason = '';
-    if (db && widget.organizationId) {
+    if (widget.organizationId) {
       try {
-        const organization = await db.collection('organizations').findOne({
-          _id: new ObjectId(widget.organizationId)
-        });
-        
+        const { data: organization } = await admin
+          .from('organizations')
+          .select('plan, usage, trial_ends_at')
+          .eq('id', widget.organizationId)
+          .maybeSingle();
+
         if (organization) {
           const { shouldBlockWidget } = await import('../../../lib/quota.js');
           const blockCheck = shouldBlockWidget(organization);

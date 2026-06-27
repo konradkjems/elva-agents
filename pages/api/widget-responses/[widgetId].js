@@ -1,5 +1,7 @@
-import clientPromise from "../../../lib/mongodb";
-import { ObjectId } from 'mongodb';
+import { admin } from "../../../lib/supabase/admin";
+import { fromRow } from "../../../lib/supabase/transform";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -32,20 +34,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Widget ID required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db("elva-agents");
-    
-    // Convert string ID to ObjectId if it's a valid ObjectId string
-    let queryId = widgetId;
-    if (ObjectId.isValid(widgetId)) {
-      queryId = new ObjectId(widgetId);
+    // Widget is looked up by its public embed id (stored as legacy_id),
+    // falling back to the uuid id.
+    let { data: widgetRow } = await admin.from('widgets').select('*').eq('legacy_id', widgetId).maybeSingle();
+    if (!widgetRow && UUID_RE.test(widgetId)) {
+      ({ data: widgetRow } = await admin.from('widgets').select('*').eq('id', widgetId).maybeSingle());
     }
-    
-    // Get widget configuration to verify it exists and get theme
-    const widget = await db.collection("widgets").findOne({ _id: queryId });
-    if (!widget) {
+    if (!widgetRow) {
       return res.status(404).json({ error: "Widget not found" });
     }
+    const widget = fromRow(widgetRow);
 
     // Check if widget is configured for Responses API
     if (!widget.openai || !widget.openai.promptId) {
