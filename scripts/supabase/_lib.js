@@ -72,12 +72,33 @@ function chunk(arr, size) {
 }
 
 /**
+ * NOT-NULL timestamp columns (created_at/updated_at/timestamp) must never be
+ * explicit null — some Mongo docs lack updatedAt/createdAt. Fall back across
+ * each other, then to now(), so the row inserts with sensible values.
+ */
+function normalizeTimestamps(row) {
+  const now = new Date();
+  if ('created_at' in row || 'updated_at' in row) {
+    const c = row.created_at || null;
+    const u = row.updated_at || null;
+    if ('created_at' in row) row.created_at = c || u || now;
+    if ('updated_at' in row) row.updated_at = u || c || now;
+  }
+  if ('timestamp' in row && row.timestamp == null) {
+    row.timestamp = row.created_at || now;
+  }
+  return row;
+}
+
+/**
  * Upsert rows into a table in batches (idempotent on legacy_id) and return a
  * Map of legacy_id → generated uuid. Each row MUST include `legacy_id`.
  */
 async function upsertMapped(supabase, table, rows, { batchSize = 500 } = {}) {
   const map = new Map();
   if (!rows.length) return map;
+
+  rows.forEach(normalizeTimestamps);
 
   for (const batch of chunk(rows, batchSize)) {
     const { data, error } = await supabase
@@ -110,6 +131,7 @@ module.exports = {
   toDate,
   chunk,
   upsertMapped,
+  normalizeTimestamps,
   ref,
   MONGO_DB_NAME,
 };

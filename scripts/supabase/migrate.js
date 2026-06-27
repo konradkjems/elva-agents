@@ -13,7 +13,7 @@
  * first.
  */
 
-const { getMongo, getSupabase, legacyKey, toDate, upsertMapped, ref, chunk } = require('./_lib');
+const { getMongo, getSupabase, legacyKey, toDate, upsertMapped, normalizeTimestamps, ref, chunk } = require('./_lib');
 
 async function main() {
   const { client, db } = await getMongo();
@@ -267,6 +267,7 @@ async function migrateConversations(db, supabase, orgMap, widgetMap) {
   let total = 0;
   const flush = async () => {
     if (!batch.length) return;
+    batch.forEach(normalizeTimestamps);
     const { error } = await supabase.from('conversations')
       .upsert(batch, { onConflict: 'legacy_id' });
     if (error) throw error;
