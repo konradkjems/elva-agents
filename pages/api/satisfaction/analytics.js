@@ -1,5 +1,7 @@
-import clientPromise from '../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRows } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   // Handle CORS preflight requests
@@ -22,13 +24,16 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Widget ID is required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    // Resolve the widget embed id / uuid to the widget uuid (FK in analytics)
+    const widgetUuid = await resolveWidgetUuid(widgetId);
+    if (!widgetUuid) {
+      return res.status(404).json({ error: 'Widget not found' });
+    }
 
     // Calculate date range
     const endDate = new Date();
     const startDate = new Date();
-    
+
     switch (timeRange) {
       case '7d':
         startDate.setDate(endDate.getDate() - 7);
@@ -43,28 +48,48 @@ export default async function handler(req, res) {
         startDate.setDate(endDate.getDate() - 30);
     }
 
+    const startKey = startDate.toISOString().split('T')[0];
+    const endKey = endDate.toISOString().split('T')[0];
+
     // Get satisfaction analytics for the time range
-    const analytics = await db.collection('satisfaction_analytics')
-      .find({
-        widgetId: new ObjectId(widgetId),
-        date: { $gte: startDate, $lte: endDate }
-      })
-      .sort({ date: 1 })
-      .toArray();
+    const { data: analyticsRows, error: analyticsErr } = await admin
+      .from('satisfaction_analytics')
+      .select('*')
+      .eq('widget_id', widgetUuid)
+      .gte('date', startKey)
+      .lte('date', endKey)
+      .order('date', { ascending: true });
+    if (analyticsErr) throw analyticsErr;
+
+    const analytics = fromRows(analyticsRows);
 
     // Aggregate the data
     const aggregated = aggregateSatisfactionData(analytics);
 
     // Get conversation-level satisfaction data for additional insights
-    const conversations = await db.collection('conversations')
-      .find({
-        widgetId: new ObjectId(widgetId),
-        'satisfaction.rating': { $exists: true },
-        'satisfaction.submittedAt': { $gte: startDate, $lte: endDate }
+    const { data: convRows } = await admin
+      .from('conversations')
+      .select('id, satisfaction')
+      .eq('widget_id', widgetUuid)
+      .not('satisfaction', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    const recentRatings = (convRows || [])
+      .map(c => c.satisfaction ? { id: c.id, ...c.satisfaction } : null)
+      .filter(s => s && s.rating != null && s.submittedAt)
+      .filter(s => {
+        const t = new Date(s.submittedAt);
+        return t >= startDate && t <= endDate;
       })
-      .sort({ 'satisfaction.submittedAt': -1 })
-      .limit(100)
-      .toArray();
+      .sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
+      .slice(0, 100)
+      .map(s => ({
+        rating: s.rating,
+        feedback: s.feedback,
+        submittedAt: s.submittedAt,
+        conversationId: s.id
+      }));
 
     // Calculate trends
     const trends = calculateTrends(analytics, timeRange);
@@ -74,12 +99,7 @@ export default async function handler(req, res) {
       data: {
         ...aggregated,
         trends,
-        recentRatings: conversations.map(conv => ({
-          rating: conv.satisfaction.rating,
-          feedback: conv.satisfaction.feedback,
-          submittedAt: conv.satisfaction.submittedAt,
-          conversationId: conv._id
-        }))
+        recentRatings
       }
     });
 
@@ -87,6 +107,14 @@ export default async function handler(req, res) {
     console.error('Satisfaction analytics error:', error);
     res.status(500).json({ error: 'Failed to fetch satisfaction analytics' });
   }
+}
+
+async function resolveWidgetUuid(widgetId) {
+  let { data } = await admin.from('widgets').select('id').eq('legacy_id', String(widgetId)).maybeSingle();
+  if (!data && UUID_RE.test(widgetId)) {
+    ({ data } = await admin.from('widgets').select('id').eq('id', widgetId).maybeSingle());
+  }
+  return data?.id || null;
 }
 
 function aggregateSatisfactionData(analytics) {
@@ -134,7 +162,7 @@ function calculateTrends(analytics, timeRange) {
   // Group by time period and calculate averages
   const groupedByDay = {};
   analytics.forEach(record => {
-    const dateKey = record.date.toISOString().split('T')[0];
+    const dateKey = String(record.date).split('T')[0];
     if (!groupedByDay[dateKey]) {
       groupedByDay[dateKey] = [];
     }
@@ -151,7 +179,7 @@ function calculateTrends(analytics, timeRange) {
         return sum + (record.ratings.average * record.ratings.total);
       }, 0);
       const dayAverage = dayTotal > 0 ? dayWeightedSum / dayTotal : 0;
-      
+
       trends.daily.push({
         date: dateKey,
         average: Math.round(dayAverage * 10) / 10,

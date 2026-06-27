@@ -1,13 +1,18 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow, fromRows } from '../../../lib/supabase/transform';
 import { sendLiveChatRequestEmail } from '../../../lib/email';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v) {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
 
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -23,13 +28,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'conversationId is required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    if (!isUuid(conversationId)) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
 
     // Get conversation
-    const conversation = await db.collection('conversations').findOne({
-      _id: new ObjectId(conversationId)
-    });
+    const { data: convRow } = await admin
+      .from('conversations').select('*').eq('id', conversationId).maybeSingle();
+    const conversation = convRow ? fromRow(convRow) : null;
 
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
@@ -37,73 +43,70 @@ export default async function handler(req, res) {
 
     // Check if already requested or active
     if (conversation.liveChat?.status === 'requested' || conversation.liveChat?.status === 'active') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Live chat already ' + (conversation.liveChat.status === 'active' ? 'active' : 'requested'),
         status: conversation.liveChat.status,
         agentInfo: conversation.liveChat?.agentInfo || null
       });
     }
 
-    // Get widget to find organization
-    // Convert widgetId to ObjectId if it's a valid ObjectId string
-    let widgetQuery = conversation.widgetId;
-    if (ObjectId.isValid(conversation.widgetId) && typeof conversation.widgetId === 'string') {
-      widgetQuery = new ObjectId(conversation.widgetId);
+    // Get widget to find organization (widget_id is a uuid FK on conversations)
+    let widget = null;
+    if (isUuid(conversation.widgetId)) {
+      const { data: widgetRow } = await admin
+        .from('widgets').select('*').eq('id', conversation.widgetId).maybeSingle();
+      widget = widgetRow ? fromRow(widgetRow) : null;
     }
-    
-    const widget = await db.collection('widgets').findOne({
-      _id: widgetQuery
-    });
 
     if (!widget || !widget.organizationId) {
       return res.status(404).json({ error: 'Widget or organization not found' });
     }
 
-    // Update conversation with live chat request
-    const updateResult = await db.collection('conversations').updateOne(
-      { _id: new ObjectId(conversationId) },
-      {
-        $set: {
-          'liveChat.status': 'requested',
-          'liveChat.requestedAt': new Date(),
-          'liveChat.handoffReason': handoffReason || null,
-          updatedAt: new Date()
-        }
-      }
-    );
+    // Update conversation with live chat request (dot-path $set into the
+    // live_chat JSONB column → mutate the object and write it back whole)
+    const liveChat = conversation.liveChat || {};
+    liveChat.status = 'requested';
+    liveChat.requestedAt = new Date();
+    liveChat.handoffReason = handoffReason || null;
 
-    if (updateResult.modifiedCount === 0) {
+    const { error: updateError } = await admin
+      .from('conversations').update({ live_chat: liveChat }).eq('id', conversationId);
+
+    if (updateError) {
       return res.status(500).json({ error: 'Failed to update conversation' });
     }
 
     // Get organization and available agents
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(widget.organizationId)
-    });
+    const { data: orgRow } = await admin
+      .from('organizations').select('*').eq('id', widget.organizationId).maybeSingle();
+    const organization = orgRow ? fromRow(orgRow) : null;
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Get all team members who are agents
-    const teamMembers = await db.collection('team_members').find({
-      organizationId: new ObjectId(widget.organizationId),
-      status: 'active'
-    }).toArray();
+    const { data: teamMemberRows } = await admin
+      .from('team_members').select('*')
+      .eq('organization_id', widget.organizationId)
+      .eq('status', 'active');
+    const teamMembers = fromRows(teamMemberRows);
 
     const userIds = teamMembers.map(m => m.userId);
-    
+
     // Get users with agent profiles who are available
-    const agents = await db.collection('users').find({
-      _id: { $in: userIds },
-      'agentProfile.isAvailable': true
-    }).toArray();
+    let agents = [];
+    if (userIds.length > 0) {
+      const { data: userRows } = await admin
+        .from('users').select('*').in('id', userIds);
+      agents = fromRows(userRows).filter(u => u.agentProfile?.isAvailable === true);
+    }
 
     // Send email notifications to all available agents
     if (agents.length > 0 && organization.settings?.supportEmail) {
       const conversationMessages = conversation.messages || [];
       const firstUserMessage = conversationMessages.find(m => m.type === 'user' || m.role === 'user');
-      
+
       try {
         await sendLiveChatRequestEmail({
           agentEmails: agents.map(a => a.email).filter(Boolean),
@@ -129,10 +132,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error creating live chat request:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
-

@@ -1,28 +1,23 @@
 /**
  * Team Member Management API
- * 
+ *
  * PUT /api/organizations/[id]/members/[memberId] - Update member role
  * DELETE /api/organizations/[id]/members/[memberId] - Remove member
  */
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../auth/[...nextauth]';
-import clientPromise from '../../../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
-
-// Helper to check user's role in organization
-async function getUserRole(db, userId, orgId) {
-  const membership = await db.collection('team_members').findOne({
-    organizationId: new ObjectId(orgId),
-    userId: new ObjectId(userId),
-    status: 'active'
-  });
-  return membership ? membership.role : null;
-}
+import { admin } from '../../../../../lib/supabase/admin';
+import { fromRow } from '../../../../../lib/supabase/transform';
+import { getUserTeamRole } from '../../../../../lib/roleCheck';
 
 // Helper to check if user is platform admin
-async function isPlatformAdmin(db, userId) {
-  const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+async function isPlatformAdmin(userId) {
+  const { data: user } = await admin
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
   return user && user.role === 'platform_admin';
 }
 
@@ -34,46 +29,50 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const userId = new ObjectId(session.user.id);
+    const userId = session.user.id;
     const { id: orgId, memberId } = req.query;
 
-    if (!orgId || !ObjectId.isValid(orgId)) {
+    if (!orgId) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
-    if (!memberId || !ObjectId.isValid(memberId)) {
+    if (!memberId) {
       return res.status(400).json({ error: 'Invalid member ID' });
     }
 
     // Get organization
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(orgId),
-      deletedAt: { $exists: false }
-    });
+    const { data: organization } = await admin
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .is('deleted_at', null)
+      .maybeSingle();
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Check permissions
-    const userRole = await getUserRole(db, userId, orgId);
-    const isAdmin = await isPlatformAdmin(db, userId);
+    const userRole = await getUserTeamRole(userId, orgId);
+    const isAdmin = await isPlatformAdmin(userId);
 
     if (!userRole && !isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     // Get the member being managed
-    const member = await db.collection('team_members').findOne({
-      _id: new ObjectId(memberId),
-      organizationId: new ObjectId(orgId)
-    });
+    const { data: memberRow } = await admin
+      .from('team_members')
+      .select('*')
+      .eq('id', memberId)
+      .eq('organization_id', orgId)
+      .maybeSingle();
 
-    if (!member) {
+    if (!memberRow) {
       return res.status(404).json({ error: 'Member not found' });
     }
+
+    const member = fromRow(memberRow);
 
     // Prevent managing the owner
     if (member.role === 'owner' && !isAdmin) {
@@ -81,7 +80,7 @@ export default async function handler(req, res) {
     }
 
     // Prevent users from managing themselves
-    if (member.userId.toString() === userId.toString()) {
+    if (member.userId === userId) {
       return res.status(403).json({ error: 'Cannot manage your own membership' });
     }
 
@@ -136,49 +135,30 @@ export default async function handler(req, res) {
       };
 
       // Update member role
-      await db.collection('team_members').updateOne(
-        { _id: new ObjectId(memberId) },
-        {
-          $set: {
-            role,
-            permissions: permissions[role],
-            updatedAt: new Date()
-          }
-        }
-      );
+      await admin
+        .from('team_members')
+        .update({ role, permissions: permissions[role] })
+        .eq('id', memberId);
 
       // If transferring ownership, downgrade current owner to admin
       if (role === 'owner') {
-        await db.collection('team_members').updateOne(
-          { 
-            organizationId: new ObjectId(orgId),
-            role: 'owner',
-            _id: { $ne: new ObjectId(memberId) }
-          },
-          {
-            $set: {
-              role: 'admin',
-              permissions: permissions.admin,
-              updatedAt: new Date()
-            }
-          }
-        );
+        await admin
+          .from('team_members')
+          .update({ role: 'admin', permissions: permissions.admin })
+          .eq('organization_id', orgId)
+          .eq('role', 'owner')
+          .neq('id', memberId);
 
         // Update organization owner
-        await db.collection('organizations').updateOne(
-          { _id: new ObjectId(orgId) },
-          {
-            $set: {
-              ownerId: member.userId,
-              updatedAt: new Date()
-            }
-          }
-        );
+        await admin
+          .from('organizations')
+          .update({ owner_id: member.userId })
+          .eq('id', orgId);
       }
 
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'Member role updated successfully',
-        role 
+        role
       });
     }
 
@@ -192,38 +172,28 @@ export default async function handler(req, res) {
       }
 
       // Cannot remove if they're the only member
-      const memberCount = await db.collection('team_members').countDocuments({
-        organizationId: new ObjectId(orgId),
-        status: 'active'
-      });
+      const { count: memberCount } = await admin
+        .from('team_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId)
+        .eq('status', 'active');
 
-      if (memberCount <= 1) {
+      if ((memberCount || 0) <= 1) {
         return res.status(400).json({ error: 'Cannot remove the last member of the organization' });
       }
 
       // Remove member (soft delete by changing status)
-      await db.collection('team_members').updateOne(
-        { _id: new ObjectId(memberId) },
-        {
-          $set: {
-            status: 'removed',
-            removedAt: new Date(),
-            removedBy: userId,
-            updatedAt: new Date()
-          }
-        }
-      );
+      await admin
+        .from('team_members')
+        .update({ status: 'removed' })
+        .eq('id', memberId);
 
       // If this was their current organization, clear it
-      await db.collection('users').updateOne(
-        { 
-          _id: member.userId,
-          currentOrganizationId: new ObjectId(orgId)
-        },
-        {
-          $unset: { currentOrganizationId: "" }
-        }
-      );
+      await admin
+        .from('users')
+        .update({ current_organization_id: null })
+        .eq('id', member.userId)
+        .eq('current_organization_id', orgId);
 
       return res.status(200).json({ message: 'Member removed successfully' });
     }
@@ -236,4 +206,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

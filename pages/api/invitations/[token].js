@@ -1,6 +1,6 @@
 /**
  * Public Invitation API
- * 
+ *
  * GET /api/invitations/[token] - Get invitation details
  * POST /api/invitations/[token]/accept - Accept invitation
  * POST /api/invitations/[token]/decline - Decline invitation
@@ -8,13 +8,11 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow } from '../../../lib/supabase/transform';
 
 export default async function handler(req, res) {
   try {
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
     const { token, action } = req.query;
 
     if (!token) {
@@ -22,11 +20,17 @@ export default async function handler(req, res) {
     }
 
     // Get invitation
-    const invitation = await db.collection('invitations').findOne({ token });
+    const { data: invitationRow } = await admin
+      .from('invitations')
+      .select('*')
+      .eq('token', token)
+      .maybeSingle();
 
-    if (!invitation) {
+    if (!invitationRow) {
       return res.status(404).json({ error: 'Invitation not found' });
     }
+
+    const invitation = fromRow(invitationRow);
 
     // ========================================
     // GET - Get Invitation Details
@@ -34,7 +38,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       // Check if invitation is still valid
       if (invitation.status !== 'pending') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'This invitation is no longer valid',
           status: invitation.status
         });
@@ -42,35 +46,37 @@ export default async function handler(req, res) {
 
       if (new Date(invitation.expiresAt) < new Date()) {
         // Mark as expired
-        await db.collection('invitations').updateOne(
-          { _id: invitation._id },
-          { 
-            $set: { 
-              status: 'expired',
-              updatedAt: new Date()
-            }
-          }
-        );
+        await admin
+          .from('invitations')
+          .update({ status: 'expired' })
+          .eq('id', invitation.id);
 
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'This invitation has expired',
           status: 'expired'
         });
       }
 
       // Get organization details
-      const organization = await db.collection('organizations').findOne({
-        _id: invitation.organizationId
-      });
+      const { data: organizationRow } = await admin
+        .from('organizations')
+        .select('*')
+        .eq('id', invitation.organizationId)
+        .maybeSingle();
 
-      if (!organization) {
+      if (!organizationRow) {
         return res.status(404).json({ error: 'Organization not found' });
       }
 
+      const organization = fromRow(organizationRow);
+
       // Get inviter details
-      const inviter = await db.collection('users').findOne({
-        _id: invitation.invitedBy
-      });
+      const { data: inviterRow } = await admin
+        .from('users')
+        .select('*')
+        .eq('id', invitation.invitedBy)
+        .maybeSingle();
+      const inviter = fromRow(inviterRow);
 
       return res.status(200).json({
         invitation: {
@@ -109,7 +115,7 @@ export default async function handler(req, res) {
 
       // Verify email matches
       if (userEmail !== invitationEmail) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'This invitation was sent to a different email address',
           invitationEmail: invitation.email,
           yourEmail: session.user.email
@@ -118,74 +124,63 @@ export default async function handler(req, res) {
 
       // Check if invitation is still valid
       if (invitation.status !== 'pending') {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'This invitation is no longer valid',
           status: invitation.status
         });
       }
 
       if (new Date(invitation.expiresAt) < new Date()) {
-        await db.collection('invitations').updateOne(
-          { _id: invitation._id },
-          { 
-            $set: { 
-              status: 'expired',
-              updatedAt: new Date()
-            }
-          }
-        );
+        await admin
+          .from('invitations')
+          .update({ status: 'expired' })
+          .eq('id', invitation.id);
 
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'This invitation has expired'
         });
       }
 
-      const userId = new ObjectId(session.user.id);
+      const userId = session.user.id;
 
       // Handle decline
       if (action === 'decline') {
-        await db.collection('invitations').updateOne(
-          { _id: invitation._id },
-          {
-            $set: {
-              status: 'declined',
-              declinedAt: new Date(),
-              updatedAt: new Date()
-            }
-          }
-        );
+        await admin
+          .from('invitations')
+          .update({ status: 'declined' })
+          .eq('id', invitation.id);
 
-        return res.status(200).json({ 
-          message: 'Invitation declined' 
+        return res.status(200).json({
+          message: 'Invitation declined'
         });
       }
 
       // Handle accept
       if (action === 'accept') {
         // Check if user is already a member
-        const existingMember = await db.collection('team_members').findOne({
-          organizationId: invitation.organizationId,
-          userId,
-          status: 'active'
-        });
+        const { data: existingMember } = await admin
+          .from('team_members')
+          .select('id')
+          .eq('organization_id', invitation.organizationId)
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .maybeSingle();
 
         if (existingMember) {
           // Mark invitation as accepted anyway
-          await db.collection('invitations').updateOne(
-            { _id: invitation._id },
-            {
-              $set: {
-                status: 'accepted',
-                acceptedAt: new Date(),
-                updatedAt: new Date()
-              }
-            }
-          );
+          await admin
+            .from('invitations')
+            .update({
+              status: 'accepted',
+              accepted_at: new Date().toISOString(),
+              accepted_by: userId
+            })
+            .eq('id', invitation.id);
 
-          return res.status(200).json({ 
+          return res.status(200).json({
             message: 'You are already a member of this organization',
             organization: {
-              _id: invitation.organizationId.toString(),
+              _id: invitation.organizationId,
               alreadyMember: true
             }
           });
@@ -220,45 +215,42 @@ export default async function handler(req, res) {
         };
 
         // Create team member
-        const teamMember = {
-          organizationId: invitation.organizationId,
-          userId,
+        await admin.from('team_members').insert({
+          organization_id: invitation.organizationId,
+          user_id: userId,
           role: invitation.role,
           permissions: permissions[invitation.role] || permissions.member,
           status: 'active',
-          joinedAt: new Date(),
-          invitationId: invitation._id,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-
-        await db.collection('team_members').insertOne(teamMember);
+          joined_at: new Date().toISOString()
+        });
 
         // Mark invitation as accepted
-        await db.collection('invitations').updateOne(
-          { _id: invitation._id },
-          {
-            $set: {
-              status: 'accepted',
-              acceptedAt: new Date(),
-              updatedAt: new Date()
-            }
-          }
-        );
+        await admin
+          .from('invitations')
+          .update({
+            status: 'accepted',
+            accepted_at: new Date().toISOString(),
+            accepted_by: userId
+          })
+          .eq('id', invitation.id);
 
         // Set as current organization if user has no current org
-        const user = await db.collection('users').findOne({ _id: userId });
-        if (!user.currentOrganizationId) {
-          await db.collection('users').updateOne(
-            { _id: userId },
-            { $set: { currentOrganizationId: invitation.organizationId } }
-          );
+        const { data: user } = await admin
+          .from('users')
+          .select('current_organization_id')
+          .eq('id', userId)
+          .maybeSingle();
+        if (user && !user.current_organization_id) {
+          await admin
+            .from('users')
+            .update({ current_organization_id: invitation.organizationId })
+            .eq('id', userId);
         }
 
         return res.status(200).json({
           message: 'Invitation accepted successfully',
           organization: {
-            _id: invitation.organizationId.toString(),
+            _id: invitation.organizationId,
             role: invitation.role
           }
         });
@@ -275,4 +267,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

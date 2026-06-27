@@ -1,29 +1,24 @@
 /**
  * Resend Invitation API
- * 
+ *
  * POST /api/organizations/[id]/invitations/[invitationId]/resend - Resend invitation email
  */
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../../auth/[...nextauth]';
-import clientPromise from '../../../../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../../../../lib/supabase/admin';
+import { fromRow } from '../../../../../../lib/supabase/transform';
+import { getUserTeamRole } from '../../../../../../lib/roleCheck';
 import crypto from 'crypto';
 import { sendInvitationEmail } from '../../../../../../lib/email';
 
-// Helper to check user's role in organization
-async function getUserRole(db, userId, orgId) {
-  const membership = await db.collection('team_members').findOne({
-    organizationId: new ObjectId(orgId),
-    userId: new ObjectId(userId),
-    status: 'active'
-  });
-  return membership ? membership.role : null;
-}
-
 // Helper to check if user is platform admin
-async function isPlatformAdmin(db, userId) {
-  const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+async function isPlatformAdmin(userId) {
+  const { data: user } = await admin
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
   return user && user.role === 'platform_admin';
 }
 
@@ -39,32 +34,32 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const userId = new ObjectId(session.user.id);
+    const userId = session.user.id;
     const { id: orgId, invitationId } = req.query;
 
-    if (!orgId || !ObjectId.isValid(orgId)) {
+    if (!orgId) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
-    if (!invitationId || !ObjectId.isValid(invitationId)) {
+    if (!invitationId) {
       return res.status(400).json({ error: 'Invalid invitation ID' });
     }
 
     // Get organization
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(orgId),
-      deletedAt: { $exists: false }
-    });
+    const { data: organization } = await admin
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .is('deleted_at', null)
+      .maybeSingle();
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Check permissions
-    const userRole = await getUserRole(db, userId, orgId);
-    const isAdmin = await isPlatformAdmin(db, userId);
+    const userRole = await getUserTeamRole(userId, orgId);
+    const isAdmin = await isPlatformAdmin(userId);
 
     if (!userRole && !isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
@@ -76,18 +71,22 @@ export default async function handler(req, res) {
     }
 
     // Get invitation
-    const invitation = await db.collection('invitations').findOne({
-      _id: new ObjectId(invitationId),
-      organizationId: new ObjectId(orgId)
-    });
+    const { data: invitationRow } = await admin
+      .from('invitations')
+      .select('*')
+      .eq('id', invitationId)
+      .eq('organization_id', orgId)
+      .maybeSingle();
 
-    if (!invitation) {
+    if (!invitationRow) {
       return res.status(404).json({ error: 'Invitation not found' });
     }
 
+    const invitation = fromRow(invitationRow);
+
     // Can only resend pending invitations
     if (invitation.status !== 'pending') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Only pending invitations can be resent',
         status: invitation.status
       });
@@ -97,19 +96,13 @@ export default async function handler(req, res) {
     const newToken = crypto.randomBytes(32).toString('hex');
     const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
 
-    await db.collection('invitations').updateOne(
-      { _id: new ObjectId(invitationId) },
-      {
-        $set: {
-          token: newToken,
-          expiresAt: newExpiresAt,
-          resentAt: new Date(),
-          resentBy: userId,
-          updatedAt: new Date()
-        },
-        $inc: { resentCount: 1 }
-      }
-    );
+    await admin
+      .from('invitations')
+      .update({
+        token: newToken,
+        expires_at: newExpiresAt.toISOString()
+      })
+      .eq('id', invitationId);
 
     // Send invitation email with new token
     try {
@@ -136,4 +129,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

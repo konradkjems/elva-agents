@@ -1,6 +1,8 @@
-import clientPromise from '../../../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../../../lib/supabase/admin';
+import { fromRows } from '../../../../../lib/supabase/transform';
 import { withAdmin } from '../../../../../lib/auth';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,37 +12,47 @@ async function handler(req, res) {
 
   try {
     const { widgetId } = req.query;
-    const { 
+    const {
       period = 'all',
       search = '',
       limit = 100,
       offset = 0
     } = req.query;
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const conversationsCollection = db.collection('conversations');
+    // The URL param may be the public/embed id (legacy_id) or the uuid.
+    // Resolve to the widget uuid so we can filter conversations by widget_id.
+    let { data: widgetRow } = await admin
+      .from('widgets')
+      .select('id')
+      .eq('legacy_id', widgetId)
+      .maybeSingle();
+    if (!widgetRow && UUID_RE.test(widgetId)) {
+      ({ data: widgetRow } = await admin
+        .from('widgets')
+        .select('id')
+        .eq('id', widgetId)
+        .maybeSingle());
+    }
 
-    // widgetId can be stored as ObjectId or string in conversations
-    // Match both possibilities
-    const widgetIdString = String(widgetId);
-    const widgetIdObjectId = ObjectId.isValid(widgetId) ? new ObjectId(widgetId) : widgetId;
+    if (!widgetRow) {
+      console.log(`📞 Widget not found for id ${widgetId}`);
+      return res.status(200).json([]);
+    }
 
-    // Build query - match widgetId as both string and ObjectId
-    const queryConditions = [
-      {
-        $or: [
-          { widgetId: widgetIdObjectId },
-          { widgetId: widgetIdString }
-        ]
-      }
-    ];
+    const limitNum = parseInt(limit);
+    const offsetNum = parseInt(offset);
 
-    // Add date filtering
+    // Build conversations query scoped to the widget uuid
+    let query = admin
+      .from('conversations')
+      .select('*')
+      .eq('widget_id', widgetRow.id);
+
+    // Add date filtering — match either created_at or start_time
     if (period !== 'all') {
       const now = new Date();
       let startDate;
-      
+
       switch (period) {
         case 'today':
           startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -52,39 +64,33 @@ async function handler(req, res) {
           startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           break;
       }
-      
+
       if (startDate) {
-        // Use $or to match either createdAt or startTime
-        queryConditions.push({
-          $or: [
-            { createdAt: { $gte: startDate } },
-            { startTime: { $gte: startDate } }
-          ]
-        });
+        const iso = startDate.toISOString();
+        query = query.or(`created_at.gte.${iso},start_time.gte.${iso}`);
       }
     }
 
-    // Add search filtering
+    query = query
+      .order('start_time', { ascending: false })
+      .range(offsetNum, offsetNum + limitNum - 1);
+
+    console.log('📞 Conversations query:', { widgetId, widgetUuid: widgetRow.id, period, search });
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let allConversations = fromRows(data);
+
+    // Search filtering on JSONB message content (applied in JS — Postgres jsonb
+    // arrays aren't directly substring-searchable via PostgREST)
     if (search) {
-      queryConditions.push({
-        'messages.content': { $regex: search, $options: 'i' }
-      });
+      const needle = String(search).toLowerCase();
+      allConversations = allConversations.filter(conv =>
+        Array.isArray(conv.messages) &&
+        conv.messages.some(msg => (msg.content || '').toLowerCase().includes(needle))
+      );
     }
-
-    // Combine all conditions with $and
-    const query = queryConditions.length > 1 
-      ? { $and: queryConditions }
-      : queryConditions[0];
-
-    console.log('📞 Conversations query:', { query, period, search });
-
-    // Fetch conversations
-    const allConversations = await conversationsCollection
-      .find(query)
-      .sort({ startTime: -1 })
-      .limit(parseInt(limit))
-      .skip(parseInt(offset))
-      .toArray();
 
     console.log(`📞 Found ${allConversations.length} conversations for widget ${widgetId}`);
 
@@ -92,7 +98,7 @@ async function handler(req, res) {
     const validConversations = allConversations.filter(conv => {
       // Must have at least one message
       if (!conv.messageCount || conv.messageCount === 0) return false;
-      
+
       // Must have at least one assistant message (handled by OpenAI)
       if (!conv.messages || !Array.isArray(conv.messages)) return false;
       const hasAssistantMessage = conv.messages.some(msg => msg.type === 'assistant');
@@ -105,7 +111,7 @@ async function handler(req, res) {
     // messageCount should only count assistant messages
     const transformedConversations = validConversations.map(conv => {
       const assistantMessageCount = conv.messages?.filter(msg => msg.type === 'assistant').length || 0;
-      
+
       return {
         _id: conv._id,
         widgetId: conv.widgetId,

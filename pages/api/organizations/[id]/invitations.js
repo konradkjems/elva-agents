@@ -1,6 +1,6 @@
 /**
  * Organization Invitations API
- * 
+ *
  * POST /api/organizations/[id]/invitations - Send invitation
  * GET /api/organizations/[id]/invitations - List invitations (implemented in [id]/index.js)
  * DELETE /api/organizations/[id]/invitations/[invitationId] - Cancel invitation
@@ -8,24 +8,19 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import clientPromise from '../../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../../lib/supabase/admin';
+import { fromRow } from '../../../../lib/supabase/transform';
+import { getUserTeamRole } from '../../../../lib/roleCheck';
 import crypto from 'crypto';
 import { sendInvitationEmail } from '../../../../lib/email';
 
-// Helper to check user's role in organization
-async function getUserRole(db, userId, orgId) {
-  const membership = await db.collection('team_members').findOne({
-    organizationId: new ObjectId(orgId),
-    userId: new ObjectId(userId),
-    status: 'active'
-  });
-  return membership ? membership.role : null;
-}
-
 // Helper to check if user is platform admin
-async function isPlatformAdmin(db, userId) {
-  const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+async function isPlatformAdmin(userId) {
+  const { data: user } = await admin
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
   return user && user.role === 'platform_admin';
 }
 
@@ -37,28 +32,28 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const userId = new ObjectId(session.user.id);
+    const userId = session.user.id;
     const { id: orgId } = req.query;
 
-    if (!orgId || !ObjectId.isValid(orgId)) {
+    if (!orgId) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
     // Get organization
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(orgId),
-      deletedAt: { $exists: false }
-    });
+    const { data: organization } = await admin
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .is('deleted_at', null)
+      .maybeSingle();
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Check permissions
-    const userRole = await getUserRole(db, userId, orgId);
-    const isAdmin = await isPlatformAdmin(db, userId);
+    const userRole = await getUserTeamRole(userId, orgId);
+    const isAdmin = await isPlatformAdmin(userId);
 
     if (!userRole && !isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
@@ -90,35 +85,41 @@ export default async function handler(req, res) {
       const normalizedEmail = email.toLowerCase().trim();
 
       // Check if user is already a member
-      const existingUser = await db.collection('users').findOne({ 
-        email: normalizedEmail 
-      });
+      const { data: existingUser } = await admin
+        .from('users')
+        .select('id')
+        .eq('email', normalizedEmail)
+        .maybeSingle();
 
       if (existingUser) {
-        const existingMember = await db.collection('team_members').findOne({
-          organizationId: new ObjectId(orgId),
-          userId: existingUser._id,
-          status: { $in: ['active', 'invited'] }
-        });
+        const { data: existingMember } = await admin
+          .from('team_members')
+          .select('id')
+          .eq('organization_id', orgId)
+          .eq('user_id', existingUser.id)
+          .in('status', ['active', 'invited'])
+          .maybeSingle();
 
         if (existingMember) {
-          return res.status(409).json({ 
-            error: 'User is already a member of this organization' 
+          return res.status(409).json({
+            error: 'User is already a member of this organization'
           });
         }
       }
 
       // Check for pending invitation
-      const existingInvitation = await db.collection('invitations').findOne({
-        organizationId: new ObjectId(orgId),
-        email: normalizedEmail,
-        status: 'pending',
-        expiresAt: { $gt: new Date() }
-      });
+      const { data: existingInvitation } = await admin
+        .from('invitations')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('email', normalizedEmail)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
 
       if (existingInvitation) {
-        return res.status(409).json({ 
-          error: 'An invitation has already been sent to this email' 
+        return res.status(409).json({
+          error: 'An invitation has already been sent to this email'
         });
       }
 
@@ -126,19 +127,22 @@ export default async function handler(req, res) {
       const token = crypto.randomBytes(32).toString('hex');
 
       // Create invitation
-      const invitation = {
-        organizationId: new ObjectId(orgId),
-        email: normalizedEmail,
-        role,
-        token,
-        invitedBy: userId,
-        status: 'pending',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      const { data: invitationRow, error: invErr } = await admin
+        .from('invitations')
+        .insert({
+          organization_id: orgId,
+          email: normalizedEmail,
+          role,
+          token,
+          invited_by: userId,
+          status: 'pending',
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+        })
+        .select('*')
+        .single();
+      if (invErr) throw invErr;
 
-      await db.collection('invitations').insertOne(invitation);
+      const invitation = fromRow(invitationRow);
 
       // Send invitation email
       try {
@@ -156,7 +160,12 @@ export default async function handler(req, res) {
       }
 
       // Get inviter details for response
-      const inviter = await db.collection('users').findOne({ _id: userId });
+      const { data: inviterRow } = await admin
+        .from('users')
+        .select('id, name, email')
+        .eq('id', userId)
+        .maybeSingle();
+      const inviter = fromRow(inviterRow);
 
       return res.status(201).json({
         invitation: {
@@ -184,4 +193,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

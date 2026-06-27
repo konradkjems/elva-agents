@@ -1,14 +1,16 @@
 /**
  * Audit Logs API
- * 
+ *
  * GET /api/admin/audit-logs - View audit trail of GDPR actions
- * 
+ *
  * GDPR Accountability requirement (Article 5(2))
  */
 
 import { getToken } from 'next-auth/jwt';
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRows } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -17,68 +19,67 @@ export default async function handler(req, res) {
 
   try {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    
+
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-
     // Query parameters
-    const { 
-      page = '1', 
-      limit = '50', 
-      action, 
+    const {
+      page = '1',
+      limit = '50',
+      action,
       userId,
       startDate,
-      endDate 
+      endDate
     } = req.query;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitNum = parseInt(limit);
+    const pageNum = parseInt(page);
+    const from = (pageNum - 1) * limitNum;
+    const to = from + limitNum - 1;
 
-    // Build filter
-    const filter = {};
-    
+    // Build query with filters
+    let query = admin
+      .from('audit_log')
+      .select('*', { count: 'exact' });
+
     if (action) {
-      filter.action = action;
-    }
-    
-    if (userId) {
-      filter.userId = new ObjectId(userId);
-    }
-    
-    if (startDate || endDate) {
-      filter.timestamp = {};
-      if (startDate) {
-        filter.timestamp.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        filter.timestamp.$lte = new Date(endDate);
-      }
+      query = query.eq('action', action);
     }
 
-    // Get audit logs
-    const logs = await db.collection('audit_log')
-      .find(filter)
-      .sort({ timestamp: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .toArray();
+    if (userId && UUID_RE.test(userId)) {
+      query = query.eq('user_id', userId);
+    }
 
-    // Get total count
-    const total = await db.collection('audit_log').countDocuments(filter);
+    if (startDate) {
+      query = query.gte('timestamp', new Date(startDate).toISOString());
+    }
+    if (endDate) {
+      query = query.lte('timestamp', new Date(endDate).toISOString());
+    }
 
-    // Get unique actions for filter
-    const actions = await db.collection('audit_log').distinct('action');
+    query = query.order('timestamp', { ascending: false }).range(from, to);
+
+    const { data: rows, count, error } = await query;
+    if (error) throw error;
+
+    const logs = fromRows(rows);
+    const total = count || 0;
+
+    // Get unique actions for filter dropdown
+    const { data: actionRows } = await admin
+      .from('audit_log')
+      .select('action');
+    const actions = [...new Set((actionRows || []).map(r => r.action).filter(Boolean))];
 
     return res.status(200).json({
       logs,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / limitNum)
       },
       actions, // For dropdown filter
       filters: {
@@ -94,4 +95,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to fetch audit logs' });
   }
 }
-

@@ -1,8 +1,9 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../auth/[...nextauth]';
-import clientPromise from '../../../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../../../lib/supabase/admin';
 import { manualResetQuota, getUsageStats } from '../../../../../lib/quota.js';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -23,30 +24,30 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Forbidden: Platform admin access required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
     const { id: orgId } = req.query;
 
     // Validate organization ID
-    if (!ObjectId.isValid(orgId)) {
+    if (!UUID_RE.test(orgId)) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
     // Check if organization exists
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(orgId)
-    });
+    const { data: organization } = await admin
+      .from('organizations')
+      .select('id, name, plan')
+      .eq('id', orgId)
+      .maybeSingle();
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Reset the quota
-    const resetBy = new ObjectId(session.user.id);
-    await manualResetQuota(new ObjectId(orgId), resetBy);
+    const resetBy = session.user.id;
+    await manualResetQuota(orgId, resetBy);
 
     // Get updated usage stats
-    const stats = await getUsageStats(new ObjectId(orgId));
+    const stats = await getUsageStats(orgId);
 
     console.log(`✅ Platform admin ${session.user.email} reset quota for ${organization.name}`);
 
@@ -55,7 +56,7 @@ export default async function handler(req, res) {
       message: 'Quota reset successfully',
       usage: stats,
       organization: {
-        id: organization._id,
+        id: organization.id,
         name: organization.name,
         plan: organization.plan
       }
@@ -63,10 +64,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Error resetting quota:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
-      details: error.message 
+      details: error.message
     });
   }
 }
-

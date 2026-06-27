@@ -1,11 +1,11 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow, fromRows } from '../../../lib/supabase/transform';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
-  
+
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -15,38 +15,36 @@ export default async function handler(req, res) {
   }
 
   try {
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    
     // Get user's organization
-    const user = await db.collection('users').findOne({ 
-      email: session.user.email 
-    });
+    const { data: userRow } = await admin
+      .from('users').select('*').eq('email', session.user.email).maybeSingle();
+    const user = userRow ? fromRow(userRow) : null;
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Get user's organization memberships
-    const memberships = await db.collection('team_members').find({
-      userId: user._id,
-      status: 'active'
-    }).toArray();
+    const { data: membershipRows } = await admin
+      .from('team_members').select('*')
+      .eq('user_id', user._id)
+      .eq('status', 'active');
+    const memberships = fromRows(membershipRows);
 
     // Use current organization if available, otherwise use all memberships
     let organizationIds;
     if (session.user.currentOrganizationId) {
-      const hasAccess = memberships.some(m => 
-        m.organizationId.toString() === session.user.currentOrganizationId
+      const hasAccess = memberships.some(m =>
+        String(m.organizationId) === session.user.currentOrganizationId
       );
-      
+
       if (hasAccess) {
-        organizationIds = [new ObjectId(session.user.currentOrganizationId)];
+        organizationIds = [session.user.currentOrganizationId];
       } else {
-        organizationIds = memberships.map(m => new ObjectId(m.organizationId));
+        organizationIds = memberships.map(m => m.organizationId);
       }
     } else {
-      organizationIds = memberships.map(m => new ObjectId(m.organizationId));
+      organizationIds = memberships.map(m => m.organizationId);
     }
 
     if (organizationIds.length === 0) {
@@ -54,41 +52,45 @@ export default async function handler(req, res) {
     }
 
     // Get all widgets for these organizations
-    const widgets = await db.collection('widgets').find({
-      organizationId: { $in: organizationIds }
-    }).toArray();
+    const { data: widgetRows } = await admin
+      .from('widgets').select('*').in('organization_id', organizationIds);
+    const widgets = fromRows(widgetRows);
 
     const widgetIds = widgets.map(w => w._id);
-    // Also include string versions for conversations that store widgetId as string
-    const widgetIdsWithStrings = [...widgetIds, ...widgetIds.map(id => id.toString())];
 
-    // Get all conversations with requested live chat status
-    const conversations = await db.collection('conversations').find({
-      widgetId: { $in: widgetIdsWithStrings },
-      'liveChat.status': 'requested'
-    })
-    .sort({ 'liveChat.requestedAt': 1 }) // Oldest first
-    .toArray();
+    // Get all conversations with requested live chat status (oldest first)
+    let conversations = [];
+    if (widgetIds.length > 0) {
+      const { data: convRows } = await admin
+        .from('conversations').select('*')
+        .in('widget_id', widgetIds)
+        .eq('live_chat->>status', 'requested')
+        .order('live_chat->>requestedAt', { ascending: true });
+      conversations = fromRows(convRows);
+    }
 
     // Enrich with widget and organization info
     const queueItems = await Promise.all(
       conversations.map(async (conv) => {
-        const widget = widgets.find(w => 
-          w._id.toString() === conv.widgetId.toString()
+        const widget = widgets.find(w =>
+          String(w._id) === String(conv.widgetId)
         );
-        
-        const organization = widget ? await db.collection('organizations').findOne({
-          _id: widget.organizationId
-        }) : null;
+
+        let organization = null;
+        if (widget) {
+          const { data: orgRow } = await admin
+            .from('organizations').select('*').eq('id', widget.organizationId).maybeSingle();
+          organization = orgRow ? fromRow(orgRow) : null;
+        }
 
         // Calculate wait time
-        const waitTime = conv.liveChat?.requestedAt 
+        const waitTime = conv.liveChat?.requestedAt
           ? Math.floor((new Date() - new Date(conv.liveChat.requestedAt)) / 1000)
           : 0;
 
         return {
-          conversationId: conv._id.toString(),
-          widgetId: conv.widgetId.toString(),
+          conversationId: String(conv._id),
+          widgetId: conv.widgetId != null ? String(conv.widgetId) : conv.widgetId,
           widgetName: widget?.name || 'Unknown Widget',
           organizationName: organization?.name || 'Unknown Organization',
           requestedAt: conv.liveChat?.requestedAt,
@@ -109,10 +111,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error fetching live chat queue:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
-

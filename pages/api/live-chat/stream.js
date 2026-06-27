@@ -1,5 +1,10 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v) {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
 
 // Store active connections - Map<conversationId, Set<res>>
 const activeConnections = new Map();
@@ -12,7 +17,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -20,7 +25,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  
+
   console.log('📡 SSE endpoint called:', req.url);
 
   try {
@@ -32,6 +37,11 @@ export default async function handler(req, res) {
 
     // Normalize conversationId to string
     const convId = conversationId.toString();
+
+    if (!isUuid(convId)) {
+      return res.status(400).json({ error: 'Invalid conversationId' });
+    }
+
     console.log('SSE connection established for conversation:', convId);
 
     // Set headers for SSE
@@ -59,11 +69,9 @@ export default async function handler(req, res) {
     res.write(`data: ${JSON.stringify({ type: 'connected', conversationId: convId })}\n\n`);
 
     // Send initial state
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const conversation = await db.collection('conversations').findOne({
-      _id: new ObjectId(convId)
-    });
+    const { data: initialRow } = await admin
+      .from('conversations').select('*').eq('id', convId).maybeSingle();
+    const conversation = initialRow ? fromRow(initialRow) : null;
 
     if (conversation) {
       const initialStatus = {
@@ -74,7 +82,7 @@ export default async function handler(req, res) {
       };
       console.log('Sending initial status:', initialStatus);
       res.write(`data: ${JSON.stringify(initialStatus)}\n\n`);
-      
+
       // Also send existing messages
       const messages = conversation.messages || [];
       console.log(`Conversation has ${messages.length} messages`);
@@ -97,9 +105,9 @@ export default async function handler(req, res) {
           return;
         }
 
-        const conversation = await db.collection('conversations').findOne({
-          _id: new ObjectId(convId)
-        });
+        const { data: pollRow } = await admin
+          .from('conversations').select('*').eq('id', convId).maybeSingle();
+        const conversation = pollRow ? fromRow(pollRow) : null;
 
         if (!conversation) {
           res.write(`data: ${JSON.stringify({ type: 'error', error: 'Conversation not found' })}\n\n`);
@@ -112,7 +120,7 @@ export default async function handler(req, res) {
         const currentStatus = conversation.liveChat?.status || 'ai';
         const storedStatusKey = `${convId}-status-${res}`;
         const lastStatus = lastStatusMap.get(storedStatusKey);
-        
+
         if (lastStatus !== currentStatus) {
           lastStatusMap.set(storedStatusKey, currentStatus);
           const statusUpdate = {
@@ -129,10 +137,10 @@ export default async function handler(req, res) {
         if (messages.length > 0) {
           const storedLastId = lastMessageIds.get(`${convId}-${res}`);
           const lastMessage = messages[messages.length - 1];
-          
+
           if (!storedLastId || lastMessage.id !== storedLastId) {
             lastMessageIds.set(`${convId}-${res}`, lastMessage.id);
-            
+
             // Send only new messages
             let messagesToSend = messages;
             if (storedLastId) {
@@ -141,7 +149,7 @@ export default async function handler(req, res) {
                 messagesToSend = messages.slice(lastIndex + 1);
               }
             }
-            
+
             messagesToSend.forEach(msg => {
               const messageUpdate = {
                 type: 'message',
@@ -179,7 +187,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Error setting up SSE stream:', error);
     if (!res.closed && !res.destroyed) {
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -207,7 +215,7 @@ export function broadcastToConversation(conversationId, data) {
   const convId = conversationId.toString();
   console.log('broadcastToConversation called with conversationId:', convId);
   console.log('Active connections keys:', Array.from(activeConnections.keys()));
-  
+
   const connections = activeConnections.get(convId);
   if (connections) {
     console.log(`Found ${connections.size} active connections for conversation ${convId}`);
@@ -229,4 +237,3 @@ export function broadcastToConversation(conversationId, data) {
     console.log(`No active connections found for conversation ${convId}`);
   }
 }
-

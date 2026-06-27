@@ -1,5 +1,34 @@
-import clientPromise from '../../../../lib/mongodb';
+import { admin } from '../../../../lib/supabase/admin';
+import { fromRow, toSnake } from '../../../../lib/supabase/transform';
 import { deleteFromCloudinary } from '../../../../lib/cloudinary';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Demo widgets live in the widgets table (is_demo_mode = true). The demoId in
+// the URL is the widget's custom string legacy_id; fall back to the uuid id.
+async function findDemoWidgetRow(demoId) {
+  let { data } = await admin
+    .from('widgets')
+    .select('*')
+    .eq('legacy_id', demoId)
+    .eq('is_demo_mode', true)
+    .maybeSingle();
+  if (!data && UUID_RE.test(demoId)) {
+    ({ data } = await admin
+      .from('widgets')
+      .select('*')
+      .eq('id', demoId)
+      .eq('is_demo_mode', true)
+      .maybeSingle());
+  }
+  return data || null;
+}
+
+function serializeDemo(row) {
+  const demo = fromRow(row);
+  if (demo && demo.legacyId) demo._id = demo.legacyId;
+  return demo;
+}
 
 export default async function handler(req, res) {
   const { demoId } = req.query;
@@ -9,66 +38,58 @@ export default async function handler(req, res) {
   }
 
   try {
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-
     if (req.method === 'GET') {
       // Get demo widget
-      const demo = await db.collection('widgets').findOne({ 
-        _id: demoId,
-        isDemoMode: true 
-      });
+      const demo = await findDemoWidgetRow(demoId);
 
       if (!demo) {
         return res.status(404).json({ message: 'Demo widget not found' });
       }
 
-      return res.status(200).json(demo);
+      return res.status(200).json(serializeDemo(demo));
     }
 
     if (req.method === 'PUT') {
       // Update demo widget
-      const updateData = req.body;
-      
-      // Remove fields that shouldn't be updated directly
-      delete updateData._id;
-      delete updateData.createdAt;
-      
-      // Add updated timestamp
-      updateData.updatedAt = new Date();
-
-      const result = await db.collection('widgets').updateOne(
-        { _id: demoId, isDemoMode: true },
-        { $set: updateData }
-      );
-
-      if (result.matchedCount === 0) {
+      const demo = await findDemoWidgetRow(demoId);
+      if (!demo) {
         return res.status(404).json({ message: 'Demo widget not found' });
       }
 
-      return res.status(200).json({ 
+      const patch = toSnake(req.body);
+      // Remove fields that shouldn't be updated directly / are trigger-managed
+      delete patch.id;
+      delete patch.created_at;
+      delete patch.updated_at;
+
+      const { data, error } = await admin
+        .from('widgets')
+        .update(patch)
+        .eq('id', demo.id)
+        .eq('is_demo_mode', true)
+        .select('id');
+      if (error) throw error;
+
+      return res.status(200).json({
         message: 'Demo widget updated successfully',
-        modifiedCount: result.modifiedCount 
+        modifiedCount: data ? data.length : 0
       });
     }
 
     if (req.method === 'DELETE') {
       // First, get the demo widget to check for screenshot
-      const demo = await db.collection('widgets').findOne({ 
-        _id: demoId,
-        isDemoMode: true 
-      });
+      const demo = await findDemoWidgetRow(demoId);
 
       if (!demo) {
         return res.status(404).json({ message: 'Demo widget not found' });
       }
 
       // Delete screenshot from Cloudinary if it exists
-      if (demo.demoSettings?.screenshotPublicId) {
+      if (demo.demo_settings?.screenshotPublicId) {
         try {
-          const deleteResult = await deleteFromCloudinary(demo.demoSettings.screenshotPublicId);
+          const deleteResult = await deleteFromCloudinary(demo.demo_settings.screenshotPublicId);
           if (deleteResult.success) {
-            console.log(`📸 Screenshot deleted from Cloudinary: ${demo.demoSettings.screenshotPublicId}`);
+            console.log(`📸 Screenshot deleted from Cloudinary: ${demo.demo_settings.screenshotPublicId}`);
           } else {
             console.warn(`📸 Failed to delete screenshot from Cloudinary: ${deleteResult.error}`);
           }
@@ -78,22 +99,24 @@ export default async function handler(req, res) {
       }
 
       // Delete demo widget from database
-      const result = await db.collection('widgets').deleteOne({ 
-        _id: demoId,
-        isDemoMode: true 
-      });
+      const { error } = await admin
+        .from('widgets')
+        .delete()
+        .eq('id', demo.id)
+        .eq('is_demo_mode', true);
+      if (error) throw error;
 
-      return res.status(200).json({ 
-        message: 'Demo widget deleted successfully' 
+      return res.status(200).json({
+        message: 'Demo widget deleted successfully'
       });
     }
 
     return res.status(405).json({ message: 'Method not allowed' });
   } catch (error) {
     console.error('Demo widget API error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Internal server error',
-      error: error.message 
+      error: error.message
     });
   }
 }

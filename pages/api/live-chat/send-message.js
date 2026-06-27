@@ -1,11 +1,17 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
+import { randomUUID } from 'crypto';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow } from '../../../lib/supabase/transform';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v) {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
+
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
-  
+
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -21,32 +27,33 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'conversationId and message are required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    if (!isUuid(conversationId)) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
 
     // Get user
-    const user = await db.collection('users').findOne({ 
-      email: session.user.email 
-    });
+    const { data: userRow } = await admin
+      .from('users').select('*').eq('email', session.user.email).maybeSingle();
+    const user = userRow ? fromRow(userRow) : null;
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Get conversation
-    const conversation = await db.collection('conversations').findOne({
-      _id: new ObjectId(conversationId)
-    });
+    const { data: convRow } = await admin
+      .from('conversations').select('*').eq('id', conversationId).maybeSingle();
+    const conversation = convRow ? fromRow(convRow) : null;
 
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
     // Verify user is the agent for this conversation
-    if (conversation.liveChat?.status !== 'active' || 
+    if (conversation.liveChat?.status !== 'active' ||
         conversation.liveChat?.acceptedBy?.toString() !== user._id.toString()) {
-      return res.status(403).json({ 
-        error: 'You are not the active agent for this conversation' 
+      return res.status(403).json({
+        error: 'You are not the active agent for this conversation'
       });
     }
 
@@ -59,7 +66,7 @@ export default async function handler(req, res) {
 
     // Create agent message
     const agentMessage = {
-      id: new ObjectId().toString(),
+      id: randomUUID(),
       type: 'agent',
       role: 'agent',
       content: message,
@@ -67,15 +74,13 @@ export default async function handler(req, res) {
       agentInfo: agentInfo
     };
 
-    // Add message to conversation
-    await db.collection('conversations').updateOne(
-      { _id: new ObjectId(conversationId) },
-      {
-        $push: { messages: agentMessage },
-        $inc: { messageCount: 1 },
-        $set: { updatedAt: new Date() }
-      }
-    );
+    // Add message to conversation ($push into the messages JSONB column)
+    const messages = Array.isArray(conversation.messages) ? conversation.messages : [];
+    messages.push(agentMessage);
+    await admin.from('conversations').update({
+      messages: messages,
+      message_count: messages.length
+    }).eq('id', conversationId);
 
     // Broadcast to SSE connections
     try {
@@ -99,10 +104,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error sending agent message:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
-

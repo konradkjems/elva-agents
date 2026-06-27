@@ -1,8 +1,15 @@
-import clientPromise from '../../../lib/mongodb.js';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRows } from '../../../lib/supabase/transform';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { ObjectId } from 'mongodb';
 import { getCache, setCache, generateCacheKey } from '../../../lib/cache.js';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// analytics.date is a DATE column — compare against YYYY-MM-DD strings.
+function toDateStr(d) {
+  return d ? new Date(d).toISOString().split('T')[0] : null;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -20,8 +27,8 @@ export default async function handler(req, res) {
     const currentOrgId = session.user?.currentOrganizationId;
     const isPlatformAdmin = session.user?.role === 'platform_admin';
 
-    const { 
-      widgetId, 
+    const {
+      widgetId,
       period = '7d', // 1d, 7d, 30d, 90d, all, custom
       timezone = 'UTC',
       startDate: customStartDate,
@@ -40,7 +47,7 @@ export default async function handler(req, res) {
 
     // Check for manual refresh parameter
     const shouldRefresh = req.query.refresh === 'true';
-    
+
     // Check cache (60 second TTL for analytics metrics) - skip if refresh requested
     if (!shouldRefresh) {
       const cached = getCache(cacheKey);
@@ -52,16 +59,11 @@ export default async function handler(req, res) {
       console.log('🔄 Manual refresh requested for analytics-metrics');
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const analytics = db.collection('analytics');
-    const widgets = db.collection('widgets');
-
     // Calculate date range
     const now = new Date();
     let startDate;
     let endDate = now;
-    
+
     if (period === 'custom' && customStartDate && customEndDate) {
       startDate = new Date(customStartDate);
       endDate = new Date(customEndDate);
@@ -85,18 +87,20 @@ export default async function handler(req, res) {
     }
 
     // First, get widgets for current organization
-    const widgetQuery = {
-      isDemoMode: { $ne: true }
-    };
-    
+    let widgetQuery = admin
+      .from('widgets')
+      .select('id, name, created_at, updated_at')
+      .eq('is_demo_mode', false);
+
     // Filter by organization unless platform admin viewing all
-    if (currentOrgId && !isPlatformAdmin) {
-      widgetQuery.organizationId = new ObjectId(currentOrgId);
-    } else if (currentOrgId && isPlatformAdmin) {
-      widgetQuery.organizationId = new ObjectId(currentOrgId);
+    if (currentOrgId && UUID_RE.test(currentOrgId)) {
+      widgetQuery = widgetQuery.eq('organization_id', currentOrgId);
     }
 
-    const orgWidgets = await widgets.find(widgetQuery).toArray();
+    const { data: widgetRows, error: widgetErr } = await widgetQuery;
+    if (widgetErr) throw widgetErr;
+
+    const orgWidgets = fromRows(widgetRows);
     console.log('📊 Found widgets for organization:', orgWidgets.map(w => ({ id: w._id, name: w.name })));
 
     // If no widgets, return empty analytics
@@ -122,39 +126,39 @@ export default async function handler(req, res) {
       });
     }
 
-    // Build analytics query for widgets in current organization
-    // IMPORTANT: Analytics always stores agentId as string, so convert all widget IDs to strings
-    const widgetIds = orgWidgets.map(w => {
-      return typeof w._id === 'object' ? w._id.toString() : String(w._id);
-    });
+    // Widget uuids for this organization
+    const widgetIds = orgWidgets.map(w => w.id);
 
-    const analyticsQuery = {
-      agentId: { $in: widgetIds }
-    };
+    // Build analytics query for widgets in current organization
+    let analyticsQuery = admin.from('analytics').select('*');
 
     // Filter by specific widget if requested
     if (widgetId && widgetId !== 'all') {
       // Verify widget belongs to organization
-      const widgetBelongsToOrg = orgWidgets.some(w => w._id.toString() === widgetId || w._id.toString() === widgetId.toString());
+      const widgetBelongsToOrg = orgWidgets.some(w => w.id === widgetId);
       if (!widgetBelongsToOrg) {
         return res.status(403).json({ error: 'Widget does not belong to your organization' });
       }
-      // Convert widgetId to string for consistent lookup
-      const widgetIdString = typeof widgetId === 'object' ? widgetId.toString() : String(widgetId);
-      analyticsQuery.agentId = widgetIdString;
+      analyticsQuery = analyticsQuery.eq('widget_id', widgetId);
+    } else {
+      analyticsQuery = analyticsQuery.in('widget_id', widgetIds);
     }
 
     // Add date filter
     if (startDate) {
+      analyticsQuery = analyticsQuery.gte('date', toDateStr(startDate));
       if (period === 'custom' && endDate) {
-        analyticsQuery.date = { $gte: startDate, $lte: endDate };
-      } else {
-        analyticsQuery.date = { $gte: startDate };
+        analyticsQuery = analyticsQuery.lte('date', toDateStr(endDate));
       }
     }
 
     // Get analytics data for the period
-    const analyticsData = await analytics.find(analyticsQuery).sort({ date: -1 }).toArray();
+    const { data: analyticsRows, error: analyticsErr } = await analyticsQuery
+      .order('date', { ascending: false })
+      .limit(10000);
+    if (analyticsErr) throw analyticsErr;
+
+    const analyticsData = fromRows(analyticsRows);
     console.log('📊 Analytics query:', { widgetId, period, startDate, analyticsCount: analyticsData.length });
 
     // Calculate aggregated metrics
@@ -163,30 +167,32 @@ export default async function handler(req, res) {
     // Get widget-specific metrics if widgetId provided
     let widgetMetrics = null;
     if (widgetId && widgetId !== 'all') {
-      widgetMetrics = await getWidgetMetrics(db, widgetId, startDate);
+      widgetMetrics = await getWidgetMetrics(widgetId, startDate);
     }
 
     // Get individual widget analytics for overview
     const widgetsWithAnalytics = await Promise.all(orgWidgets.map(async (widget) => {
-      const widgetIdString = typeof widget._id === 'object' ? widget._id.toString() : String(widget._id);
-      const widgetAnalyticsQuery = { agentId: widgetIdString };
+      let widgetAnalyticsQuery = admin
+        .from('analytics')
+        .select('metrics')
+        .eq('widget_id', widget.id);
       if (startDate) {
+        widgetAnalyticsQuery = widgetAnalyticsQuery.gte('date', toDateStr(startDate));
         if (period === 'custom' && endDate) {
-          widgetAnalyticsQuery.date = { $gte: startDate, $lte: endDate };
-        } else {
-          widgetAnalyticsQuery.date = { $gte: startDate };
+          widgetAnalyticsQuery = widgetAnalyticsQuery.lte('date', toDateStr(endDate));
         }
       }
-      
-      const widgetAnalyticsData = await analytics.find(widgetAnalyticsQuery).toArray();
+
+      const { data: widgetAnalyticsRows } = await widgetAnalyticsQuery;
+      const widgetAnalyticsData = fromRows(widgetAnalyticsRows);
       const totalConversations = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
       const totalMessages = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
       const totalResponseTime = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.responseTime || 0), 0);
       const avgResponseTime = widgetAnalyticsData.length > 0 ? totalResponseTime / widgetAnalyticsData.length : 0;
       const uniqueUsers = widgetAnalyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
-      
+
       return {
-        _id: widget._id,
+        _id: widget.id,
         name: widget.name,
         stats: {
           conversations: totalConversations,
@@ -240,7 +246,7 @@ function calculateAggregatedMetrics(analyticsData, period) {
   const totalResponseTime = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
   const totalSatisfaction = analyticsData.reduce((sum, data) => sum + (data.metrics?.satisfaction || 0), 0);
   const uniqueUsers = analyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
-  
+
   const avgResponseTime = analyticsData.length > 0 ? totalResponseTime / analyticsData.length : 0;
   const avgConversationLength = totalConversations > 0 ? totalMessages / totalConversations : 0;
   const avgSatisfaction = analyticsData.length > 0 ? totalSatisfaction / analyticsData.length : null;
@@ -277,7 +283,7 @@ function calculateAggregatedMetrics(analyticsData, period) {
 
 function calculateHourlyDistributionFromAnalytics(analyticsData) {
   const hourly = Array(24).fill(0);
-  
+
   analyticsData.forEach(data => {
     if (data.hourly) {
       for (let hour = 0; hour < 24; hour++) {
@@ -296,7 +302,7 @@ function calculateHourlyDistributionFromAnalytics(analyticsData) {
 function calculateDailyTrendsFromAnalytics(analyticsData, period) {
   const days = [];
   const now = new Date();
-  
+
   // Determine number of days to show
   let numDays;
   switch (period) {
@@ -311,7 +317,7 @@ function calculateDailyTrendsFromAnalytics(analyticsData, period) {
   for (let i = numDays - 1; i >= 0; i--) {
     const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
     const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    
+
     // Find analytics data for this day
     const dayData = analyticsData.find(data => {
       const dataDate = new Date(data.date);
@@ -330,26 +336,25 @@ function calculateDailyTrendsFromAnalytics(analyticsData, period) {
   return days;
 }
 
-async function getWidgetMetrics(db, widgetId, startDate) {
-  const widgets = db.collection('widgets');
-  const analytics = db.collection('analytics');
-  
-  const widget = await widgets.findOne({ _id: widgetId });
-  
+async function getWidgetMetrics(widgetId, startDate) {
+  const { data: widget } = await admin
+    .from('widgets')
+    .select('name, created_at, updated_at')
+    .eq('id', widgetId)
+    .maybeSingle();
+
   if (!widget) {
     return null;
   }
 
-  // IMPORTANT: Convert widgetId to string for analytics lookup
-  const widgetIdString = typeof widgetId === 'object' ? widgetId.toString() : String(widgetId);
-  
   // Get analytics data for this widget
-  const query = { agentId: widgetIdString };
+  let query = admin.from('analytics').select('metrics').eq('widget_id', widgetId);
   if (startDate) {
-    query.date = { $gte: startDate };
+    query = query.gte('date', toDateStr(startDate));
   }
-  
-  const analyticsData = await analytics.find(query).toArray();
+
+  const { data: rows } = await query;
+  const analyticsData = fromRows(rows);
   const totalConversations = analyticsData.reduce((sum, data) => sum + (data.metrics?.conversations || 0), 0);
   const totalMessages = analyticsData.reduce((sum, data) => sum + (data.metrics?.messages || 0), 0);
   const totalResponseTime = analyticsData.reduce((sum, data) => sum + (data.metrics?.avgResponseTime || 0), 0);
@@ -357,10 +362,10 @@ async function getWidgetMetrics(db, widgetId, startDate) {
   const uniqueUsers = analyticsData.reduce((sum, data) => sum + (data.metrics?.uniqueUsers || 0), 0);
 
   return {
-    widgetId: widgetIdString,
+    widgetId: widgetId,
     widgetName: widget.name,
-    createdAt: widget.createdAt,
-    lastUpdated: widget.updatedAt,
+    createdAt: widget.created_at,
+    lastUpdated: widget.updated_at,
     totalConversations,
     totalMessages,
     responseTime: avgResponseTime,

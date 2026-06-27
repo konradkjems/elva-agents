@@ -1,14 +1,15 @@
 /**
  * User Account Deletion API
  * GDPR Article 17 (Right to Erasure / Right to be Forgotten)
- * 
+ *
  * POST /api/user/delete-account - Request account deletion with 30-day grace period
  */
 
 import { getSession } from 'next-auth/react';
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
 import { verifyPassword } from '../../../lib/password';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,7 +18,7 @@ export default async function handler(req, res) {
 
   try {
     const session = await getSession({ req });
-    
+
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -28,20 +29,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Password confirmation required' });
     }
 
-    const userId = new ObjectId(session.user.id);
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    const userId = session.user.id;
+    if (!UUID_RE.test(userId)) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     // 1. Get user and verify password
-    const user = await db.collection('users').findOne({ _id: userId });
-    
+    const { data: user } = await admin
+      .from('users')
+      .select('id, email, password_hash')
+      .eq('id', userId)
+      .maybeSingle();
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Verify password (using bcrypt from Sprint 1)
-    const isValidPassword = await verifyPassword(confirmPassword, user.password);
-    
+    const isValidPassword = await verifyPassword(confirmPassword, user.password_hash);
+
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid password' });
     }
@@ -50,26 +56,24 @@ export default async function handler(req, res) {
     const deletionDate = new Date();
     deletionDate.setDate(deletionDate.getDate() + 30);
 
-    await db.collection('users').updateOne(
-      { _id: userId },
-      {
-        $set: {
-          status: 'pending_deletion',
-          deletionScheduledAt: new Date(),
-          deletionDate: deletionDate,
-          deletionReason: reason || 'User requested',
-        }
-      }
-    );
+    const { error: updErr } = await admin
+      .from('users')
+      .update({
+        status: 'pending_deletion',
+        deletion_scheduled_at: new Date().toISOString(),
+        deletion_date: deletionDate.toISOString(),
+        deletion_reason: reason || 'User requested'
+      })
+      .eq('id', userId);
+    if (updErr) throw updErr;
 
     // 3. Log the deletion request (GDPR audit requirement)
-    await db.collection('audit_log').insertOne({
-      userId: userId,
+    await admin.from('audit_log').insert({
       action: 'account_deletion_requested',
-      timestamp: new Date(),
+      user_id: userId,
       metadata: {
         reason: reason,
-        deletionDate: deletionDate,
+        deletionDate: deletionDate.toISOString(),
         gracePeriodDays: 30
       }
     });
@@ -92,4 +96,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to delete account' });
   }
 }
-

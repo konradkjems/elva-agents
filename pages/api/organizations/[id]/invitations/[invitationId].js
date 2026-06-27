@@ -1,29 +1,23 @@
 /**
  * Single Invitation Management API
- * 
+ *
  * DELETE /api/organizations/[id]/invitations/[invitationId] - Cancel invitation
  * POST /api/organizations/[id]/invitations/[invitationId]/resend - Resend invitation
  */
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../auth/[...nextauth]';
-import clientPromise from '../../../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
-import crypto from 'crypto';
-
-// Helper to check user's role in organization
-async function getUserRole(db, userId, orgId) {
-  const membership = await db.collection('team_members').findOne({
-    organizationId: new ObjectId(orgId),
-    userId: new ObjectId(userId),
-    status: 'active'
-  });
-  return membership ? membership.role : null;
-}
+import { admin } from '../../../../../lib/supabase/admin';
+import { fromRow } from '../../../../../lib/supabase/transform';
+import { getUserTeamRole } from '../../../../../lib/roleCheck';
 
 // Helper to check if user is platform admin
-async function isPlatformAdmin(db, userId) {
-  const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+async function isPlatformAdmin(userId) {
+  const { data: user } = await admin
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle();
   return user && user.role === 'platform_admin';
 }
 
@@ -35,46 +29,50 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const userId = new ObjectId(session.user.id);
+    const userId = session.user.id;
     const { id: orgId, invitationId } = req.query;
 
-    if (!orgId || !ObjectId.isValid(orgId)) {
+    if (!orgId) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
-    if (!invitationId || !ObjectId.isValid(invitationId)) {
+    if (!invitationId) {
       return res.status(400).json({ error: 'Invalid invitation ID' });
     }
 
     // Get organization
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(orgId),
-      deletedAt: { $exists: false }
-    });
+    const { data: organization } = await admin
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .is('deleted_at', null)
+      .maybeSingle();
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Check permissions
-    const userRole = await getUserRole(db, userId, orgId);
-    const isAdmin = await isPlatformAdmin(db, userId);
+    const userRole = await getUserTeamRole(userId, orgId);
+    const isAdmin = await isPlatformAdmin(userId);
 
     if (!userRole && !isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     // Get invitation
-    const invitation = await db.collection('invitations').findOne({
-      _id: new ObjectId(invitationId),
-      organizationId: new ObjectId(orgId)
-    });
+    const { data: invitationRow } = await admin
+      .from('invitations')
+      .select('*')
+      .eq('id', invitationId)
+      .eq('organization_id', orgId)
+      .maybeSingle();
 
-    if (!invitation) {
+    if (!invitationRow) {
       return res.status(404).json({ error: 'Invitation not found' });
     }
+
+    const invitation = fromRow(invitationRow);
 
     // ========================================
     // DELETE - Cancel Invitation
@@ -90,17 +88,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Only pending invitations can be cancelled' });
       }
 
-      await db.collection('invitations').updateOne(
-        { _id: new ObjectId(invitationId) },
-        {
-          $set: {
-            status: 'cancelled',
-            cancelledBy: userId,
-            cancelledAt: new Date(),
-            updatedAt: new Date()
-          }
-        }
-      );
+      await admin
+        .from('invitations')
+        .update({ status: 'cancelled' })
+        .eq('id', invitationId);
 
       return res.status(200).json({ message: 'Invitation cancelled successfully' });
     }
@@ -113,4 +104,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

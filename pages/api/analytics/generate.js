@@ -1,4 +1,7 @@
-import clientPromise from '../../../lib/mongodb.js';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRows } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,34 +10,49 @@ export default async function handler(req, res) {
   }
 
   try {
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const conversations = db.collection('conversations');
-    const analytics = db.collection('analytics');
+    // Get all conversations (paginated to bypass the per-request row cap)
+    const allConversations = [];
+    const batchSize = 1000;
+    let offset = 0;
+    while (true) {
+      const { data, error } = await admin
+        .from('conversations')
+        .select('widget_id, start_time, message_count, messages, satisfaction')
+        .range(offset, offset + batchSize - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allConversations.push(...fromRows(data));
+      if (data.length < batchSize) break;
+      offset += batchSize;
+    }
 
-    // Get all conversations
-    const allConversations = await conversations.find({}).toArray();
     console.log(`📊 Found ${allConversations.length} conversations to process`);
 
     if (allConversations.length === 0) {
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'No conversations found',
-        analyticsGenerated: 0 
+        analyticsGenerated: 0
       });
     }
 
     // Group conversations by widgetId and date
     const groupedData = {};
-    
+
     allConversations.forEach(conv => {
+      const widgetId = conv.widgetId;
+
+      // Skip conversations not tied to a real widget uuid
+      if (!widgetId || !UUID_RE.test(widgetId)) {
+        return;
+      }
+
       const date = new Date(conv.startTime);
       const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
-      const widgetId = conv.widgetId;
-      
+
       if (!groupedData[widgetId]) {
         groupedData[widgetId] = {};
       }
-      
+
       if (!groupedData[widgetId][dateKey]) {
         groupedData[widgetId][dateKey] = {
           conversations: 0,
@@ -46,11 +64,11 @@ export default async function handler(req, res) {
           hourly: Array(24).fill(0)
         };
       }
-      
+
       const dayData = groupedData[widgetId][dateKey];
       dayData.conversations++;
       dayData.messages += conv.messageCount || 0;
-      
+
       // Calculate response time from messages
       if (conv.messages) {
         conv.messages.forEach(msg => {
@@ -60,13 +78,13 @@ export default async function handler(req, res) {
           }
         });
       }
-      
+
       // Add satisfaction if available
       if (conv.satisfaction !== null && conv.satisfaction !== undefined) {
         dayData.satisfactionSum += conv.satisfaction;
         dayData.satisfactionCount++;
       }
-      
+
       // Add to hourly distribution
       const hour = date.getHours();
       dayData.hourly[hour]++;
@@ -74,29 +92,31 @@ export default async function handler(req, res) {
 
     // Generate analytics documents
     let analyticsGenerated = 0;
-    
+
     for (const [widgetId, widgetData] of Object.entries(groupedData)) {
       for (const [dateKey, dayData] of Object.entries(widgetData)) {
-        const avgResponseTime = dayData.responseTimeCount > 0 
-          ? dayData.totalResponseTime / dayData.responseTimeCount 
+        const avgResponseTime = dayData.responseTimeCount > 0
+          ? dayData.totalResponseTime / dayData.responseTimeCount
           : 0;
-        
-        const avgSatisfaction = dayData.satisfactionCount > 0 
-          ? dayData.satisfactionSum / dayData.satisfactionCount 
+
+        const avgSatisfaction = dayData.satisfactionCount > 0
+          ? dayData.satisfactionSum / dayData.satisfactionCount
           : null;
 
         // Calculate actual unique users for this widget on this date
-        const uniqueUsers = await db.collection('conversations').distinct('sessionId', {
-          widgetId: widgetId,
-          createdAt: {
-            $gte: new Date(dateKey),
-            $lt: new Date(new Date(dateKey).getTime() + 24 * 60 * 60 * 1000)
-          }
-        });
+        const dayStart = new Date(dateKey);
+        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+        const { data: sessionRows } = await admin
+          .from('conversations')
+          .select('session_id')
+          .eq('widget_id', widgetId)
+          .gte('created_at', dayStart.toISOString())
+          .lt('created_at', dayEnd.toISOString());
+        const uniqueUsers = [...new Set((sessionRows || []).map(r => r.session_id).filter(Boolean))];
 
         const analyticsDoc = {
-          agentId: widgetId,
-          date: new Date(dateKey),
+          widget_id: widgetId,
+          date: dateKey,
           metrics: {
             conversations: dayData.conversations,
             messages: dayData.messages,
@@ -108,17 +128,15 @@ export default async function handler(req, res) {
           hourly: dayData.hourly.reduce((acc, count, hour) => {
             acc[hour.toString()] = count;
             return acc;
-          }, {}),
-          createdAt: new Date()
+          }, {})
         };
 
-        // Insert or update analytics document
-        await analytics.replaceOne(
-          { agentId: widgetId, date: new Date(dateKey) },
-          analyticsDoc,
-          { upsert: true }
-        );
-        
+        // Insert or update analytics document (unique on widget_id + date)
+        const { error: upsertErr } = await admin
+          .from('analytics')
+          .upsert(analyticsDoc, { onConflict: 'widget_id,date' });
+        if (upsertErr) throw upsertErr;
+
         analyticsGenerated++;
       }
     }

@@ -1,8 +1,8 @@
-import clientPromise from '../../../lib/mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow, fromRows } from '../../../lib/supabase/transform';
 import { withAdmin } from '../../../lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { ObjectId } from 'mongodb';
 import { requireRole } from '../../../lib/roleCheck';
 import { getCache, setCache, generateCacheKey } from '../../../lib/cache.js';
 
@@ -296,49 +296,51 @@ async function handler(req, res) {
         console.log('🔄 Manual refresh requested for admin-widgets');
       }
 
-      // Get widgets from MongoDB filtered by organization
+      // Get widgets from Supabase filtered by organization
       try {
-        const client = await clientPromise;
-        const db = client.db('elva-agents'); // Use new database
-        
-        // Build query to filter by organization
-        const query = {
-          isDemoMode: { $ne: true } // Exclude demo widgets
-        };
-        
-        // Filter by organization unless platform admin viewing all
-        if (currentOrgId && !isPlatformAdmin) {
-          query.organizationId = new ObjectId(currentOrgId);
-        } else if (currentOrgId && isPlatformAdmin) {
-          // Platform admin: filter by current org if one is selected
-          query.organizationId = new ObjectId(currentOrgId);
+        // Build query to filter by organization (exclude demo widgets)
+        let widgetsQuery = admin
+          .from('widgets')
+          .select('*')
+          .eq('is_demo_mode', false);
+
+        // Filter by organization unless platform admin viewing all orgs.
+        // (Platform admins with no org selected bypass org scoping.)
+        if (currentOrgId) {
+          widgetsQuery = widgetsQuery.eq('organization_id', currentOrgId);
         }
-        
-        const widgets = await db.collection('widgets').find(query).toArray();
+
+        const { data: widgetRows, error: widgetsError } = await widgetsQuery;
+        if (widgetsError) throw widgetsError;
+
+        const widgets = fromRows(widgetRows);
         console.log('📊 Found widgets:', widgets.map(w => ({ id: w._id, name: w.name, slug: w.slug })));
-        const analytics = db.collection('analytics');
-        
-        // Debug: Show all analytics records to understand the data structure
-        const allAnalytics = await analytics.find({}).limit(5).toArray();
-        console.log('📊 Sample analytics records:', allAnalytics.map(a => ({ 
-          agentId: a.agentId, 
-          widgetId: a.widgetId, 
-          date: a.date, 
-          conversations: a.metrics?.conversations 
+
+        // Debug: sample a few analytics records to understand the data structure
+        const { data: sampleAnalytics } = await admin
+          .from('analytics')
+          .select('widget_id, date, metrics')
+          .limit(5);
+        console.log('📊 Sample analytics records:', (sampleAnalytics || []).map(a => ({
+          widgetId: a.widget_id,
+          date: a.date,
+          conversations: a.metrics?.conversations
         })));
-        
+
         const widgetsWithStats = await Promise.all(widgets.map(async (widget) => {
           try {
-            // IMPORTANT: Analytics always stores agentId as string
-            // Convert widget._id to string for consistent lookup
-            const widgetIdString = typeof widget._id === 'object' ? widget._id.toString() : String(widget._id);
-            
             // Get organization's billing period from quota system
             // This ensures we use the SAME period as the Quota Widget
-            const organization = widget.organizationId ? 
-              await db.collection('organizations').findOne({ _id: new ObjectId(widget.organizationId) }) : 
-              null;
-            
+            let organization = null;
+            if (widget.organizationId) {
+              const { data: orgData } = await admin
+                .from('organizations')
+                .select('usage')
+                .eq('id', widget.organizationId)
+                .maybeSingle();
+              organization = orgData;
+            }
+
             // Use organization's quota period dates if available, otherwise use calendar month
             let monthStart, monthEnd;
             if (organization?.usage?.conversations?.lastReset && organization?.usage?.conversations?.nextReset) {
@@ -350,64 +352,38 @@ async function handler(req, res) {
               monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
               monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
             }
-            
-            const analyticsData = await analytics.find({ 
-              agentId: widgetIdString,
-              date: { $gte: monthStart, $lt: monthEnd }
-            }).toArray();
-            
-            console.log(`📊 Widget ${widget.name} (${widgetIdString}): Found ${analyticsData.length} analytics records for ${monthStart.toISOString().split('T')[0]} to ${monthEnd.toISOString().split('T')[0]}`);
+
+            // Analytics rollups are keyed by widget uuid and a `date` column
+            const monthStartDate = new Date(monthStart).toISOString().split('T')[0];
+            const monthEndDate = new Date(monthEnd).toISOString().split('T')[0];
+            const { data: analyticsRows } = await admin
+              .from('analytics')
+              .select('*')
+              .eq('widget_id', widget._id)
+              .gte('date', monthStartDate)
+              .lt('date', monthEndDate);
+            const analyticsData = analyticsRows || [];
+
+            console.log(`📊 Widget ${widget.name} (${widget._id}): Found ${analyticsData.length} analytics records for ${monthStartDate} to ${monthEndDate}`);
             if (analyticsData.length > 0) {
               console.log(`📊 Sample analytics data:`, analyticsData[0]);
             }
-            
-            // Count conversations directly from conversations collection
+
+            // Count conversations directly from the conversations table.
             // Only count conversations that:
             // 1. Have at least one message (messageCount > 0)
             // 2. Have at least one assistant message (handled by OpenAI API)
-            const conversationsCollection = db.collection('conversations');
-            
-            // widgetId can be stored as ObjectId or string in conversations
-            // widgetIdString is already declared above, now determine if we can use ObjectId
-            // Only convert to ObjectId if it's a valid ObjectId format (24 char hex string)
-            let widgetIdObjectId;
-            
-            if (typeof widget._id === 'object') {
-              // Already an ObjectId
-              widgetIdObjectId = widget._id;
-            } else if (ObjectId.isValid(widget._id) && widget._id.length === 24) {
-              // Valid ObjectId string - convert it
-              widgetIdObjectId = new ObjectId(widget._id);
-            } else {
-              // Not a valid ObjectId format (e.g., 'cottonshoppen-widget-456')
-              // Use as string only - widgetIdString is already set above
-              widgetIdObjectId = null; // Don't use ObjectId for query
-            }
-            
-            // Get all conversations for this widget in the period
-            // Use $or to match widgetId as both string and ObjectId
-            // Match conversations where either createdAt OR startTime falls within the period
-            const widgetIdQuery = widgetIdObjectId 
-              ? {
-                  $or: [
-                    { widgetId: widgetIdObjectId },
-                    { widgetId: widgetIdString }
-                  ]
-                }
-              : { widgetId: widgetIdString }; // Only match string if not a valid ObjectId
-            
-            const allConversations = await conversationsCollection.find({
-              $and: [
-                widgetIdQuery,
-                {
-                  $or: [
-                    { createdAt: { $gte: monthStart, $lt: monthEnd } },
-                    { startTime: { $gte: monthStart, $lt: monthEnd } }
-                  ]
-                }
-              ]
-            }).toArray();
-            
+            // Conversations are matched by widget uuid; a conversation counts if
+            // either created_at OR start_time falls within the period.
+            const monthStartIso = new Date(monthStart).toISOString();
+            const monthEndIso = new Date(monthEnd).toISOString();
+            const { data: convRows } = await admin
+              .from('conversations')
+              .select('*')
+              .eq('widget_id', widget._id)
+              .or(`and(created_at.gte.${monthStartIso},created_at.lt.${monthEndIso}),and(start_time.gte.${monthStartIso},start_time.lt.${monthEndIso})`);
+            const allConversations = fromRows(convRows);
+
             console.log(`📊 Widget ${widget.name}: Found ${allConversations.length} conversations in period`);
             
             // Filter to only count conversations with assistant messages and messageCount > 0
@@ -471,12 +447,18 @@ async function handler(req, res) {
             };
           } catch (error) {
             console.error(`Error fetching analytics for widget ${widget._id}:`, error);
-            
+
             // Get organization's billing period for error fallback too
-            const organization = widget.organizationId ? 
-              await db.collection('organizations').findOne({ _id: new ObjectId(widget.organizationId) }) : 
-              null;
-            
+            let organization = null;
+            if (widget.organizationId) {
+              const { data: orgData } = await admin
+                .from('organizations')
+                .select('usage')
+                .eq('id', widget.organizationId)
+                .maybeSingle();
+              organization = orgData;
+            }
+
             let fallbackStart, fallbackEnd;
             if (organization?.usage?.conversations?.lastReset && organization?.usage?.conversations?.nextReset) {
               fallbackStart = new Date(organization.usage.conversations.lastReset).toISOString();
@@ -524,29 +506,62 @@ async function handler(req, res) {
         return res.status(403).json({ error: roleCheck.error });
       }
       
-      // Create new widget in MongoDB
+      // Create new widget in Supabase
       try {
         if (!currentOrgId) {
           return res.status(400).json({ error: 'No organization selected' });
         }
 
-        const client = await clientPromise;
-        const db = client.db('elva-agents'); // Use new database
-        
-        const newWidget = {
-          ...req.body,
-          organizationId: new ObjectId(currentOrgId), // Add organization
-          createdBy: new ObjectId(session.user.id), // Add creator
-          lastEditedBy: new ObjectId(session.user.id),
-          lastEditedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          status: req.body.status || 'active'
+        const body = req.body || {};
+
+        // Build a snake_case widget row from known columns only. Postgres
+        // rejects unknown columns, and the GET response shape (and the duplicate
+        // flow that spreads it) carries extras like `stats`/`_id`/`createdAt`.
+        const newRow = {
+          organization_id: currentOrgId,
+          created_by: session.user.id,
+          last_edited_by: session.user.id,
+          last_edited_at: new Date().toISOString(),
+          status: body.status || 'active',
+          is_demo_mode: body.isDemoMode ?? false,
+          name: body.name,
+          description: body.description,
+          prompt: body.prompt,
+          theme: body.theme,
+          timezone: body.timezone,
+          openai: body.openai,
+          appearance: body.appearance,
+          messages: body.messages,
+          branding: body.branding,
+          advanced: body.advanced,
+          analytics: body.analytics,
+          behavior: body.behavior,
+          consent: body.consent,
+          demo_settings: body.demoSettings,
+          imageupload: body.imageupload,
+          integrations: body.integrations,
+          manual_review: body.manualReview,
+          satisfaction: body.satisfaction
         };
-        
-        const result = await db.collection('widgets').insertOne(newWidget);
-        const createdWidget = await db.collection('widgets').findOne({ _id: result.insertedId });
-        res.status(201).json(createdWidget);
+
+        // Insert (DB defaults the uuid id + timestamps), then set legacy_id to
+        // the new id so the public/embed identifier stays stable.
+        const { data: inserted, error: insertError } = await admin
+          .from('widgets')
+          .insert(newRow)
+          .select('*')
+          .single();
+        if (insertError) throw insertError;
+
+        const { data: createdWidget, error: legacyError } = await admin
+          .from('widgets')
+          .update({ legacy_id: inserted.id })
+          .eq('id', inserted.id)
+          .select('*')
+          .single();
+        if (legacyError) throw legacyError;
+
+        res.status(201).json(fromRow(createdWidget));
       } catch (dbError) {
         console.error('Database error:', dbError);
         res.status(500).json({ error: 'Failed to create widget' });
