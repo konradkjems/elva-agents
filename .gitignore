@@ -110,6 +110,8 @@ backups/
 # Database dumps
 *.sql
 *.dump
+# ...but Supabase schema migrations are source code — keep them tracked
+!supabase/migrations/*.sql
 
 # Test coverage
 coverage/
