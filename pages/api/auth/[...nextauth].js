@@ -1,8 +1,16 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
-import clientPromise from '../../../lib/mongodb'
+import { admin } from '../../../lib/supabase/admin'
 import { verifyPassword, needsRehash, hashPassword } from '../../../lib/password'
+
+// Default permissions for an organization owner.
+const OWNER_PERMISSIONS = {
+  widgets: { create: true, read: true, update: true, delete: true },
+  demos: { create: false, read: true, update: false, delete: false },
+  team: { invite: true, manage: true, remove: true },
+  settings: { view: true, edit: true }
+}
 
 export const authOptions = {
   providers: [
@@ -25,47 +33,40 @@ export const authOptions = {
       },
       async authorize(credentials) {
         try {
-          const client = await clientPromise
-          const db = client.db('elva-agents') // Updated to new database
-          
-          // Find user in database
-          const user = await db.collection('users').findOne({
-            email: credentials.email,
-            status: 'active'
-          })
+          // Find active user by email
+          const { data: user } = await admin
+            .from('users')
+            .select('id, email, name, role, password_hash, current_organization_id')
+            .eq('email', credentials.email.toLowerCase())
+            .eq('status', 'active')
+            .maybeSingle()
 
-          if (!user) {
+          if (!user || !user.password_hash) {
             return null
           }
 
           // Verify password with bcrypt - GDPR COMPLIANCE FIX (Artikel 32)
-          const isValidPassword = await verifyPassword(credentials.password, user.password)
-          
+          const isValidPassword = await verifyPassword(credentials.password, user.password_hash)
+
           if (!isValidPassword) {
             return null
           }
 
           // Optional: Rehash if needed (salt rounds increased)
-          if (needsRehash(user.password)) {
+          if (needsRehash(user.password_hash)) {
             const newHash = await hashPassword(credentials.password)
-            await db.collection('users').updateOne(
-              { _id: user._id },
-              { $set: { password: newHash } }
-            )
+            await admin.from('users').update({ password_hash: newHash }).eq('id', user.id)
           }
 
           // Update last login
-          await db.collection('users').updateOne(
-            { _id: user._id },
-            { $set: { lastLogin: new Date() } }
-          )
+          await admin.from('users').update({ last_login: new Date().toISOString() }).eq('id', user.id)
 
           return {
-            id: user._id.toString(),
+            id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
-            currentOrganizationId: user.currentOrganizationId?.toString()
+            currentOrganizationId: user.current_organization_id || undefined
           }
         } catch (error) {
           console.error('Auth error:', error)
@@ -85,113 +86,99 @@ export const authOptions = {
       // Handle Google OAuth sign-in
       if (account.provider === 'google') {
         try {
-          const client = await clientPromise
-          const db = client.db('elva-agents') // Updated to new database
-          const { ObjectId } = require('mongodb')
-          
           // Check if user exists
-          let dbUser = await db.collection('users').findOne({
-            email: user.email
-          })
+          let { data: dbUser } = await admin
+            .from('users')
+            .select('id, role, current_organization_id')
+            .eq('email', user.email.toLowerCase())
+            .maybeSingle()
 
           if (!dbUser) {
             // Create new user from Google account
-            const newUser = {
-              email: user.email,
-              name: user.name,
-              image: user.image,
-              role: 'member', // Regular user by default
-              status: 'active',
-              provider: 'google',
-              emailVerified: true,
-              preferences: {
-                theme: 'light',
-                language: 'en',
-                notifications: {
-                  email: true,
-                  newWidgetCreated: true,
-                  teamInvitation: true
-                }
-              },
-              createdAt: new Date(),
-              lastLogin: new Date()
-            }
-            
-            const result = await db.collection('users').insertOne(newUser)
-            dbUser = { ...newUser, _id: result.insertedId }
+            const { data: created, error: createErr } = await admin
+              .from('users')
+              .insert({
+                email: user.email.toLowerCase(),
+                name: user.name,
+                image: user.image,
+                role: 'member',
+                status: 'active',
+                provider: 'google',
+                email_verified: true,
+                preferences: {
+                  theme: 'light',
+                  language: 'en',
+                  notifications: {
+                    email: true,
+                    newWidgetCreated: true,
+                    teamInvitation: true
+                  }
+                },
+                last_login: new Date().toISOString()
+              })
+              .select('id')
+              .single()
+            if (createErr) throw createErr
+
+            const userId = created.id
 
             // Create personal organization for new user
-            const organization = {
-              name: `${user.name}'s Organization`,
-              slug: user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-org',
-              ownerId: dbUser._id,
-              plan: 'free',
-              limits: {
-                maxWidgets: 10,
-                maxTeamMembers: 5,
-                maxConversations: 10000,
-                maxDemos: 0
-              },
-              usage: {
-                conversations: {
-                  current: 0,
-                  limit: 100,
-                  lastReset: new Date(),
-                  overage: 0,
-                  notificationsSent: []
+            const { data: org, error: orgErr } = await admin
+              .from('organizations')
+              .insert({
+                name: `${user.name}'s Organization`,
+                slug: user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-org',
+                owner_id: userId,
+                plan: 'free',
+                limits: { maxWidgets: 10, maxTeamMembers: 5, maxConversations: 10000, maxDemos: 0 },
+                usage: {
+                  conversations: {
+                    current: 0,
+                    limit: 100,
+                    lastReset: new Date().toISOString(),
+                    overage: 0,
+                    notificationsSent: []
+                  }
+                },
+                subscription_status: 'trial',
+                trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                settings: {
+                  allowDemoCreation: false,
+                  requireEmailVerification: false,
+                  allowGoogleAuth: true
                 }
-              },
-              subscriptionStatus: 'trial',
-              trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
-              settings: {
-                allowDemoCreation: false,
-                requireEmailVerification: false,
-                allowGoogleAuth: true
-              },
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-
-            const orgResult = await db.collection('organizations').insertOne(organization)
+              })
+              .select('id')
+              .single()
+            if (orgErr) throw orgErr
 
             // Create team member entry (owner)
-            const teamMember = {
-              organizationId: orgResult.insertedId,
-              userId: dbUser._id,
+            await admin.from('team_members').insert({
+              organization_id: org.id,
+              user_id: userId,
               role: 'owner',
-              permissions: {
-                widgets: { create: true, read: true, update: true, delete: true },
-                demos: { create: false, read: true, update: false, delete: false },
-                team: { invite: true, manage: true, remove: true },
-                settings: { view: true, edit: true }
-              },
+              permissions: OWNER_PERMISSIONS,
               status: 'active',
-              joinedAt: new Date(),
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-
-            await db.collection('team_members').insertOne(teamMember)
+              joined_at: new Date().toISOString()
+            })
 
             // Set current organization
-            await db.collection('users').updateOne(
-              { _id: dbUser._id },
-              { $set: { currentOrganizationId: orgResult.insertedId } }
-            )
+            await admin.from('users')
+              .update({ current_organization_id: org.id })
+              .eq('id', userId)
 
-            dbUser.currentOrganizationId = orgResult.insertedId
+            dbUser = { id: userId, role: 'member', current_organization_id: org.id }
           } else {
-            // Update last login
-            await db.collection('users').updateOne(
-              { _id: dbUser._id },
-              { $set: { lastLogin: new Date(), image: user.image } }
-            )
+            // Update last login + image
+            await admin.from('users')
+              .update({ last_login: new Date().toISOString(), image: user.image })
+              .eq('id', dbUser.id)
           }
 
           // Add fields to user object for JWT
           user.role = dbUser.role
-          user.currentOrganizationId = dbUser.currentOrganizationId?.toString()
-          user.id = dbUser._id.toString()
+          user.currentOrganizationId = dbUser.current_organization_id || undefined
+          user.id = dbUser.id
         } catch (error) {
           console.error('Google sign-in error:', error)
           return false
@@ -208,31 +195,31 @@ export const authOptions = {
           token.provider = 'google'
         }
       }
-      
+
       // Always refresh currentOrganizationId from database
       // This ensures org switching works immediately
       if (token.sub) {
         try {
-          const client = await clientPromise
-          const db = client.db('elva-agents')
-          const { ObjectId } = require('mongodb')
-          
-          const dbUser = await db.collection('users').findOne({ 
-            _id: new ObjectId(token.sub) 
-          })
-          
+          const { data: dbUser } = await admin
+            .from('users')
+            .select('role, current_organization_id')
+            .eq('id', token.sub)
+            .maybeSingle()
+
           if (dbUser) {
-            token.currentOrganizationId = dbUser.currentOrganizationId?.toString()
+            token.currentOrganizationId = dbUser.current_organization_id || undefined
             token.role = dbUser.role
-            
+
             // Fetch team role and permissions from current organization
-            if (dbUser.currentOrganizationId) {
-              const teamMember = await db.collection('team_members').findOne({
-                userId: new ObjectId(token.sub),
-                organizationId: dbUser.currentOrganizationId,
-                status: 'active'
-              })
-              
+            if (dbUser.current_organization_id) {
+              const { data: teamMember } = await admin
+                .from('team_members')
+                .select('role, permissions')
+                .eq('user_id', token.sub)
+                .eq('organization_id', dbUser.current_organization_id)
+                .eq('status', 'active')
+                .maybeSingle()
+
               if (teamMember) {
                 token.teamRole = teamMember.role
                 token.permissions = teamMember.permissions
@@ -243,7 +230,7 @@ export const authOptions = {
           console.error('Error refreshing user data in JWT:', error)
         }
       }
-      
+
       return token
     },
     async session({ session, token }) {
