@@ -1,5 +1,5 @@
 import { admin } from '../../../lib/supabase/admin';
-import { fromRow } from '../../../lib/supabase/transform';
+import { fromRow, fromRows } from '../../../lib/supabase/transform';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { getCache, setCache, generateCacheKey } from '../../../lib/cache.js';
