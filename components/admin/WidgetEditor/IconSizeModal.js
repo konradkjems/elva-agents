@@ -229,7 +229,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
               {/* Avatar Preview */}
               <div className="bg-white rounded-lg p-4 shadow-sm">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Assistant Avatar</h4>
-                <div className="flex items-center space-x-3 p-3 bg-blue-500 rounded-lg">
+                <div className="flex items-center space-x-3 p-3 bg-primary rounded-lg">
                   <div 
                     className="bg-white bg-opacity-20 rounded-full flex items-center justify-center backdrop-blur-sm overflow-hidden"
                     style={{ width: '40px', height: '40px' }}
@@ -264,7 +264,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Message Avatar</h4>
                 <div className="flex items-start space-x-3">
                   <div 
-                    className="bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
+                    className="bg-primary rounded-full flex items-center justify-center flex-shrink-0 shadow-lg overflow-hidden"
                     style={{ width: '32px', height: '32px' }}
                   >
                     {widgetName && brandingTitle ? (
@@ -331,7 +331,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary transition-colors"
           >
             Save Changes
           </button>

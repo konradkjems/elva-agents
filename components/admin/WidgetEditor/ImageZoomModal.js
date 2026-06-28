@@ -102,7 +102,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
               onClick={() => setActiveTab('logo')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'logo'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -112,7 +112,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
               onClick={() => setActiveTab('avatar')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'avatar'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -122,7 +122,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
               onClick={() => setActiveTab('widget')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'widget'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-primary text-primary'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -168,7 +168,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full bg-blue-500 flex items-center justify-center">
+                      <div className="w-full h-full bg-primary flex items-center justify-center">
                         <span className="text-white text-2xl font-bold">
                           {generateAIIcon(widgetName, brandingTitle)}
                         </span>
@@ -517,15 +517,15 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Quick Tips</h4>
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-start space-x-2">
-                      <span className="text-blue-500 font-bold">•</span>
+                      <span className="text-primary font-bold">•</span>
                       <span><strong>Avatar:</strong> Use for the AI assistant's personality - appears next to chat messages</span>
                     </div>
                     <div className="flex items-start space-x-2">
-                      <span className="text-blue-500 font-bold">•</span>
+                      <span className="text-primary font-bold">•</span>
                       <span><strong>Logo:</strong> Your company branding - appears in header and when minimized</span>
                     </div>
                     <div className="flex items-start space-x-2">
-                      <span className="text-blue-500 font-bold">•</span>
+                      <span className="text-primary font-bold">•</span>
                       <span>Both images can be zoomed and positioned independently</span>
                     </div>
                   </div>
@@ -545,7 +545,7 @@ export default function ImageZoomModal({ isOpen, onClose, imageSettings, onSave,
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 text-sm text-white bg-primary rounded-lg hover:bg-primary transition-colors"
           >
             Apply
           </button>

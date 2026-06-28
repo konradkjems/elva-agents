@@ -87,7 +87,7 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+            <div className="p-2 rounded-lg bg-primary">
               <Building2 className="h-5 w-5 text-white" />
             </div>
             <DialogTitle className="text-xl">Create New Organization</DialogTitle>
@@ -201,7 +201,7 @@ export default function CreateOrganizationModal({ open, onOpenChange, onSuccess 
             <Button 
               type="submit" 
               disabled={loading || !formData.name}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 gap-2"
+              className="gap-2"
             >
               {loading ? (
                 <>
