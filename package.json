@@ -74,7 +74,6 @@
     "mongodb": "^6.19.0",
     "multer": "^2.0.2",
     "next": "15.5.9",
-    "next-auth": "^4.24.11",
     "node-fetch": "^3.3.2",
     "openai": "^4.0.0",
     "puppeteer": "^24.22.0",

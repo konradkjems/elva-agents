@@ -5,7 +5,6 @@
  */
 
 import { admin } from '../../../lib/supabase/admin';
-import { hashPassword } from '../../../lib/password';
 
 function getPermissionsForRole(role) {
   switch (role) {
@@ -90,20 +89,16 @@ export default async function handler(req, res) {
       }
     }
 
-    // Hash password - GDPR COMPLIANCE FIX (Artikel 32)
-    const hashedPassword = await hashPassword(password);
-
-    // Create the new user
+    // Create the application profile (password lives in Supabase Auth, below)
     const { data: newUser, error: userErr } = await admin
       .from('users')
       .insert({
         email: normalizedEmail,
         name: name.trim(),
-        password_hash: hashedPassword,
         role: 'member',
         status: 'active',
         provider: 'credentials',
-        email_verified: false,
+        email_verified: true,
         preferences: {
           theme: 'light',
           language: 'en',
@@ -120,6 +115,23 @@ export default async function handler(req, res) {
     if (userErr) throw userErr;
 
     const userId = newUser.id;
+
+    // Create the matching Supabase Auth user with the SAME id so the account is
+    // loginnable (auth.users is the single source of truth for the password).
+    const { error: authErr } = await admin.auth.admin.createUser({
+      id: userId,
+      email: normalizedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: { name: name.trim() },
+      app_metadata: { provider: 'email', providers: ['email'] }
+    });
+    if (authErr) {
+      // Roll back the profile row so we don't leave an un-loginnable account.
+      await admin.from('users').delete().eq('id', userId);
+      console.error('Auth user creation failed:', authErr);
+      return res.status(500).json({ error: 'An error occurred during registration' });
+    }
 
     if (invitation) {
       // User is registering via invitation - add them to the invited organization

@@ -1,6 +1,6 @@
+import { createClient } from '@supabase/supabase-js';
 import { admin } from '../../../../lib/supabase/admin';
 import { getSessionContext } from '../../../../lib/supabase/session';
-import { verifyPassword, hashPassword } from '../../../../lib/password';
 
 export default async function handler(req, res) {
   if (req.method !== 'PUT') {
@@ -36,33 +36,26 @@ export default async function handler(req, res) {
       });
     }
 
-    // Find user
-    const { data: user, error } = await admin
-      .from('users')
-      .select('*')
-      .eq('email', session.user.email)
-      .maybeSingle();
-    if (error) throw error;
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Verify current password against the stored hash
-    const isValid = user.password_hash
-      ? await verifyPassword(currentPassword, user.password_hash)
-      : false;
-    if (!isValid) {
+    // Verify the current password by attempting a sign-in with the anon client
+    // (Supabase Auth has no "verify password" admin call).
+    const anon = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+    const { error: verifyError } = await anon.auth.signInWithPassword({
+      email: session.user.email,
+      password: currentPassword,
+    });
+    if (verifyError) {
       return res.status(401).json({ message: 'Current password is incorrect' });
     }
 
-    // Hash and update the new password
-    const newHash = await hashPassword(newPassword);
-
-    const { error: updateError } = await admin
-      .from('users')
-      .update({ password_hash: newHash })
-      .eq('email', session.user.email);
+    // Update the password in Supabase Auth.
+    const { error: updateError } = await admin.auth.admin.updateUserById(
+      session.user.id,
+      { password: newPassword }
+    );
     if (updateError) throw updateError;
 
     return res.status(200).json({

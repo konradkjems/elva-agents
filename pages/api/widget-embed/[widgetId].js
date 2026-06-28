@@ -518,7 +518,7 @@ export default async function handler(req, res) {
       poweredByText: widget.branding?.poweredByText || widget.settings?.branding?.poweredByText || null,
       availableNowText: widget.messages?.availableNowText || widget.branding?.availableNowText || widget.settings?.branding?.availableNowText || null
     },
-    apiUrl: process.env.NEXT_PUBLIC_API_URL || process.env.NEXTAUTH_URL || 'https://www.elva-agents.com/',
+    apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://www.elva-agents.com/',
     apiType: useResponsesAPI ? 'responses' : 'legacy',
     streaming: widget.settings?.streaming?.enabled !== false, // Enable streaming by default
     openai: useResponsesAPI ? {

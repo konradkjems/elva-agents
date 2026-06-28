@@ -5,9 +5,9 @@
  * POST /api/user/delete-account - Request account deletion with 30-day grace period
  */
 
+import { createClient } from '@supabase/supabase-js';
 import { getSessionContext } from '../../../lib/supabase/session';
 import { admin } from '../../../lib/supabase/admin';
-import { verifyPassword } from '../../../lib/password';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     // 1. Get user and verify password
     const { data: user } = await admin
       .from('users')
-      .select('id, email, password_hash')
+      .select('id, email')
       .eq('id', userId)
       .maybeSingle();
 
@@ -45,10 +45,17 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify password (using bcrypt from Sprint 1)
-    const isValidPassword = await verifyPassword(confirmPassword, user.password_hash);
-
-    if (!isValidPassword) {
+    // Verify the password via Supabase Auth (no admin "verify" call exists).
+    const anon = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
+    const { error: verifyError } = await anon.auth.signInWithPassword({
+      email: user.email,
+      password: confirmPassword,
+    });
+    if (verifyError) {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
