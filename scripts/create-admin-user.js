@@ -1,127 +1,140 @@
-const { MongoClient, ObjectId } = require('mongodb');
-require('dotenv').config({ path: '.env.local' });
+/**
+ * Create an admin bootstrap user on Supabase (Auth + profile + org).
+ *
+ * Replaces the old MongoDB version. Mirrors the proven prod creation flow in
+ * pages/api/auth/register.js. Creates:
+ *   - a public.users profile with role 'admin' and a matching auth.users record
+ *     with the SAME uuid (auth.users is the password source of truth)
+ *   - a personal enterprise organization, an owner team membership, current org
+ *
+ * Account role 'admin' is NOT the same as platform admin. To grant full
+ * platform-admin access (all orgs + demos; lib/roleCheck.js checks
+ * role === 'platform_admin'), run afterwards:
+ *   node scripts/set-platform-admin.js <email>
+ *
+ * Usage:
+ *   node scripts/create-admin-user.js [email] [password] [name]
+ *   npm run create-admin
+ */
 
-async function createAdminUser() {
-  const client = new MongoClient(process.env.MONGODB_URI);
-  
-  try {
-    await client.connect();
-    // Using new database for multi-tenancy (keeps old chatwidgets as backup)
-    const db = client.db('elva-agents');
-    
-    // Check if admin user already exists
-    const existingAdmin = await db.collection('users').findOne({ 
-      email: 'admin@elva-solutions.com' 
-    });
-    
-    if (existingAdmin) {
-      console.log('✅ Admin user already exists');
-      console.log('📧 Email: admin@elva-solutions.com');
-      console.log('🔑 Password: admin123 (if not changed)');
-      console.log('\n💡 To make them platform admin, run:');
-      console.log('   node scripts/set-platform-admin.js admin@elva-solutions.com');
-      return;
-    }
-    
-    console.log('🔄 Creating admin user with organization...\n');
-    
-    // Create admin user with new multi-tenancy fields
-    const adminUser = {
-      email: 'admin@elva-solutions.com',
-      name: 'Admin User',
-      password: 'admin123', // In production, use bcrypt to hash passwords
-      role: 'admin', // Legacy field
-      permissions: ['read', 'write', 'delete', 'analytics'], // Legacy field
-      platformRole: 'user', // Will be set to platform_admin separately
-      provider: 'credentials',
-      emailVerified: true,
+require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env' });
+const { createClient } = require('@supabase/supabase-js');
+
+const EMAIL = (process.argv[2] || 'admin@elva-solutions.com').toLowerCase();
+const PASSWORD = process.argv[3] || 'admin123';
+const NAME = process.argv[4] || 'Admin User';
+
+const ownerPermissions = () => ({
+  widgets: { create: true, read: true, update: true, delete: true },
+  demos: { create: true, read: true, update: true, delete: true },
+  team: { invite: true, manage: true, remove: true },
+  settings: { view: true, edit: true },
+});
+
+async function main() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY');
+    process.exit(1);
+  }
+  const admin = createClient(url, key, { auth: { persistSession: false } });
+
+  // Already exists?
+  const { data: existing } = await admin.from('users').select('id, role').eq('email', EMAIL).maybeSingle();
+  if (existing) {
+    console.log(`✅ User already exists: ${EMAIL} (role: ${existing.role})`);
+    console.log(`💡 To make them a platform admin:\n   node scripts/set-platform-admin.js ${EMAIL}`);
+    return;
+  }
+
+  console.log(`🔄 Creating admin user ${EMAIL} ...`);
+
+  // 1) Application profile (password lives in Supabase Auth, created next).
+  const { data: profile, error: pErr } = await admin
+    .from('users')
+    .insert({
+      email: EMAIL,
+      name: NAME,
+      role: 'admin',
       status: 'active',
-      createdAt: new Date(),
-      lastLogin: null,
+      provider: 'credentials',
+      email_verified: true,
       preferences: {
         theme: 'light',
         language: 'da',
-        notifications: {
-          email: true,
-          newWidgetCreated: true,
-          teamInvitation: true
-        }
-      }
-    };
-    
-    const userResult = await db.collection('users').insertOne(adminUser);
-    console.log('✅ Admin user created');
-    
-    // Get the inserted ID for use in organization
-    const adminUserId = userResult.insertedId;
-    
-    // Create personal organization for admin
-    const organization = {
-      name: "Admin's Organization",
-      slug: 'admin-org',
-      ownerId: adminUserId,
-      plan: 'enterprise',
-      limits: {
-        maxWidgets: 999,
-        maxTeamMembers: 999,
-        maxConversations: 999999,
-        maxDemos: 0
+        notifications: { email: true, newWidgetCreated: true, teamInvitation: true },
       },
-      subscriptionStatus: 'active',
-      settings: {
-        allowDemoCreation: false,
-        requireEmailVerification: false,
-        allowGoogleAuth: true
-      },
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    const orgResult = await db.collection('organizations').insertOne(organization);
-    console.log('✅ Organization created');
-    
-    // Create team member entry (owner)
-    const teamMember = {
-      organizationId: orgResult.insertedId,
-      userId: adminUserId,
-      role: 'owner',
-      permissions: {
-        widgets: { create: true, read: true, update: true, delete: true },
-        demos: { create: false, read: true, update: false, delete: false },
-        team: { invite: true, manage: true, remove: true },
-        settings: { view: true, edit: true }
-      },
-      status: 'active',
-      joinedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    await db.collection('team_members').insertOne(teamMember);
-    console.log('✅ Team membership created');
-    
-    // Set current organization
-    await db.collection('users').updateOne(
-      { _id: adminUserId },
-      { $set: { currentOrganizationId: orgResult.insertedId } }
-    );
-    console.log('✅ Current organization set');
-    
-    console.log('\n🎉 Admin user setup complete!\n');
-    console.log('📧 Email: admin@elva-solutions.com');
-    console.log('🔑 Password: admin123');
-    console.log('🏢 Organization: Admin\'s Organization');
-    console.log('👤 Role: Owner');
-    console.log('\n⚠️  IMPORTANT:');
-    console.log('   1. Please change the password after first login!');
-    console.log('   2. To make platform admin (access all orgs + demos), run:');
-    console.log('      node scripts/set-platform-admin.js admin@elva-solutions.com');
-    
-  } catch (error) {
-    console.error('❌ Error creating admin user:', error);
-  } finally {
-    await client.close();
+      last_login: null,
+    })
+    .select('id')
+    .single();
+  if (pErr) { console.error('❌ profile insert failed:', pErr.message); process.exit(1); }
+  const userId = profile.id;
+
+  // 2) Matching Supabase Auth user with the SAME id so the account is loginnable.
+  const { error: aErr } = await admin.auth.admin.createUser({
+    id: userId,
+    email: EMAIL,
+    password: PASSWORD,
+    email_confirm: true,
+    user_metadata: { name: NAME },
+    app_metadata: { provider: 'email', providers: ['email'] },
+  });
+  if (aErr) {
+    await admin.from('users').delete().eq('id', userId); // rollback un-loginnable profile
+    console.error('❌ auth user creation failed (rolled back profile):', aErr.message);
+    process.exit(1);
   }
+  console.log('✅ auth + profile created (role: admin)');
+
+  // 3) Personal enterprise organization.
+  const slug = EMAIL.split('@')[0].replace(/[^a-z0-9]+/g, '-') + '-org';
+  const { data: org, error: oErr } = await admin
+    .from('organizations')
+    .insert({
+      name: `${NAME}'s Organization`,
+      slug,
+      owner_id: userId,
+      plan: 'enterprise',
+      limits: { maxWidgets: 999, maxTeamMembers: 999, maxConversations: 999999, maxDemos: 0 },
+      usage: {
+        conversations: {
+          current: 0,
+          limit: 999999,
+          lastReset: new Date().toISOString(),
+          overage: 0,
+          notificationsSent: [],
+        },
+      },
+      subscription_status: 'active',
+      settings: { allowDemoCreation: false, requireEmailVerification: false, allowGoogleAuth: true },
+    })
+    .select('id')
+    .single();
+  if (oErr) { console.error('❌ organization insert failed:', oErr.message); process.exit(1); }
+
+  // 4) Owner team membership.
+  const { error: tErr } = await admin.from('team_members').insert({
+    organization_id: org.id,
+    user_id: userId,
+    role: 'owner',
+    permissions: ownerPermissions(),
+    status: 'active',
+    joined_at: new Date().toISOString(),
+  });
+  if (tErr) { console.error('❌ team_member insert failed:', tErr.message); process.exit(1); }
+
+  // 5) Set current organization.
+  await admin.from('users').update({ current_organization_id: org.id }).eq('id', userId);
+
+  console.log('\n🎉 Admin user setup complete!');
+  console.log(`📧 Email: ${EMAIL}`);
+  console.log(`🔑 Password: ${PASSWORD}`);
+  console.log(`🏢 Organization: ${NAME}'s Organization (enterprise) — Owner`);
+  console.log('\n⚠️  Change the password after first login.');
+  console.log(`💡 To grant full platform-admin access (all orgs + demos):\n   node scripts/set-platform-admin.js ${EMAIL}`);
 }
 
-createAdminUser();
+main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });

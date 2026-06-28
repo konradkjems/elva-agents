@@ -1,79 +1,54 @@
 /**
- * Set Platform Admin Role
- * 
+ * Promote a user to platform admin on Supabase.
+ *
+ * Sets public.users.role = 'platform_admin' — the exact check the live app uses
+ * (lib/roleCheck.js: session.user.role === 'platform_admin'). A platform admin
+ * bypasses org scoping and can manage all organizations + demos.
+ *
  * Usage: node scripts/set-platform-admin.js <email>
- * Example: node scripts/set-platform-admin.js admin@elva.com
  */
 
 require('dotenv').config({ path: '.env.local' });
-const { MongoClient } = require('mongodb');
+require('dotenv').config({ path: '.env' });
+const { createClient } = require('@supabase/supabase-js');
 
-const uri = process.env.MONGODB_URI;
-
-if (!uri) {
-  console.error('❌ MONGODB_URI environment variable is not set');
-  process.exit(1);
-}
-
-async function setPlatformAdmin() {
-  const email = process.argv[2];
-
+async function main() {
+  const email = (process.argv[2] || '').toLowerCase();
   if (!email) {
     console.error('❌ Please provide an email address');
-    console.log('\nUsage: node scripts/set-platform-admin.js <email>');
-    console.log('Example: node scripts/set-platform-admin.js admin@elva.com');
+    console.log('Usage: node scripts/set-platform-admin.js <email>');
     process.exit(1);
   }
 
-  const client = new MongoClient(uri);
-
-  try {
-    console.log('🔄 Connecting to MongoDB...');
-    await client.connect();
-    console.log('✅ Connected to MongoDB');
-
-    // Using new database for multi-tenancy (keeps old chatwidgets as backup)
-    const db = client.db('elva-agents');
-
-    // Find user by email
-    const user = await db.collection('users').findOne({ email });
-
-    if (!user) {
-      console.error(`❌ User with email "${email}" not found`);
-      process.exit(1);
-    }
-
-    // Update user to platform admin
-    await db.collection('users').updateOne(
-      { _id: user._id },
-      { 
-        $set: { 
-          platformRole: 'platform_admin',
-          updatedAt: new Date()
-        } 
-      }
-    );
-
-    console.log(`✅ User "${user.name}" (${email}) is now a Platform Admin`);
-    console.log('\n🔑 Platform Admin Capabilities:');
-    console.log('   - Create and manage all demos');
-    console.log('   - Access any organization (impersonation)');
-    console.log('   - View all users and organizations');
-    console.log('   - System-wide settings and analytics');
-
-  } catch (error) {
-    console.error('❌ Error setting platform admin:', error);
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.error('❌ Missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY');
     process.exit(1);
-  } finally {
-    await client.close();
-    console.log('\n🔒 MongoDB connection closed');
   }
+  const admin = createClient(url, key, { auth: { persistSession: false } });
+
+  const { data: user, error: fErr } = await admin
+    .from('users')
+    .select('id, name, role')
+    .eq('email', email)
+    .maybeSingle();
+  if (fErr) { console.error('❌ lookup failed:', fErr.message); process.exit(1); }
+  if (!user) { console.error(`❌ User with email "${email}" not found`); process.exit(1); }
+
+  if (user.role === 'platform_admin') {
+    console.log(`✅ "${user.name || email}" is already a Platform Admin`);
+    return;
+  }
+
+  const { error: uErr } = await admin
+    .from('users')
+    .update({ role: 'platform_admin' })
+    .eq('id', user.id);
+  if (uErr) { console.error('❌ update failed:', uErr.message); process.exit(1); }
+
+  console.log(`✅ "${user.name || email}" (${email}) is now a Platform Admin`);
+  console.log('🔑 Capabilities: manage all demos, access any organization, system-wide settings/analytics.');
 }
 
-// Run if called directly
-if (require.main === module) {
-  setPlatformAdmin();
-}
-
-module.exports = { setPlatformAdmin };
-
+main().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });
