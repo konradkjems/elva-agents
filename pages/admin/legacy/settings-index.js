@@ -251,9 +251,7 @@ function SystemSettings({ settings, onSave }) {
 
 function APIKeysSettings({ settings, onSave }) {
   const [formData, setFormData] = useState({
-    openaiApiKey: settings?.apiKeys?.openaiApiKey ? '••••••••••••••••' : '',
-    cloudinaryApiKey: settings?.apiKeys?.cloudinaryApiKey ? '••••••••••••••••' : '',
-    cloudinarySecret: settings?.apiKeys?.cloudinarySecret ? '••••••••••••••••' : ''
+    openaiApiKey: settings?.apiKeys?.openaiApiKey ? '••••••••••••••••' : ''
   });
 
   const handleSubmit = (e) => {
@@ -285,32 +283,6 @@ function APIKeysSettings({ settings, onSave }) {
           />
           <p className="text-xs text-gray-500 mt-1">Get your API key from OpenAI Platform</p>
         </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Cloudinary API Key
-          </label>
-          <input
-            type="password"
-            placeholder="Enter new Cloudinary API key"
-            value={formData.cloudinaryApiKey}
-            onChange={(e) => setFormData(prev => ({ ...prev, cloudinaryApiKey: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Cloudinary Secret
-          </label>
-          <input
-            type="password"
-            placeholder="Enter new Cloudinary secret"
-            value={formData.cloudinarySecret}
-            onChange={(e) => setFormData(prev => ({ ...prev, cloudinarySecret: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
 
         <button
           type="submit"
@@ -323,85 +295,31 @@ function APIKeysSettings({ settings, onSave }) {
   );
 }
 
-function DatabaseSettings({ settings, onSave }) {
-  const [formData, setFormData] = useState({
-    connectionString: settings?.database?.connectionString ? '••••••••••••••••' : '',
-    maxConnections: settings?.database?.maxConnections || 10,
-    timeout: settings?.database?.timeout || 30000,
-    retryAttempts: settings?.database?.retryAttempts || 3
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const dataToSave = { ...formData };
-    if (dataToSave.connectionString.includes('••••')) {
-      delete dataToSave.connectionString;
-    }
-    onSave('database', dataToSave);
-  };
-
+function DatabaseSettings() {
+  // The database is now Supabase (Postgres); there is no app-managed MongoDB
+  // connection string anymore. Connection config lives in Supabase env vars and
+  // schema is managed via SQL migrations (supabase/migrations/*).
   return (
     <div className="p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Database Configuration</h3>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            MongoDB Connection String
-          </label>
-          <input
-            type="password"
-            placeholder="Enter new MongoDB connection string"
-            value={formData.connectionString}
-            onChange={(e) => setFormData(prev => ({ ...prev, connectionString: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Max Connections
-            </label>
-            <input
-              type="number"
-              value={formData.maxConnections}
-              onChange={(e) => setFormData(prev => ({ ...prev, maxConnections: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Timeout (ms)
-            </label>
-            <input
-              type="number"
-              value={formData.timeout}
-              onChange={(e) => setFormData(prev => ({ ...prev, timeout: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Retry Attempts
-            </label>
-            <input
-              type="number"
-              value={formData.retryAttempts}
-              onChange={(e) => setFormData(prev => ({ ...prev, retryAttempts: parseInt(e.target.value) }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
 
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-medium text-gray-900 mb-2">Managed by Supabase</h4>
+        <p className="text-sm text-gray-600 mb-4">
+          The platform runs on Supabase (Postgres). Connection settings are
+          configured via Supabase environment variables and the schema is managed
+          through SQL migrations — there is no app-level connection string to set
+          here. Use the Supabase dashboard for database administration.
+        </p>
+        <a
+          href="https://supabase.com/dashboard/project/_/database/tables"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Save Database Settings
-        </button>
-      </form>
+          Open Supabase Database
+        </a>
+      </div>
     </div>
   );
 }

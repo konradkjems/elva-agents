@@ -11,15 +11,7 @@ function buildDefaultSettings() {
       maintenanceMode: false
     },
     apiKeys: {
-      openaiApiKey: process.env.OPENAI_API_KEY ? '••••••••••••••••' : '',
-      cloudinaryApiKey: process.env.CLOUDINARY_API_KEY ? '••••••••••••••••' : '',
-      cloudinarySecret: process.env.CLOUDINARY_API_SECRET ? '••••••••••••••••' : ''
-    },
-    database: {
-      connectionString: process.env.MONGODB_URI ? '••••••••••••••••' : '',
-      maxConnections: 10,
-      timeout: 30000,
-      retryAttempts: 3
+      openaiApiKey: process.env.OPENAI_API_KEY ? '••••••••••••••••' : ''
     },
     security: {
       corsOrigins: '*',
