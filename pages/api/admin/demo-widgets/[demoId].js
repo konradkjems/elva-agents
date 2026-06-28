@@ -1,6 +1,6 @@
 import { admin } from '../../../../lib/supabase/admin';
 import { fromRow, toSnake } from '../../../../lib/supabase/transform';
-import { deleteFromCloudinary } from '../../../../lib/cloudinary';
+import { deleteFromStorage, deleteByPublicUrl } from '../../../../lib/supabase/storage';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -84,18 +84,17 @@ export default async function handler(req, res) {
         return res.status(404).json({ message: 'Demo widget not found' });
       }
 
-      // Delete screenshot from Cloudinary if it exists
-      if (demo.demo_settings?.screenshotPublicId) {
-        try {
-          const deleteResult = await deleteFromCloudinary(demo.demo_settings.screenshotPublicId);
-          if (deleteResult.success) {
-            console.log(`📸 Screenshot deleted from Cloudinary: ${demo.demo_settings.screenshotPublicId}`);
-          } else {
-            console.warn(`📸 Failed to delete screenshot from Cloudinary: ${deleteResult.error}`);
-          }
-        } catch (error) {
-          console.error('Error deleting screenshot from Cloudinary:', error);
+      // Delete the demo screenshot from storage if it exists.
+      try {
+        if (demo.demo_settings?.screenshotPath) {
+          await deleteFromStorage('demo-screenshots', demo.demo_settings.screenshotPath);
+        } else if (demo.demo_settings?.screenshotUrl) {
+          // Legacy rows store only a URL (Supabase URLs are deletable; Cloudinary
+          // URLs are skipped).
+          await deleteByPublicUrl(demo.demo_settings.screenshotUrl);
         }
+      } catch (error) {
+        console.error('Error deleting screenshot from storage:', error);
       }
 
       // Delete demo widget from database
