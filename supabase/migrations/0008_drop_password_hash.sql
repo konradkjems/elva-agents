@@ -1,0 +1,24 @@
+-- ============================================================================
+-- Drop the now-unused users.password_hash column.
+--
+-- WHY: Phase 2 moved authentication from NextAuth (which read the bcrypt hash
+-- from public.users.password_hash) to Supabase Auth. The 6 existing users were
+-- imported into auth.users with the SAME uuid and their existing bcrypt hash
+-- (scripts/supabase/migrate-auth.js -> admin.auth.admin.createUser({id,
+-- password_hash})). auth.users.encrypted_password is now the single source of
+-- truth and email/password + Google login are both verified working, so the
+-- public.users copy is dead weight (and a needless plaintext-of-hash exposure
+-- surface). It was kept until now only as rollback safety for the cutover.
+--
+-- IRREVERSIBLE: this drops the only copy of the bcrypt hashes outside
+-- auth.users. Do NOT apply until Supabase Auth login is confirmed working
+-- (it is). After this, scripts/supabase/migrate-auth.js can no longer be
+-- re-run as-is (its SELECT references password_hash) — that script is one-shot
+-- import tooling that has already completed, so this is expected.
+--
+-- APPLY: there is no psql/pg locally and no exec-SQL RPC; run this in the
+-- Supabase dashboard SQL editor (same path used for 0007), or via `supabase db
+-- push` if the CLI is wired up.
+-- ============================================================================
+
+alter table public.users drop column if exists password_hash;
