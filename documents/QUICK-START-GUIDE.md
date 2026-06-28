@@ -1,3 +1,5 @@
+> ⚠️ **Historical / pre-migration document.** As of June 2026 the platform runs on **Supabase** (Postgres + Auth + Storage); MongoDB, NextAuth, and Cloudinary have been removed, along with their setup scripts and npm commands. Steps, env vars, and commands below that reference those services are outdated — see `WARP.md` / `CLAUDE.md` for the current setup.
+
 # 🚀 Quick Start Guide - Widget Management Frontend
 
 ## 📋 Getting Started
@@ -17,14 +19,10 @@ npm install -D @types/multer
 ### Environment Variables
 Add to your `.env.local`:
 ```bash
-# Authentication
-NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:3000
-
-# File Upload
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
+# Database (Supabase)
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # Admin Access
 ADMIN_EMAIL=konradkjems@gmail.com

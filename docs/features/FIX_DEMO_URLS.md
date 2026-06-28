@@ -1,3 +1,5 @@
+> ⚠️ **Historical / pre-migration document.** As of June 2026 the platform runs on **Supabase** (Postgres + Auth + Storage); MongoDB, NextAuth, and Cloudinary have been removed, along with their setup scripts and npm commands. Steps, env vars, and commands below that reference those services are outdated — see `WARP.md` / `CLAUDE.md` for the current setup.
+
 # Fix Demo URLs - Issues & Solutions
 
 ## Problem 1: Localhost URLs
@@ -22,7 +24,6 @@ Demo pages fail to load HTTP websites in iframes when the demo page is served ov
 
 ```
 NEXT_PUBLIC_APP_URL=https://your-production-domain.com
-NEXTAUTH_URL=https://your-production-domain.com
 ```
 
 Replace `your-production-domain.com` with your actual production domain (e.g., `elva-solutions.com` or `elva-agents.vercel.app`).

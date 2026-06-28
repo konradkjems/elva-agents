@@ -1,3 +1,5 @@
+> ⚠️ **Historical / pre-migration document.** As of June 2026 the platform runs on **Supabase** (Postgres + Auth + Storage); MongoDB, NextAuth, and Cloudinary have been removed, along with their setup scripts and npm commands. Steps, env vars, and commands below that reference those services are outdated — see `WARP.md` / `CLAUDE.md` for the current setup.
+
 # 🚀 Vercel Deployment Guide - Elva Widget Platform
 
 ## 📋 Prerequisites
@@ -60,20 +62,13 @@ In Vercel Dashboard:
 2. **Add these variables**:
 
 ```env
-# Authentication
-NEXTAUTH_SECRET=your-super-secret-key-here-min-32-chars
-NEXTAUTH_URL=https://your-project-name.vercel.app
-
-# Database
-MONGODB_URI=mongodb+srv://elva-admin:YOUR_PASSWORD@elva-widgets-cluster.xxxxx.mongodb.net/chatwidgets?retryWrites=true&w=majority
+# Database (Supabase)
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # OpenAI
 OPENAI_API_KEY=sk-your-openai-api-key
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
 
 # Public URL
 NEXT_PUBLIC_API_URL=https://your-project-name.vercel.app
@@ -113,11 +108,11 @@ After deployment, run these commands locally with production environment:
 
 ```bash
 # Set production environment variables locally
-export MONGODB_URI="your-production-mongodb-uri"
-export NEXTAUTH_SECRET="your-production-secret"
+export NEXT_PUBLIC_SUPABASE_URL="https://<ref>.supabase.co"
+export NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+export SUPABASE_SERVICE_ROLE_KEY="your-production-service-role-key"
 
-# Initialize database
-npm run init-db
+# Apply Supabase SQL migrations, then create the admin user
 npm run create-admin
 ```
 
@@ -136,7 +131,6 @@ npm run create-admin
    - Add A record: `@` → `76.76.19.61`
 3. **Update Environment Variables**:
    ```env
-   NEXTAUTH_URL=https://yourdomain.com
    NEXT_PUBLIC_API_URL=https://yourdomain.com
    ```
 

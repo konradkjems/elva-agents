@@ -2,12 +2,16 @@
 
 This file provides guidance to WARP (warp.dev) when working with code in this repository.
 
+> Companion to `CLAUDE.md` (same purpose). As of June 2026 the platform has been
+> fully migrated from MongoDB + NextAuth + Cloudinary to **Supabase** (Postgres
+> database + Supabase Auth + Supabase Storage). This file reflects that stack.
+
 ## Project Overview
 
-**Elva Chat Widget Platform** is a multi-tenant AI-powered chat widget platform built with Next.js, OpenAI, and MongoDB. It allows organizations to deploy customizable AI chat widgets on their websites with conversation persistence, team collaboration, and advanced analytics.
+**Elva Chat Widget Platform** is a multi-tenant AI-powered chat widget platform built with Next.js (Pages Router), OpenAI, and Supabase. Organizations deploy customizable AI chat widgets on their websites with conversation persistence, team collaboration, analytics, quota enforcement, GDPR controls, and a human live-chat handoff.
 
 ### Key Capabilities
-- **Multi-tenancy**: Organizations have isolated data and widgets
+- **Multi-tenancy**: Organizations have isolated data and widgets (app-level scoping by `organizationId`)
 - **OpenAI Integration**: Dual API support (Responses API and Chat Completions)
 - **Team Collaboration**: Role-based access control with owners, admins, editors, viewers
 - **Quota Management**: Conversation limits per subscription plan with automatic tracking
@@ -20,129 +24,46 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 # Install dependencies
 npm install
 
-# Initialize database with Responses API (recommended)
-npm run init-db-responses
-# or
-npm run migrate-responses
-
-# Initialize database with legacy Chat Completions API
-npm run init-db
-
-# Complete setup from scratch
-npm run setup-responses  # Responses API
-npm run setup           # Legacy API
+# Copy env template and fill in Supabase + OpenAI keys
+cp .env.example .env.local
 ```
+The database schema is managed by **SQL migrations** under `supabase/migrations/*.sql`
+(applied with the Supabase CLI: `supabase db push`, or via the dashboard SQL editor).
+There is no app-side DB-init step anymore — the old `init-db*` scripts were removed.
 
 ### Development
 ```bash
-# Start development server (with Turbopack)
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linter
-npm run lint
+npm run dev      # Start dev server (Turbopack)
+npm run build    # Production build
+npm start        # Production server
+npm run lint     # next lint
 ```
 
-### Database Management
+### Operational scripts
 ```bash
-# Create admin user
-npm run create-admin
+# Create an admin bootstrap user (Supabase Auth + profile + org)
+npm run create-admin            # node scripts/create-admin-user.js [email] [password] [name]
 
-# Test MongoDB connection
-node scripts/test-mongodb-connection.js
+# Promote a user to platform admin (sets users.role = 'platform_admin')
+node scripts/set-platform-admin.js <email>
 
-# Backup database
-npm run backup:db
+# GDPR (Supabase-backed)
+npm run gdpr:process-deletions  # process scheduled account deletions
+npm run gdpr:apply-retention    # apply per-widget data retention
 
-# Restore database
-npm run restore:db
+# Deployment helpers
+npm run deploy:vercel           # vercel --prod
+npm run deploy:production       # node scripts/deploy-production.js
 ```
-
-### GDPR/Privacy
-```bash
-# Migrate passwords to bcrypt
-npm run gdpr:migrate-passwords
-
-# Anonymize IP addresses
-npm run gdpr:anonymize-ips
-
-# Process account deletions
-npm run gdpr:process-deletions
-
-# Initialize audit log
-npm run gdpr:init-audit-log
-
-# Apply data retention policies
-npm run gdpr:apply-retention
-```
-
-### Organization & Multi-tenancy
-```bash
-# Migrate to organizations schema
-node scripts/migrate-to-organizations.js
-
-# Add organizationId to widgets
-node scripts/add-organizationid-to-widgets.js
-
-# Add organizationId to demos
-npm run migrate:demos-org
-
-# Debug user memberships
-node scripts/debug-user-memberships.js
-```
-
-### Quota Management
-```bash
-# Debug quota tracking
-node scripts/debug-quota-tracking.js
-
-# Test quota system
-node scripts/test-quota-system.js
-
-# Sync quota counts
-node scripts/sync-quota-counts.js
-
-# Migrate conversation quotas
-node scripts/migrate-conversation-quotas.js
-```
-
-### Deployment
-```bash
-# Prepare for deployment
-npm run deploy:prepare
-
-# Deploy to Vercel
-npm run deploy:vercel
-
-# Deploy to Netlify
-npm run deploy:netlify
-
-# Production setup
-npm run setup:production
-```
-
-### Analytics & Testing
-```bash
-# Verify analytics fixes
-npm run verify:analytics
-
-# Initialize satisfaction analytics
-node scripts/init-satisfaction-analytics.js
-
-# Fix analytics overcounting
-node scripts/fix-analytics-overcounting.js
-```
+Supabase-side tooling lives in `scripts/supabase/` (storage bucket setup, asset
+migration, Google OAuth setup). Database backups are handled by **Supabase native
+backups + Point-in-Time Recovery** — there are no app backup/restore scripts.
 
 ## Architecture
 
 ### High-Level Structure
 ```
-Platform Admin (Elva Team)
+Platform Admin (Elva Team, users.role = 'platform_admin')
   ├── Demos (Platform-level, for potential clients)
   ├── Organizations Management
   └── System Settings
@@ -167,70 +88,69 @@ pages/api/
 ├── widget-responses/[widgetId].js # Responses API widget serving
 ├── widget/[widgetId].js          # Legacy widget serving
 ├── auth/
-│   ├── [...nextauth].js          # NextAuth configuration
-│   └── register.js               # User registration
-├── organizations/
-│   └── index.js                  # Organization CRUD
-├── conversations/
-│   ├── index.js                  # List conversations
-│   ├── [id].js                   # Conversation details
-│   └── track.js                  # Conversation tracking
-└── admin/
-    ├── widgets.js                # Widget management
-    ├── analytics-overview.js     # Platform analytics
-    ├── audit-logs.js             # Audit trail
-    └── platform-stats.js         # Platform statistics
+│   ├── me.js                     # Returns the current session context (or 401)
+│   └── register.js               # User registration (Supabase Auth)
+├── live-chat/                    # Human handoff (request/queue/accept/send/poll/stream/end)
+├── organizations/                # Organization CRUD
+├── conversations/                # List / details / tracking
+└── admin/                        # Widget, analytics, audit, settings, etc.
 ```
+OAuth completes at the public page `pages/auth/callback.js` (outside the
+`/admin/*` middleware matcher) so the PKCE code is exchanged before any auth gate.
 
 #### Key Libraries (`lib/`)
-- **mongodb.js**: Database connection with fallback URI support and Atlas-specific SSL handling
-- **auth.js**: Authentication middleware (`requireAuth`, `requireAdmin`, `withAuth`, `withAdmin`)
-- **roleCheck.js**: Team role checking and permission validation
-- **quota.js**: Conversation quota management (check, increment, reset, notifications)
-- **privacy.js**: GDPR compliance utilities (IP anonymization, consent checking)
-- **rate-limit.js**: Rate limiting middleware
-- **password.js**: bcrypt password hashing and verification
-- **email.js**: Email notifications (quota, invitations)
+- **supabase/admin.js**: server-only service-role client (bypasses RLS) — the primary data-access entry point (`admin.from('table')...`)
+- **supabase/server.js** / **supabase/client.js**: request-scoped (`@supabase/ssr`) and browser clients used for auth
+- **supabase/session.js**: `getSessionContext(req, res)` — validates the Supabase cookie and returns `{ user: { id, email, role, currentOrganizationId, teamRole, permissions } }`
+- **supabase/auth-context.js**: `<AuthProvider>` + a drop-in `useSession()` for client components
+- **supabase/storage.js**: Supabase Storage helper (upload/delete + sharp resize) — replaced `lib/cloudinary.js`
+- **supabase/transform.js**: snake_case ↔ camelCase row mapping (`fromRow`/`fromRows`/`toSnake`)
+- **auth.js**: auth middlewares (`requireAuth`, `requireAdmin`, `withAuth`, `withAdmin`) backed by `getSessionContext`
+- **roleCheck.js**: `getUserTeamRole`, `requireRole` (team-level permission gate; platform_admin bypass)
+- **quota.js**: conversation quota management (check, increment, reset, notifications) via Postgres RPCs
+- **privacy.js**: GDPR utilities (IP anonymization, consent checking)
+- **rate-limit.js**, **cache.js**, **email.js** (Resend)
 
-### Database Collections
+### Database Tables (Postgres / Supabase)
+Hybrid schema: normalized core columns + JSONB for nested config. Every table has a
+UUID `id` plus a `legacy_id` preserving the original Mongo `_id` (widget embed ids
+live in `legacy_id`). Lookups by embed id use `.eq('legacy_id', id)` with a UUID fallback.
 
-#### Core Collections
-- **users**: User accounts with platform roles and current organization context
-- **organizations**: Client subaccounts with plans, limits, usage tracking
-- **team_members**: Organization membership with roles and permissions
-- **widgets**: Chat widget configurations (two modes: `openai.promptId` for Responses API or `prompt` for legacy)
-- **conversations**: Chat conversations with messages, satisfaction ratings, analytics metadata
-- **demos**: Platform admin demos for showcasing to potential clients
-- **invitations**: Team member invitation tokens
+#### Core tables
+- **users**: accounts; `role in ('member','admin','platform_admin')`, `current_organization_id`, JSONB `preferences`/`agent_profile`. Passwords live in Supabase Auth (`auth.users`, same UUID), not here.
+- **organizations**: client subaccounts; plan, limits, usage (JSONB), subscription status
+- **team_members**: org membership; `role in ('owner','admin','member','viewer')`, JSONB `permissions`, unique `(organization_id, user_id)`
+- **widgets**: widget config (two modes: `openai.promptId` for Responses API or `prompt` for legacy); JSONB `openai`/`appearance`/`messages`/`branding`/`advanced`/`analytics`
+- **conversations**: messages (JSONB), satisfaction, `last_response_id`, analytics metadata
+- **demos**, **invitations**
 
-#### Supporting Collections
-- **audit_logs**: GDPR-compliant audit trail
-- **support_requests**: User support tickets
-- **account_deletions**: Scheduled account deletion requests
+#### Supporting tables
+- **audit_log**, **support_requests**, **analytics**, **satisfaction_analytics**, **app_settings**
+- Account deletions are fields on `users` + an `audit_log` entry (not a separate table)
 
 ### Authentication & Authorization
 
 #### Session Management
-- Uses NextAuth with JWT strategy
-- Session duration: 24 hours with rolling updates
-- Supports both credentials (email/password) and Google OAuth
+- **Supabase Auth** (GoTrue); the session lives in a cookie (`sb-<ref>-auth-token`)
+- `middleware.js` gates `/admin/*` on a valid Supabase session, redirecting to `/admin/login`
+- Supports credentials (email/password) and Google OAuth
+- `auth.users.id === public.users.id` (same UUID), so `session.user.id` is stable
 
 #### User Roles
-1. **Platform Admin** (`role: 'platform_admin'`): Full system access, can impersonate organizations
-2. **Organization Owner** (`teamRole: 'owner'`): Full control over their organization
-3. **Organization Admin** (`teamRole: 'admin'`): Manage widgets, team, settings
-4. **Organization Editor** (`teamRole: 'editor'`): Create/edit widgets
-5. **Organization Viewer** (`teamRole: 'viewer'`): Read-only access
+1. **Platform Admin** (`users.role = 'platform_admin'`): full system access, can impersonate organizations
+2. **Organization Owner** (`teamRole: 'owner'`): full control over their organization
+3. **Organization Admin** (`teamRole: 'admin'`): manage widgets, team, settings
+4. **Organization Editor** (`teamRole: 'editor'`): create/edit widgets
+5. **Organization Viewer** (`teamRole: 'viewer'`): read-only access
 
 #### Permission Pattern
 ```javascript
-// Check authentication
 const { requireRole } = require('./lib/roleCheck');
 const { authorized, session } = await requireRole(req, res, ['owner', 'admin']);
 
 // Platform admin bypass
 if (session.user.role === 'platform_admin') {
-  // Admins can access anything
+  // can access anything
 }
 ```
 
@@ -239,51 +159,33 @@ if (session.user.role === 'platform_admin') {
 #### Responses API (Recommended)
 - Prompts managed centrally on platform.openai.com
 - Automatic conversation context via `previous_response_id`
-- Widget config: `widget.openai.promptId` and optional `widget.openai.version`
-- Endpoint: `/api/respond-responses.js`
-- Widget serving: `/api/widget-responses/[widgetId].js`
+- Widget config: `widget.openai.promptId` (+ optional `widget.openai.version`)
+- Endpoint: `/api/respond-responses.js`; serving: `/api/widget-responses/[widgetId].js`
 
 #### Chat Completions API (Legacy)
-- Prompts stored in widget configuration
-- Manual conversation array building
+- Prompts stored in widget configuration; manual conversation-array building
 - Widget config: `widget.prompt`
-- Endpoint: `/api/respond.js`
-- Widget serving: `/api/widget/[widgetId].js`
+- Endpoint: `/api/respond.js`; serving: `/api/widget/[widgetId].js`
 
 ### Quota System
+1. Each organization has a conversation quota based on plan; quotas reset monthly on the 1st
+2. FREE tier: hard block when exceeded; PAID tiers: allow tracked overage
+3. Atomic counters use Postgres RPCs (avoid read-modify-write races)
 
-#### How It Works
-1. Each organization has a conversation quota based on their plan
-2. Quotas reset monthly on the 1st
-3. FREE tier: Hard block when quota exceeded
-4. PAID tiers: Allow overages, track for billing
-5. Trial expiry blocks new conversations for FREE tier
-
-#### Quota Flow
 ```javascript
-// Before creating conversation
-const { checkQuota } = require('./lib/quota');
+const { checkQuota, incrementConversationCount } = require('./lib/quota');
 const quotaCheck = await checkQuota(organizationId);
-if (quotaCheck.blocked) {
-  return res.status(403).json({ error: 'Quota exceeded' });
-}
-
-// After creating conversation
-const { incrementConversationCount } = require('./lib/quota');
+if (quotaCheck.blocked) return res.status(403).json({ error: 'Quota exceeded' });
+// ... after creating the conversation:
 await incrementConversationCount(organizationId);
 ```
 
 ### GDPR Compliance
+- IP anonymization (last octet removed); consent headers `x-elva-consent-analytics` / `x-elva-consent-functional`
+- Data retention with automatic cleanup (`scripts/apply-data-retention.js`, Supabase)
+- Right to erasure (account deletion with 30-day delay; `scripts/process-account-deletions.js`)
+- Audit logs; passwords hashed by Supabase Auth (bcrypt)
 
-#### Key Privacy Features
-- IP address anonymization (last octet removed)
-- Consent headers: `x-elva-consent-analytics`, `x-elva-consent-functional`
-- Data retention with automatic cleanup
-- Right to erasure (account deletion with 30-day delay)
-- Audit logs for all data access/modifications
-- bcrypt password hashing with salt rounds = 12
-
-#### Consent Pattern
 ```javascript
 const analyticsConsent = req.headers['x-elva-consent-analytics'] === 'true';
 const country = analyticsConsent ? await getCountryFromIP(rawIP) : null;
@@ -292,100 +194,76 @@ const country = analyticsConsent ? await getCountryFromIP(rawIP) : null;
 ## Important Implementation Patterns
 
 ### Organization Data Isolation
-Always filter by `organizationId` when querying widgets or conversations:
+Always filter by `organizationId` (from `session.user.currentOrganizationId`) when querying widgets or conversations. Platform admins bypass org scoping.
 ```javascript
-const currentOrgId = session.user.currentOrganizationId;
-const widgets = await db.collection('widgets').find({ 
-  organizationId: new ObjectId(currentOrgId) 
-}).toArray();
+const { admin } = require('./lib/supabase/admin');
+const { data: widgets } = await admin
+  .from('widgets')
+  .select('*')
+  .eq('organization_id', session.user.currentOrganizationId);
 ```
 
-### Error Handling in API Routes
+### API Route Preamble
 ```javascript
-// Always set CORS first
+// CORS first
 res.setHeader('Access-Control-Allow-Origin', '*');
 res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
 res.setHeader('Access-Control-Allow-Headers', 'Content-Type, ...');
-
-// Handle OPTIONS
-if (req.method === 'OPTIONS') {
-  res.status(200).end();
-  return;
-}
-
-// Apply rate limiting
-await runMiddleware(req, res, widgetLimiter);
+if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+await runMiddleware(req, res, widgetLimiter); // rate limit
+// ... auth/role check, then org-scoped query
 ```
 
-### MongoDB Connection
-- Uses singleton pattern for connection reuse
-- Supports fallback URI for DNS/SRV issues
-- Development mode uses global caching to prevent hot reload issues
+### Supabase access
+- Server code uses the service-role `admin` client (bypasses RLS). RLS is ON
+  (deny-by-default, no policies) on all tables; the browser only uses Supabase for auth.
+- `SUPABASE_SERVICE_ROLE_KEY` must be the real service-role secret (never exposed client-side).
 
 ### Widget Caching
-Widget configurations are cached for 5 minutes to reduce database queries. Cache is keyed by widget ID and includes `cachedAt` timestamp.
+Widget configurations are cached ~5 minutes (keyed by widget id) to reduce DB load.
 
 ## Testing
-
-The platform primarily uses manual testing with HTML test pages located in `/tests/`:
-- `test.html`: Basic widget testing
-- `test-widget-overview.html`: Multi-widget comparison
-- `test-consent.js`: GDPR consent testing
-- Language-specific tests: `test-widget-da.html`, `test-widget-en.html`, etc.
-
-Start dev server and navigate to `http://localhost:3000/tests/[test-file].html`
+Manual HTML test pages in `/tests/` (e.g. `test.html`, `test-widget-da.html`). Start `npm run dev` and open `http://localhost:3000/tests/<file>.html`. Live-chat manual steps are in `LIVE_CHAT_TEST_GUIDE.md`.
 
 ## Configuration Files
 
 ### Environment Variables
-Required in `.env.local`:
+Required in `.env.local` (see `.env.example`):
 ```env
 # OpenAI
 OPENAI_API_KEY=sk-...
 
-# MongoDB
-MONGODB_URI=mongodb+srv://...
-MONGODB_URI_FALLBACK=mongodb://...  # Optional fallback
+# Supabase (Database + Auth + Storage)
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...          # server only — bypasses RLS
+SUPABASE_DB_URL=postgresql://...       # used by migration tooling
 
-# NextAuth
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=generate-with-openssl
-
-# Google OAuth (optional)
+# Google OAuth (configured in Supabase dashboard)
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 
-# API URL
+# App
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
+Google OAuth redirect URLs (Site URL + Redirect URLs) are configured in the Supabase
+dashboard (Authentication → URL Configuration), not in app code.
 
 ### Next.js Configuration
-- Uses Turbopack for faster dev builds (`--turbopack` flag)
-- Middleware for auth protection on `/admin/*` routes
-- API routes are in `/pages/api/`
+- Turbopack for dev (`--turbopack`); middleware gates `/admin/*`; API routes in `/pages/api/`
 
 ## Migration Notes
 
-### From Legacy to Responses API
-1. Create prompt on platform.openai.com
-2. Copy prompt ID (starts with `pmpt_`)
-3. Update widget: `db.widgets.updateOne({ _id }, { $set: { 'openai.promptId': 'pmpt_...' }})`
-4. Use `/api/widget-responses/[widgetId]` for embedding
+### Legacy → Responses API
+1. Create a prompt on platform.openai.com, copy the prompt id (`pmpt_...`)
+2. Set `widget.openai.promptId` on the widget (admin UI or `admin.from('widgets').update(...)`)
+3. Embed via `/api/widget-responses/[widgetId]`
 
-### From Single-User to Multi-Tenant
-Phase 1 (Complete):
-1. Add `organizations` and `team_members` collections
-2. Add `organizationId` to widgets and conversations
-3. Update all queries to filter by organization
-4. Implement quota system
-5. Update authentication to include team roles
+### MongoDB + NextAuth + Cloudinary → Supabase (complete)
+- Data migrated 1:1 (Mongo `_id` → `legacy_id`, ObjectId → UUID)
+- NextAuth replaced by Supabase Auth (same user UUIDs; bcrypt hashes imported)
+- Cloudinary replaced by Supabase Storage (buckets: `widget-assets`, `chat-uploads`, `agent-avatars`, `demo-screenshots`)
+- The `mongodb` package and all Mongo-era scripts were removed
 
 ## Documentation
-
-Full documentation is in `/docs/`:
-- **Deployment**: Complete deployment guides for Vercel, domain setup, production testing
-- **Setup**: MongoDB setup, Google OAuth configuration
-- **Features**: Multi-tenancy setup, profile management, search functionality
-- **Development**: Project summary, API migration, styling improvements
-
-See `/docs/README.md` for documentation index.
+Full documentation is in `/docs/` (deployment, setup, features, development). See `/docs/README.md` for the index. Note: some older docs predate the Supabase migration and may reference MongoDB/NextAuth/Cloudinary — this file and `CLAUDE.md` are the current source of truth.

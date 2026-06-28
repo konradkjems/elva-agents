@@ -1,3 +1,5 @@
+> ⚠️ **Historical / pre-migration document.** As of June 2026 the platform runs on **Supabase** (Postgres + Auth + Storage); MongoDB, NextAuth, and Cloudinary have been removed, along with their setup scripts and npm commands. Steps, env vars, and commands below that reference those services are outdated — see `WARP.md` / `CLAUDE.md` for the current setup.
+
 # 🚀 Complete Production Deployment Guide - Elva Widget Platform
 
 ## 📋 Overview
@@ -106,20 +108,13 @@ Internet → Vercel CDN → Next.js App → MongoDB Atlas
 
 ### Required for Production
 ```env
-# Authentication
-NEXTAUTH_SECRET=your-super-secret-key-32-chars-min
-NEXTAUTH_URL=https://your-domain.com
-
-# Database
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/chatwidgets
+# Database (Supabase)
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # OpenAI
 OPENAI_API_KEY=sk-your-openai-key
-
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
 
 # Public URL
 NEXT_PUBLIC_API_URL=https://your-domain.com

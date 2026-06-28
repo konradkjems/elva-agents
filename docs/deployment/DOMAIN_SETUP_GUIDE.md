@@ -1,3 +1,5 @@
+> ⚠️ **Historical / pre-migration document.** As of June 2026 the platform runs on **Supabase** (Postgres + Auth + Storage); MongoDB, NextAuth, and Cloudinary have been removed, along with their setup scripts and npm commands. Steps, env vars, and commands below that reference those services are outdated — see `WARP.md` / `CLAUDE.md` for the current setup.
+
 # 🌐 Custom Domain Setup Guide - Elva Widget Platform
 
 ## 📋 Prerequisites
@@ -53,7 +55,6 @@ TTL: 3600
 After domain is configured, update these in Vercel:
 
 ```env
-NEXTAUTH_URL=https://widgets.elva-solutions.com
 NEXT_PUBLIC_API_URL=https://widgets.elva-solutions.com
 ```
 

@@ -1,3 +1,5 @@
+> ⚠️ **Historical / pre-migration document.** As of June 2026 the platform runs on **Supabase** (Postgres + Auth + Storage); MongoDB, NextAuth, and Cloudinary have been removed, along with their setup scripts and npm commands. Steps, env vars, and commands below that reference those services are outdated — see `WARP.md` / `CLAUDE.md` for the current setup.
+
 # Google OAuth Setup Guide
 
 This guide will help you set up Google OAuth authentication for your Elva-Agents admin panel.
@@ -60,10 +62,6 @@ Create or update your `.env.local` file:
 # Google OAuth
 GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret-here
-
-# NextAuth (should already exist)
-NEXTAUTH_SECRET=your-nextauth-secret
-NEXTAUTH_URL=http://localhost:3000
 ```
 
 ### 2.2 Vercel Production

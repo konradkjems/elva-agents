@@ -1,3 +1,5 @@
+> ⚠️ **Historical / pre-migration document.** As of June 2026 the platform runs on **Supabase** (Postgres + Auth + Storage); MongoDB, NextAuth, and Cloudinary have been removed, along with their setup scripts and npm commands. Steps, env vars, and commands below that reference those services are outdated — see `WARP.md` / `CLAUDE.md` for the current setup.
+
 # 🚀 Elva Widget Platform - Deployment Guide
 
 ## 📋 Pre-Deployment Checklist
@@ -47,9 +49,10 @@ Set these in your hosting platform:
 
 ```env
 OPENAI_API_KEY=sk-your-production-key
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/elva-agents
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_API_URL=https://your-domain.com
-NEXTAUTH_SECRET=your-secret-key
 ```
 
 ### Domain Configuration
