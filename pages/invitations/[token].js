@@ -460,7 +460,7 @@ export default function InvitationPage() {
                     type="button"
                     variant="outline"
                     className="w-full"
-                    onClick={() => getSupabaseBrowserClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/invitations/${token}` } })}
+                    onClick={() => getSupabaseBrowserClient().auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/invitations/${token}`)}` } })}
                     disabled={processing}
                   >
                     <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
