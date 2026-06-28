@@ -8,11 +8,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "init-db": "node scripts/init-db.cjs",
-    "init-db-responses": "node scripts/init-db-responses.cjs",
-    "migrate-responses": "npm run init-db-responses",
-    "setup": "npm install && npm run init-db",
-    "setup-responses": "npm install && npm run init-db-responses",
     "deploy": "node scripts/deploy.js",
     "deploy:prepare": "npm run deploy",
     "deploy:vercel": "vercel --prod",
@@ -20,16 +15,8 @@
     "create-admin": "node scripts/create-admin-user.js",
     "setup:production": "npm run create-admin && npm run build",
     "deploy:production": "node scripts/deploy-production.js",
-    "gdpr:migrate-passwords": "node scripts/migrate-passwords-to-bcrypt.js",
-    "gdpr:anonymize-ips": "node scripts/anonymize-existing-ips.js",
     "gdpr:process-deletions": "node scripts/process-account-deletions.js",
-    "gdpr:init-audit-log": "node scripts/init-audit-log.js",
-    "gdpr:apply-retention": "node scripts/apply-data-retention.js",
-    "backup:db": "node scripts/backup-database.js",
-    "restore:db": "node scripts/restore-database.js",
-    "verify:analytics": "node scripts/verify-analytics-fix.js",
-    "migrate:demos-org": "node scripts/add-organizationId-to-demos.js",
-    "migrate:rename-manual-reviews": "node scripts/rename-manual-reviews-collection.js"
+    "gdpr:apply-retention": "node scripts/apply-data-retention.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
@@ -68,7 +55,6 @@
     "express-rate-limit": "^7.5.0",
     "formidable": "^3.5.4",
     "lucide-react": "^0.544.0",
-    "mongodb": "^6.19.0",
     "multer": "^2.0.2",
     "next": "15.5.9",
     "node-fetch": "^3.3.2",
@@ -103,7 +89,7 @@
     "chat",
     "widget",
     "openai",
-    "mongodb"
+    "supabase"
   ],
   "author": "Elva Solutions",
   "license": "ISC"
