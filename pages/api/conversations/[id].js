@@ -1,25 +1,23 @@
-import clientPromise from '../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   try {
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const conversations = db.collection('conversations');
-
     const { id } = req.query;
 
-    if (!ObjectId.isValid(id)) {
+    if (!UUID_RE.test(id)) {
       return res.status(400).json({ error: 'Invalid conversation ID' });
     }
 
     switch (req.method) {
       case 'GET':
-        return await getConversation(req, res, conversations, id);
+        return await getConversation(req, res, id);
       case 'PUT':
-        return await updateConversation(req, res, conversations, id);
+        return await updateConversation(req, res, id);
       case 'DELETE':
-        return await deleteConversation(req, res, conversations, id);
+        return await deleteConversation(req, res, id);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
         return res.status(405).json({ error: 'Method not allowed' });
@@ -30,15 +28,20 @@ export default async function handler(req, res) {
   }
 }
 
-async function getConversation(req, res, conversations, id) {
+async function getConversation(req, res, id) {
   try {
-    const conversation = await conversations.findOne({ _id: new ObjectId(id) });
-    
-    if (!conversation) {
+    const { data, error } = await admin
+      .from('conversations')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (!data) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    return res.status(200).json({ conversation });
+    return res.status(200).json({ conversation: fromRow(data) });
 
   } catch (error) {
     console.error('Error fetching conversation:', error);
@@ -46,7 +49,7 @@ async function getConversation(req, res, conversations, id) {
   }
 }
 
-async function updateConversation(req, res, conversations, id) {
+async function updateConversation(req, res, id) {
   const {
     endTime,
     messageCount,
@@ -57,29 +60,47 @@ async function updateConversation(req, res, conversations, id) {
   } = req.body;
 
   try {
-    const updateData = {
-      updatedAt: new Date()
-    };
+    // Build a snake_case patch; updated_at is maintained by a trigger.
+    const patch = {};
+    if (endTime !== undefined) patch.end_time = new Date(endTime).toISOString();
+    if (messageCount !== undefined) patch.message_count = messageCount;
+    if (messages !== undefined) patch.messages = messages;
+    if (satisfaction !== undefined) patch.satisfaction = satisfaction;
+    if (tags !== undefined) patch.tags = tags;
+    if (metadata !== undefined) patch.metadata = { ...metadata };
 
-    if (endTime !== undefined) updateData.endTime = new Date(endTime);
-    if (messageCount !== undefined) updateData.messageCount = messageCount;
-    if (messages !== undefined) updateData.messages = messages;
-    if (satisfaction !== undefined) updateData.satisfaction = satisfaction;
-    if (tags !== undefined) updateData.tags = tags;
-    if (metadata !== undefined) updateData.metadata = { ...metadata };
+    // Nothing to update — just confirm the conversation exists.
+    if (Object.keys(patch).length === 0) {
+      const { data, error } = await admin
+        .from('conversations')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+      return res.status(200).json({
+        success: true,
+        message: 'Conversation updated successfully'
+      });
+    }
 
-    const result = await conversations.updateOne(
-      { _id: new ObjectId(id) },
-      { $set: updateData }
-    );
+    const { data, error } = await admin
+      .from('conversations')
+      .update(patch)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
 
-    if (result.matchedCount === 0) {
+    if (!data) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Conversation updated successfully' 
+    return res.status(200).json({
+      success: true,
+      message: 'Conversation updated successfully'
     });
 
   } catch (error) {
@@ -88,17 +109,23 @@ async function updateConversation(req, res, conversations, id) {
   }
 }
 
-async function deleteConversation(req, res, conversations, id) {
+async function deleteConversation(req, res, id) {
   try {
-    const result = await conversations.deleteOne({ _id: new ObjectId(id) });
+    const { data, error } = await admin
+      .from('conversations')
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
 
-    if (result.deletedCount === 0) {
+    if (!data) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Conversation deleted successfully' 
+    return res.status(200).json({
+      success: true,
+      message: 'Conversation deleted successfully'
     });
 
   } catch (error) {

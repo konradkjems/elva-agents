@@ -1,13 +1,10 @@
 /**
  * Switch Organization Context API
- * 
+ *
  * POST /api/organizations/[id]/switch - Switch user's current organization
  */
-
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
-import clientPromise from '../../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../../lib/supabase/admin';
+import { getSessionContext } from '../../../../lib/supabase/session';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -16,29 +13,32 @@ export default async function handler(req, res) {
 
   try {
     // Check authentication
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
     if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    // Using elva-agents database for multi-tenancy
-    const db = client.db('elva-agents');
-    const userId = new ObjectId(session.user.id);
+    const userId = session.user.id;
     const { id: orgId } = req.query;
 
-    if (!orgId || !ObjectId.isValid(orgId)) {
+    if (!orgId) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
     // Check if user is a member of this organization or is platform admin
-    const membership = await db.collection('team_members').findOne({
-      organizationId: new ObjectId(orgId),
-      userId,
-      status: 'active'
-    });
+    const { data: membership } = await admin
+      .from('team_members')
+      .select('role')
+      .eq('organization_id', orgId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
 
-    const user = await db.collection('users').findOne({ _id: userId });
+    const { data: user } = await admin
+      .from('users')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
     const isPlatformAdmin = user && user.role === 'platform_admin';
 
     if (!membership && !isPlatformAdmin) {
@@ -46,25 +46,23 @@ export default async function handler(req, res) {
     }
 
     // Check if organization exists and is not deleted
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(orgId),
-      deletedAt: { $exists: false }
-    });
+    const { data: organization } = await admin
+      .from('organizations')
+      .select('name')
+      .eq('id', orgId)
+      .is('deleted_at', null)
+      .maybeSingle();
 
     if (!organization) {
       return res.status(404).json({ error: 'Organization not found' });
     }
 
     // Update user's current organization
-    await db.collection('users').updateOne(
-      { _id: userId },
-      {
-        $set: {
-          currentOrganizationId: new ObjectId(orgId),
-          updatedAt: new Date()
-        }
-      }
-    );
+    const { error: updateErr } = await admin
+      .from('users')
+      .update({ current_organization_id: orgId })
+      .eq('id', userId);
+    if (updateErr) throw updateErr;
 
     return res.status(200).json({
       message: 'Organization switched successfully',
@@ -78,4 +76,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

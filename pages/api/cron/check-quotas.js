@@ -1,22 +1,21 @@
 /**
  * Cron Job: Check Conversation Quotas and Send Notifications
- * 
+ *
  * This endpoint should be triggered daily (or as needed) to check
  * all organization quotas and send notifications at threshold levels.
- * 
+ *
  * Vercel Cron: Configure in vercel.json
  * Manual trigger: GET /api/cron/check-quotas?secret=YOUR_CRON_SECRET
  */
 
-import clientPromise from '../../../lib/mongodb.js';
-import { getUsageStats } from '../../../lib/quota.js';
+import { admin } from '../../../lib/supabase/admin';
 import { sendQuotaNotificationEmail } from '../../../lib/email.js';
 
 export default async function handler(req, res) {
   // Verify cron secret for security
   const cronSecret = process.env.CRON_SECRET || 'dev-secret';
   const providedSecret = req.query.secret || req.headers['x-cron-secret'];
-  
+
   // Vercel Cron sends authorization header
   const vercelCronAuth = req.headers['authorization'];
   const isVercelCron = vercelCronAuth === `Bearer ${cronSecret}`;
@@ -27,14 +26,15 @@ export default async function handler(req, res) {
 
   try {
     console.log('🔄 Starting quota check cron job...');
-    
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
 
     // Get all organizations with usage tracking
-    const organizations = await db.collection('organizations').find({
-      'usage.conversations': { $exists: true }
-    }).toArray();
+    const { data: organizationRows, error: orgErr } = await admin
+      .from('organizations')
+      .select('id, name, plan, usage, owner_id, billing_email')
+      .not('usage->conversations', 'is', null);
+    if (orgErr) throw orgErr;
+
+    const organizations = organizationRows || [];
 
     console.log(`📊 Found ${organizations.length} organizations to check`);
 
@@ -47,59 +47,49 @@ export default async function handler(req, res) {
         if (!usage) continue;
 
         const usagePercentage = (usage.current / usage.limit) * 100;
-        const notificationsSent = usage.notificationsSent || [];
+        const sentThresholds = usage.notificationsSent || [];
 
         // Determine which thresholds need notifications
         const thresholdsToNotify = [];
-        
-        if (usagePercentage >= 110 && !notificationsSent.includes('110%')) {
+
+        if (usagePercentage >= 110 && !sentThresholds.includes('110%')) {
           thresholdsToNotify.push('110%');
-        } else if (usagePercentage >= 100 && !notificationsSent.includes('100%')) {
+        } else if (usagePercentage >= 100 && !sentThresholds.includes('100%')) {
           thresholdsToNotify.push('100%');
-        } else if (usagePercentage >= 80 && !notificationsSent.includes('80%')) {
+        } else if (usagePercentage >= 80 && !sentThresholds.includes('80%')) {
           thresholdsToNotify.push('80%');
         }
 
         if (thresholdsToNotify.length === 0) continue;
 
-        // Get admin emails
-        const teamMembers = await db.collection('team_members').aggregate([
-          {
-            $match: {
-              organizationId: org._id,
-              status: 'active',
-              role: { $in: ['owner', 'admin'] }
-            }
-          },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'userId',
-              foreignField: '_id',
-              as: 'user'
-            }
-          },
-          {
-            $unwind: '$user'
-          }
-        ]).toArray();
+        // Get admin emails (team_members → users; disambiguate the double FK)
+        const { data: teamMembers } = await admin
+          .from('team_members')
+          .select('users!team_members_user_id_fkey(email)')
+          .eq('organization_id', org.id)
+          .eq('status', 'active')
+          .in('role', ['owner', 'admin']);
 
-        const adminEmails = teamMembers.map(m => m.user.email).filter(Boolean);
+        const adminEmails = (teamMembers || []).map(m => m.users?.email).filter(Boolean);
 
         // Get owner email
         let ownerEmail = null;
-        if (org.ownerId) {
-          const owner = await db.collection('users').findOne({ _id: org.ownerId });
+        if (org.owner_id) {
+          const { data: owner } = await admin
+            .from('users')
+            .select('email')
+            .eq('id', org.owner_id)
+            .maybeSingle();
           ownerEmail = owner?.email;
         }
 
         // Send notification for the highest threshold
         const threshold = thresholdsToNotify[0];
-        
+
         await sendQuotaNotificationEmail({
           organizationName: org.name,
           ownerEmail: ownerEmail,
-          billingEmail: org.billingEmail,
+          billingEmail: org.billing_email,
           adminEmails: adminEmails,
           usagePercentage: Math.round(usagePercentage),
           current: usage.current,
@@ -107,13 +97,18 @@ export default async function handler(req, res) {
           plan: org.plan || 'free'
         });
 
-        // Mark notification as sent
-        await db.collection('organizations').updateOne(
-          { _id: org._id },
-          {
-            $push: { 'usage.conversations.notificationsSent': threshold }
+        // Mark notification as sent (append threshold to the usage JSONB)
+        const newUsage = {
+          ...org.usage,
+          conversations: {
+            ...usage,
+            notificationsSent: [...sentThresholds, threshold]
           }
-        );
+        };
+        await admin
+          .from('organizations')
+          .update({ usage: newUsage })
+          .eq('id', org.id);
 
         notificationsSent++;
         console.log(`✅ Sent ${threshold} notification for ${org.name}`);
@@ -138,10 +133,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Cron job error:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
-      details: error.message 
+      details: error.message
     });
   }
 }
-

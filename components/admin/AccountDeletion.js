@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
+import { signOut } from '@/lib/supabase/auth-context';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -52,7 +53,7 @@ export default function AccountDeletion() {
       alert(`Din konto er markeret til sletning.\n\nDen vil blive permanent slettet ${new Date(data.deletionDate).toLocaleDateString('da-DK')}.\n\nDu har 30 dage til at fortryde ved at logge ind igen.`);
       
       // Sign out
-      window.location.href = '/api/auth/signout';
+      await signOut({ callbackUrl: '/admin/login' });
 
     } catch (error) {
       console.error('Delete error:', error);

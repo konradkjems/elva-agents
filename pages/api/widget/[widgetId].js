@@ -1,4 +1,7 @@
-import clientPromise from "../../../lib/mongodb";
+import { admin } from "../../../lib/supabase/admin";
+import { fromRow } from "../../../lib/supabase/transform";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -24,11 +27,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Widget ID required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db("elva-agents");
-    
-    // Get widget configuration to verify it exists and get theme
-    const widget = await db.collection("widgets").findOne({ _id: widgetId });
+    // Get widget configuration (looked up by legacy embed id)
+    let { data } = await admin.from('widgets').select('*').eq('legacy_id', String(widgetId)).maybeSingle();
+    if (!data && UUID_RE.test(widgetId)) {
+      ({ data } = await admin.from('widgets').select('*').eq('id', widgetId).maybeSingle());
+    }
+    const widget = data ? fromRow(data) : null;
     if (!widget) {
       return res.status(404).json({ error: "Widget not found" });
     }

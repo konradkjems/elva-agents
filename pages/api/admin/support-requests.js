@@ -1,52 +1,54 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]';
+import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
+import { fromRows } from '../../../lib/supabase/transform';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
-  
+  const session = await getSessionContext(req, res);
+
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   if (req.method === 'GET') {
     try {
-      const client = await clientPromise;
-      const db = client.db('elva-agents');
-      
       // Get user's organization
-      const user = await db.collection('users').findOne({ 
-        email: session.user.email 
-      });
+      const { data: user } = await admin
+        .from('users')
+        .select('id')
+        .eq('email', session.user.email)
+        .maybeSingle();
 
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
 
       // Get user's organization memberships
-      const memberships = await db.collection('team_members').find({
-        userId: user._id,
-        status: 'active'
-      }).toArray();
+      const { data: memberships } = await admin
+        .from('team_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      const allOrgIds = (memberships || []).map(m => m.organization_id);
 
       // Use current organization if available, otherwise use all memberships
       let organizationIds;
       if (session.user.currentOrganizationId) {
         // Check if user has access to current organization
-        const hasAccess = memberships.some(m => 
-          m.organizationId.toString() === session.user.currentOrganizationId
+        const hasAccess = allOrgIds.some(
+          id => id === session.user.currentOrganizationId
         );
-        
+
         if (hasAccess) {
-          organizationIds = [new ObjectId(session.user.currentOrganizationId)];
+          organizationIds = [session.user.currentOrganizationId];
         } else {
           // Fallback to all memberships if current org access denied
-          organizationIds = memberships.map(m => new ObjectId(m.organizationId));
+          organizationIds = allOrgIds;
         }
       } else {
         // Fallback to all memberships if no current organization
-        organizationIds = memberships.map(m => new ObjectId(m.organizationId));
+        organizationIds = allOrgIds;
       }
 
       if (organizationIds.length === 0) {
@@ -54,47 +56,61 @@ export default async function handler(req, res) {
       }
 
       // Get support requests for user's organizations
-      const requests = await db.collection('support_requests')
-        .find({
-          organizationId: { $in: organizationIds }
-        })
-        .sort({ submittedAt: -1 })
-        .limit(100)
-        .toArray();
+      const { data: requestRows, error: reqErr } = await admin
+        .from('support_requests')
+        .select('*')
+        .in('organization_id', organizationIds)
+        .order('submitted_at', { ascending: false })
+        .limit(100);
+      if (reqErr) throw reqErr;
+
+      const requests = fromRows(requestRows);
 
       // Get widget and organization information for each request
       const requestsWithDetails = await Promise.all(
         requests.map(async (request) => {
-          const widget = await db.collection('widgets').findOne({
-            _id: request.widgetId
-          });
-          
-          const conversation = await db.collection('conversations').findOne({
-            _id: request.conversationId
-          });
+          const { data: widget } = request.widgetId
+            ? await admin
+                .from('widgets')
+                .select('id, name, description')
+                .eq('id', request.widgetId)
+                .maybeSingle()
+            : { data: null };
 
-          const organization = await db.collection('organizations').findOne({
-            _id: request.organizationId
-          });
+          const { data: conversation } = request.conversationId
+            ? await admin
+                .from('conversations')
+                .select('id, messages, created_at, updated_at')
+                .eq('id', request.conversationId)
+                .maybeSingle()
+            : { data: null };
+
+          const { data: organization } = request.organizationId
+            ? await admin
+                .from('organizations')
+                .select('id, name, slug')
+                .eq('id', request.organizationId)
+                .maybeSingle()
+            : { data: null };
 
           return {
             ...request,
             widget: widget ? {
-              _id: widget._id,
+              _id: widget.id,
               name: widget.name,
               description: widget.description
             } : null,
             organization: organization ? {
-              _id: organization._id,
+              _id: organization.id,
               name: organization.name,
               slug: organization.slug
             } : null,
             conversation: conversation ? {
-              _id: conversation._id,
+              _id: conversation.id,
               messageCount: conversation.messages?.length || 0,
               messages: conversation.messages || [],
-              createdAt: conversation.createdAt,
-              updatedAt: conversation.updatedAt
+              createdAt: conversation.created_at,
+              updatedAt: conversation.updated_at
             } : null
           };
         })
@@ -107,7 +123,7 @@ export default async function handler(req, res) {
 
     } catch (error) {
       console.error('❌ Error fetching support requests:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -117,43 +133,49 @@ export default async function handler(req, res) {
       const { requestId, status, notes } = req.body;
 
       if (!requestId || !status) {
-        return res.status(400).json({ 
-          error: 'Missing required fields: requestId and status' 
+        return res.status(400).json({
+          error: 'Missing required fields: requestId and status'
         });
       }
 
       const validStatuses = ['pending', 'in_review', 'completed', 'rejected'];
       if (!validStatuses.includes(status)) {
-        return res.status(400).json({ 
-          error: 'Invalid status. Must be one of: pending, in_review, completed, rejected' 
+        return res.status(400).json({
+          error: 'Invalid status. Must be one of: pending, in_review, completed, rejected'
         });
       }
 
-      const client = await clientPromise;
-      const db = client.db('elva-agents');
-      
+      if (!UUID_RE.test(requestId)) {
+        return res.status(404).json({ error: 'Support request not found or access denied' });
+      }
+
       // Get user's organization
-      const user = await db.collection('users').findOne({ 
-        email: session.user.email 
-      });
+      const { data: user } = await admin
+        .from('users')
+        .select('id, email')
+        .eq('email', session.user.email)
+        .maybeSingle();
 
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
 
       // Get user's organization memberships
-      const memberships = await db.collection('team_members').find({
-        userId: user._id,
-        status: 'active'
-      }).toArray();
+      const { data: memberships } = await admin
+        .from('team_members')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
 
-      const organizationIds = memberships.map(m => m.organizationId);
+      const organizationIds = (memberships || []).map(m => m.organization_id);
 
       // Verify user has access to this support request
-      const request = await db.collection('support_requests').findOne({
-        _id: new ObjectId(requestId),
-        organizationId: { $in: organizationIds }
-      });
+      const { data: request } = await admin
+        .from('support_requests')
+        .select('*')
+        .eq('id', requestId)
+        .in('organization_id', organizationIds)
+        .maybeSingle();
 
       if (!request) {
         return res.status(404).json({ error: 'Support request not found or access denied' });
@@ -161,27 +183,23 @@ export default async function handler(req, res) {
 
       // Update request status
       const updateData = {
-        status,
-        updatedAt: new Date()
+        status
       };
 
       if (notes) {
-        updateData.adminNotes = notes;
+        updateData.admin_notes = notes;
       }
 
       if (status === 'completed' || status === 'rejected') {
-        updateData.completedAt = new Date();
-        updateData.completedBy = user._id;
+        updateData.completed_at = new Date().toISOString();
+        updateData.completed_by = user.id;
       }
 
-      const result = await db.collection('support_requests').updateOne(
-        { _id: new ObjectId(requestId) },
-        { $set: updateData }
-      );
-
-      if (result.modifiedCount === 0) {
-        return res.status(404).json({ error: 'Support request not found' });
-      }
+      const { error: updErr } = await admin
+        .from('support_requests')
+        .update(updateData)
+        .eq('id', requestId);
+      if (updErr) throw updErr;
 
       console.log('✅ Support request status updated:', {
         requestId,
@@ -196,7 +214,7 @@ export default async function handler(req, res) {
 
     } catch (error) {
       console.error('❌ Error updating support request:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });

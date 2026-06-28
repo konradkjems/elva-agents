@@ -1,7 +1,5 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
-import clientPromise from '../../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../../lib/supabase/admin';
+import { getSessionContext } from '../../../../lib/supabase/session';
 import { getUsageStats } from '../../../../lib/quota.js';
 
 export default async function handler(req, res) {
@@ -13,30 +11,28 @@ export default async function handler(req, res) {
 
   try {
     // Authenticate user
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
     const { id: orgId } = req.query;
 
-    // Validate organization ID
-    if (!ObjectId.isValid(orgId)) {
+    if (!orgId) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
     // Check if user belongs to this organization
-    const userId = new ObjectId(session.user.id);
     const isPlatformAdmin = session.user.platformRole === 'platform_admin';
 
     if (!isPlatformAdmin) {
-      const membership = await db.collection('team_members').findOne({
-        organizationId: new ObjectId(orgId),
-        userId: userId,
-        status: 'active'
-      });
+      const { data: membership } = await admin
+        .from('team_members')
+        .select('id')
+        .eq('organization_id', orgId)
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
 
       if (!membership) {
         return res.status(403).json({ error: 'Access denied' });
@@ -44,16 +40,15 @@ export default async function handler(req, res) {
     }
 
     // Get usage statistics
-    const stats = await getUsageStats(new ObjectId(orgId));
+    const stats = await getUsageStats(orgId);
 
     return res.status(200).json(stats);
 
   } catch (error) {
     console.error('❌ Error fetching usage stats:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
-      details: error.message 
+      details: error.message
     });
   }
 }
-

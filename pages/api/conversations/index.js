@@ -1,17 +1,15 @@
-import clientPromise from '../../../lib/mongodb.js';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRows, fromRow, camelToSnake } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   try {
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-    const conversations = db.collection('conversations');
-
     switch (req.method) {
       case 'GET':
-        return await getConversations(req, res, conversations);
+        return await getConversations(req, res);
       case 'POST':
-        return await createConversation(req, res, conversations);
+        return await createConversation(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
         return res.status(405).json({ error: 'Method not allowed' });
@@ -22,61 +20,59 @@ export default async function handler(req, res) {
   }
 }
 
-async function getConversations(req, res, conversations) {
-  const { 
-    widgetId, 
-    page = 1, 
-    limit = 20, 
-    startDate, 
+async function getConversations(req, res) {
+  const {
+    widgetId,
+    page = 1,
+    limit = 20,
+    startDate,
     endDate,
     sortBy = 'startTime',
     sortOrder = 'desc'
   } = req.query;
 
   try {
-    // Build query
-    const query = {};
-    
+    // Request the total count alongside the page of rows
+    let query = admin.from('conversations').select('*', { count: 'exact' });
+
     if (widgetId) {
-      query.widgetId = widgetId;
+      // widget_id is the uuid FK; the embed identifier lives on widget_legacy_id
+      if (UUID_RE.test(widgetId)) {
+        query = query.eq('widget_id', widgetId);
+      } else {
+        query = query.eq('widget_legacy_id', widgetId);
+      }
     }
-    
-    if (startDate || endDate) {
-      query.startTime = {};
-      if (startDate) query.startTime.$gte = new Date(startDate);
-      if (endDate) query.startTime.$lte = new Date(endDate);
-    }
 
-    // Build sort
-    const sort = {};
-    sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
+    if (startDate) query = query.gte('start_time', new Date(startDate).toISOString());
+    if (endDate) query = query.lte('start_time', new Date(endDate).toISOString());
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    // Sort (map the camelCase sort field to its snake_case column)
+    const sortColumn = camelToSnake(sortBy);
+    query = query.order(sortColumn, { ascending: sortOrder !== 'desc' });
 
-    // Execute query
-    const [conversationList, totalCount] = await Promise.all([
-      conversations
-        .find(query)
-        .sort(sort)
-        .skip(skip)
-        .limit(parseInt(limit))
-        .toArray(),
-      conversations.countDocuments(query)
-    ]);
+    // Pagination
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+    query = query.range(skip, skip + limitNum - 1);
 
-    // Calculate pagination info
-    const totalPages = Math.ceil(totalCount / parseInt(limit));
+    const { data, count, error } = await query;
+    if (error) throw error;
+
+    const conversationList = fromRows(data);
+    const totalCount = count || 0;
+    const totalPages = Math.ceil(totalCount / limitNum);
 
     return res.status(200).json({
       conversations: conversationList,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: pageNum,
+        limit: limitNum,
         totalCount,
         totalPages,
-        hasNext: parseInt(page) < totalPages,
-        hasPrev: parseInt(page) > 1
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1
       }
     });
 
@@ -86,7 +82,7 @@ async function getConversations(req, res, conversations) {
   }
 }
 
-async function createConversation(req, res, conversations) {
+async function createConversation(req, res) {
   const {
     widgetId,
     sessionId,
@@ -95,19 +91,32 @@ async function createConversation(req, res, conversations) {
   } = req.body;
 
   if (!widgetId || !sessionId) {
-    return res.status(400).json({ 
-      error: 'widgetId and sessionId are required' 
+    return res.status(400).json({
+      error: 'widgetId and sessionId are required'
     });
   }
 
   try {
-    const conversation = {
-      widgetId,
-      sessionId,
-      userId: userId || null,
-      startTime: new Date(),
-      endTime: null,
-      messageCount: 0,
+    // Resolve the widget uuid for the FK. The embed id is kept on
+    // widget_legacy_id regardless.
+    let widgetUuid = UUID_RE.test(widgetId) ? widgetId : null;
+    if (!widgetUuid) {
+      const { data: w } = await admin
+        .from('widgets')
+        .select('id')
+        .eq('legacy_id', widgetId)
+        .maybeSingle();
+      if (w) widgetUuid = w.id;
+    }
+
+    const row = {
+      widget_id: widgetUuid,
+      widget_legacy_id: String(widgetId),
+      session_id: sessionId,
+      user_id: userId || null,
+      start_time: new Date().toISOString(),
+      end_time: null,
+      message_count: 0,
       messages: [],
       satisfaction: null,
       tags: [],
@@ -117,17 +126,20 @@ async function createConversation(req, res, conversations) {
         country: metadata.country || null,
         referrer: metadata.referrer || null,
         ...metadata
-      },
-      createdAt: new Date(),
-      updatedAt: new Date()
+      }
     };
 
-    const result = await conversations.insertOne(conversation);
-    
+    const { data: inserted, error } = await admin
+      .from('conversations')
+      .insert(row)
+      .select('*')
+      .single();
+    if (error) throw error;
+
     return res.status(201).json({
       success: true,
-      conversationId: result.insertedId,
-      conversation: conversation
+      conversationId: inserted.id,
+      conversation: fromRow(inserted)
     });
 
   } catch (error) {

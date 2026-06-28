@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 
 /**
  * ThemeProvider Component

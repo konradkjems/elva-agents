@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 import ModernLayout from '../../components/admin/ModernLayout';
 import ModernWidgetCard from '../../components/admin/ModernWidgetCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,15 +30,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import QuotaUsageCard from '../../components/admin/QuotaUsageCard';
 
 const StatCard = ({ title, value, icon: Icon, subtitle }) => (
-  <Card className="hover:shadow-md transition-shadow">
+  <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">
         {title}
       </CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary">
+        <Icon className="h-[18px] w-[18px]" />
+      </span>
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-2xl font-bold tracking-tight">{value}</div>
       {subtitle && (
         <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
       )}
@@ -329,7 +331,7 @@ export default function ModernAdminDashboard() {
           <div className="grid gap-4 md:grid-cols-2">
             {/* Organization Info Card */}
             {currentOrganization.stats && (
-              <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200 dark:from-blue-900/20 dark:to-purple-900/20 dark:border-blue-700/40">
+              <Card className="bg-elva-50 border-elva-100 dark:bg-elva-950/30 dark:border-elva-900/50">
                 <CardHeader>
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Building2 className="h-4 w-4" />

@@ -1,13 +1,15 @@
 /**
  * User Data Export API
  * GDPR Article 15 (Right to Access) & Article 20 (Data Portability)
- * 
+ *
  * GET /api/user/export-data - Download all user data in JSON format
  */
 
-import { getSession } from 'next-auth/react';
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { getSessionContext } from '../../../lib/supabase/session';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow, fromRows } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -15,15 +17,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const session = await getSession({ req });
-    
+    const session = await getSessionContext(req, res);
+
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const userId = new ObjectId(session.user.id);
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    const userId = session.user.id;
+    if (!UUID_RE.test(userId)) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     console.log(`📥 Data export requested by user: ${userId}`);
 
@@ -42,69 +45,96 @@ export default async function handler(req, res) {
     };
 
     // 1. User profile (exclude password)
-    const user = await db.collection('users').findOne({ _id: userId });
-    if (user) {
-      const { password, ...userWithoutPassword } = user;
-      userData.user = userWithoutPassword;
+    const { data: userRow } = await admin
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
+
+    let userEmail = null;
+    if (userRow) {
+      const userDoc = fromRow(userRow);
+      delete userDoc.passwordHash;
+      delete userDoc.password;
+      userData.user = userDoc;
+      userEmail = userRow.email;
     }
 
     // 2. Organizations & Team Memberships
-    const memberships = await db.collection('team_members').find({
-      userId: userId
-    }).toArray();
+    const { data: membershipRows } = await admin
+      .from('team_members')
+      .select('*')
+      .eq('user_id', userId);
+    const memberships = fromRows(membershipRows);
 
     for (const membership of memberships) {
-      const org = await db.collection('organizations').findOne({
-        _id: membership.organizationId
-      });
-      
-      if (org) {
+      const { data: orgRow } = membership.organizationId
+        ? await admin
+            .from('organizations')
+            .select('*')
+            .eq('id', membership.organizationId)
+            .maybeSingle()
+        : { data: null };
+
+      if (orgRow) {
         userData.organizations.push({
-          organization: org,
+          organization: fromRow(orgRow),
           membership: membership
         });
       }
     }
 
     // 3. Widgets owned by user's organizations
-    const orgIds = memberships.map(m => m.organizationId);
-    const widgets = await db.collection('widgets').find({
-      organizationId: { $in: orgIds }
-    }).toArray();
+    const orgIds = memberships.map(m => m.organizationId).filter(Boolean);
+    let widgets = [];
+    if (orgIds.length > 0) {
+      const { data: widgetRows } = await admin
+        .from('widgets')
+        .select('*')
+        .in('organization_id', orgIds);
+      widgets = fromRows(widgetRows);
+    }
     userData.widgets = widgets;
 
     // 4. Conversations (limit to last 1000 for performance)
     const widgetIds = widgets.map(w => w._id);
     if (widgetIds.length > 0) {
-      const conversations = await db.collection('conversations').find({
-        widgetId: { $in: widgetIds }
-      }).sort({ createdAt: -1 }).limit(1000).toArray();
-      userData.conversations = conversations;
+      const { data: conversationRows } = await admin
+        .from('conversations')
+        .select('*')
+        .in('widget_id', widgetIds)
+        .order('created_at', { ascending: false })
+        .limit(1000);
+      userData.conversations = fromRows(conversationRows);
 
       // 5. Analytics
-      const analytics = await db.collection('analytics').find({
-        agentId: { $in: widgetIds.map(id => id.toString()) }
-      }).toArray();
-      userData.analytics = analytics;
+      const { data: analyticsRows } = await admin
+        .from('analytics')
+        .select('*')
+        .in('widget_id', widgetIds);
+      userData.analytics = fromRows(analyticsRows);
 
       // 6. Support requests
-      const requests = await db.collection('support_requests').find({
-        widgetId: { $in: widgetIds }
-      }).toArray();
-      userData.supportRequests = requests;
+      const { data: requestRows } = await admin
+        .from('support_requests')
+        .select('*')
+        .in('widget_id', widgetIds);
+      userData.supportRequests = fromRows(requestRows);
     }
 
     // 7. Invitations sent to this user
-    const invitations = await db.collection('invitations').find({
-      email: user.email
-    }).toArray();
-    userData.invitations = invitations;
+    if (userEmail) {
+      const { data: invitationRows } = await admin
+        .from('invitations')
+        .select('*')
+        .eq('email', userEmail);
+      userData.invitations = fromRows(invitationRows);
+    }
 
     // Log the export for audit trail
-    await db.collection('audit_log').insertOne({
-      userId: userId,
+    await admin.from('audit_log').insert({
       action: 'data_export',
-      timestamp: new Date(),
+      user_id: userId,
       metadata: {
         itemsExported: {
           widgets: userData.widgets.length,
@@ -131,4 +161,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to export data' });
   }
 }
-

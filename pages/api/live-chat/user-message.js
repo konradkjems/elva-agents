@@ -1,12 +1,18 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
+import { randomUUID } from 'crypto';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow } from '../../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v) {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
 
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -22,13 +28,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'conversationId and message are required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    if (!isUuid(conversationId)) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
 
     // Get conversation
-    const conversation = await db.collection('conversations').findOne({
-      _id: new ObjectId(conversationId)
-    });
+    const { data: convRow } = await admin
+      .from('conversations').select('*').eq('id', conversationId).maybeSingle();
+    const conversation = convRow ? fromRow(convRow) : null;
 
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
@@ -36,7 +43,7 @@ export default async function handler(req, res) {
 
     // Verify live chat is active
     if (conversation.liveChat?.status !== 'active') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Live chat is not active',
         status: conversation.liveChat?.status || 'ai'
       });
@@ -44,22 +51,20 @@ export default async function handler(req, res) {
 
     // Create user message
     const userMessage = {
-      id: new ObjectId().toString(),
+      id: randomUUID(),
       type: 'user',
       role: 'user',
       content: message,
       timestamp: new Date()
     };
 
-    // Add message to conversation
-    await db.collection('conversations').updateOne(
-      { _id: new ObjectId(conversationId) },
-      {
-        $push: { messages: userMessage },
-        $inc: { messageCount: 1 },
-        $set: { updatedAt: new Date() }
-      }
-    );
+    // Add message to conversation ($push into the messages JSONB column)
+    const messages = Array.isArray(conversation.messages) ? conversation.messages : [];
+    messages.push(userMessage);
+    await admin.from('conversations').update({
+      messages: messages,
+      message_count: messages.length
+    }).eq('id', conversationId);
 
     // Broadcast to SSE connections
     try {
@@ -82,10 +87,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error saving user message:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
-

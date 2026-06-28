@@ -1,4 +1,4 @@
-import clientPromise from '../../../lib/mongodb';
+import { admin } from '../../../lib/supabase/admin';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -6,55 +6,52 @@ export default async function handler(req, res) {
   }
 
   try {
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-
     // Get the base URL dynamically from request headers
     const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers['x-forwarded-host'] || req.headers.host;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${protocol}://${host}`;
-    
-    // Find all demo widgets with localhost URLs in widgets collection
-    const demoWidgets = await db.collection('widgets').find({ 
-      isDemoMode: true,
-      'demoSettings.demoUrl': { $regex: /localhost/ }
-    }).toArray();
 
-    // Find all demos with localhost URLs in demos collection
-    const demos = await db.collection('demos').find({ 
-      'demoSettings.demoUrl': { $regex: /localhost/ }
-    }).toArray();
+    // Find all demo widgets with localhost URLs in widgets table
+    const { data: widgetRows, error: widgetErr } = await admin
+      .from('widgets')
+      .select('*')
+      .eq('is_demo_mode', true);
+    if (widgetErr) throw widgetErr;
+    const demoWidgets = (widgetRows || []).filter(
+      w => w.demo_settings?.demoUrl && w.demo_settings.demoUrl.includes('localhost')
+    );
+
+    // Find all demos with localhost URLs in demos table
+    const { data: demoRows, error: demoErr } = await admin
+      .from('demos')
+      .select('*');
+    if (demoErr) throw demoErr;
+    const demos = (demoRows || []).filter(
+      d => d.demo_settings?.demoUrl && d.demo_settings.demoUrl.includes('localhost')
+    );
 
     console.log(`Found ${demoWidgets.length} demo widgets and ${demos.length} demos with localhost URLs`);
 
-    // Update each demo widget
-    const widgetUpdatePromises = demoWidgets.map(demo => {
-      const newDemoUrl = `${baseUrl}/demo/${demo._id}`;
-      
-      return db.collection('widgets').updateOne(
-        { _id: demo._id },
-        { 
-          $set: { 
-            'demoSettings.demoUrl': newDemoUrl,
-            updatedAt: new Date()
-          }
-        }
-      );
+    // Update each demo widget (mutate the JSONB demo_settings and write it back)
+    const widgetUpdatePromises = demoWidgets.map(widget => {
+      const publicId = widget.legacy_id || widget.id;
+      widget.demo_settings.demoUrl = `${baseUrl}/demo/${publicId}`;
+
+      return admin
+        .from('widgets')
+        .update({ demo_settings: widget.demo_settings })
+        .eq('id', widget.id);
     });
 
     // Update each demo
     const demoUpdatePromises = demos.map(demo => {
-      const newDemoUrl = `${baseUrl}/demo/${demo._id}`;
-      
-      return db.collection('demos').updateOne(
-        { _id: demo._id },
-        { 
-          $set: { 
-            'demoSettings.demoUrl': newDemoUrl,
-            updatedAt: new Date()
-          }
-        }
-      );
+      const publicId = demo.legacy_id || demo.id;
+      demo.demo_settings.demoUrl = `${baseUrl}/demo/${publicId}`;
+
+      return admin
+        .from('demos')
+        .update({ demo_settings: demo.demo_settings })
+        .eq('id', demo.id);
     });
 
     await Promise.all([...widgetUpdatePromises, ...demoUpdatePromises]);
@@ -72,9 +69,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error updating demo URLs:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Internal server error',
-      error: error.message 
+      error: error.message
     });
   }
 }

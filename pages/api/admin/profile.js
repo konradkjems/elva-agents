@@ -1,30 +1,32 @@
-import { getSession } from 'next-auth/react';
-import clientPromise from '../../../lib/mongodb';
+import { getSessionContext } from '../../../lib/supabase/session';
+import { admin } from '../../../lib/supabase/admin';
+import { fromRow } from '../../../lib/supabase/transform';
 
 export default async function handler(req, res) {
-  const session = await getSession({ req });
+  const session = await getSessionContext(req, res);
 
   if (!session) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  const client = await clientPromise;
-  const db = client.db('elva-agents');
-
   if (req.method === 'GET') {
     try {
       // Find user by email
-      const user = await db.collection('users').findOne({
-        email: session.user.email
-      });
+      const { data: user, error } = await admin
+        .from('users')
+        .select('*')
+        .eq('email', session.user.email)
+        .maybeSingle();
+      if (error) throw error;
 
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
       // Return user data without sensitive information
-      const { password, ...userData } = user;
-      
+      const userData = fromRow(user);
+      delete userData.passwordHash;
+
       return res.status(200).json(userData);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -43,32 +45,33 @@ export default async function handler(req, res) {
 
       // Check if email is already taken by another user
       if (email !== session.user.email) {
-        const existingUser = await db.collection('users').findOne({ email });
+        const { data: existingUser } = await admin
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
         if (existingUser) {
           return res.status(400).json({ message: 'Email already in use' });
         }
       }
 
       // Update user
-      const result = await db.collection('users').findOneAndUpdate(
-        { email: session.user.email },
-        {
-          $set: {
-            name,
-            email,
-            updatedAt: new Date()
-          }
-        },
-        { returnDocument: 'after' }
-      );
+      const { data: updated, error } = await admin
+        .from('users')
+        .update({ name, email })
+        .eq('email', session.user.email)
+        .select('*')
+        .single();
+      if (error) throw error;
 
-      if (!result.value) {
+      if (!updated) {
         return res.status(404).json({ message: 'User not found' });
       }
 
       // Return updated user data without sensitive information
-      const { password, ...userData } = result.value;
-      
+      const userData = fromRow(updated);
+      delete userData.passwordHash;
+
       return res.status(200).json(userData);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -78,4 +81,3 @@ export default async function handler(req, res) {
 
   return res.status(405).json({ message: 'Method not allowed' });
 }
-

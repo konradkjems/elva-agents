@@ -1,13 +1,14 @@
 /**
  * Cancel Account Deletion API
  * GDPR compliance - allow users to cancel deletion during grace period
- * 
+ *
  * POST /api/user/cancel-deletion - Restore account from pending deletion
  */
 
-import { getSession } from 'next-auth/react';
-import clientPromise from '../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { getSessionContext } from '../../../lib/supabase/session';
+import { admin } from '../../../lib/supabase/admin';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,40 +16,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    const session = await getSession({ req });
-    
+    const session = await getSessionContext(req, res);
+
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const userId = new ObjectId(session.user.id);
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    const userId = session.user.id;
+    if (!UUID_RE.test(userId)) {
+      return res.status(404).json({ error: 'No pending deletion found' });
+    }
 
-    // Restore account
-    const result = await db.collection('users').updateOne(
-      { _id: userId, status: 'pending_deletion' },
-      {
-        $set: {
-          status: 'active'
-        },
-        $unset: {
-          deletionScheduledAt: '',
-          deletionDate: '',
-          deletionReason: ''
-        }
-      }
-    );
+    // Restore account (only if currently pending deletion)
+    const { data: restored, error: updErr } = await admin
+      .from('users')
+      .update({
+        status: 'active',
+        deletion_scheduled_at: null,
+        deletion_date: null,
+        deletion_reason: null
+      })
+      .eq('id', userId)
+      .eq('status', 'pending_deletion')
+      .select('id');
+    if (updErr) throw updErr;
 
-    if (result.matchedCount === 0) {
+    if (!restored || restored.length === 0) {
       return res.status(404).json({ error: 'No pending deletion found' });
     }
 
     // Log the cancellation
-    await db.collection('audit_log').insertOne({
-      userId: userId,
+    await admin.from('audit_log').insert({
       action: 'account_deletion_cancelled',
-      timestamp: new Date()
+      user_id: userId
     });
 
     console.log(`✅ Account deletion cancelled for user ${userId}`);
@@ -60,4 +60,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to cancel deletion' });
   }
 }
-

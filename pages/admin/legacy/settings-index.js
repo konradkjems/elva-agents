@@ -587,79 +587,31 @@ function NotificationSettings({ settings, onSave }) {
   );
 }
 
-function BackupSettings({ settings, onSave }) {
-  const [backupStatus, setBackupStatus] = useState('idle');
-
-  const handleBackup = async () => {
-    setBackupStatus('backing-up');
-    try {
-      const response = await fetch('/api/admin/backup', { method: 'POST' });
-      if (!response.ok) throw new Error('Backup failed');
-      setBackupStatus('success');
-      setTimeout(() => setBackupStatus('idle'), 3000);
-    } catch (error) {
-      setBackupStatus('error');
-      setTimeout(() => setBackupStatus('idle'), 3000);
-    }
-  };
-
-  const handleRestore = async () => {
-    setBackupStatus('restoring');
-    try {
-      const response = await fetch('/api/admin/restore', { method: 'POST' });
-      if (!response.ok) throw new Error('Restore failed');
-      setBackupStatus('success');
-      setTimeout(() => setBackupStatus('idle'), 3000);
-    } catch (error) {
-      setBackupStatus('error');
-      setTimeout(() => setBackupStatus('idle'), 3000);
-    }
-  };
-
+function BackupSettings() {
+  // Database backups are now handled natively by Supabase (automated daily
+  // backups + Point-in-Time Recovery). The previous in-app /api/admin/backup
+  // and /api/admin/restore endpoints dumped whole collections into a single row
+  // and restored by wiping every collection — unscoped across tenants,
+  // size-limited, and dangerous — so they have been retired.
   return (
     <div className="p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Backup & Restore</h3>
-      
-      <div className="space-y-6">
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-2">Database Backup</h4>
-          <p className="text-sm text-gray-600 mb-4">
-            Create a backup of your database including all widgets, conversations, and settings.
-          </p>
-          <button
-            onClick={handleBackup}
-            disabled={backupStatus === 'backing-up'}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {backupStatus === 'backing-up' ? 'Creating Backup...' : 'Create Backup'}
-          </button>
-        </div>
-        
-        <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-2">Database Restore</h4>
-          <p className="text-sm text-gray-600 mb-4">
-            Restore your database from the latest backup. This will overwrite all current data.
-          </p>
-          <button
-            onClick={handleRestore}
-            disabled={backupStatus === 'restoring'}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-          >
-            {backupStatus === 'restoring' ? 'Restoring...' : 'Restore from Backup'}
-          </button>
-        </div>
-        
-        {backupStatus === 'success' && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-green-800">Operation completed successfully!</p>
-          </div>
-        )}
-        
-        {backupStatus === 'error' && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800">Operation failed. Please try again.</p>
-          </div>
-        )}
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 className="font-medium text-gray-900 mb-2">Managed by Supabase</h4>
+        <p className="text-sm text-gray-600 mb-4">
+          Database backups are handled automatically by Supabase — daily automated
+          backups and Point-in-Time Recovery (PITR). To create an on-demand backup,
+          restore a snapshot, or download a dump, use the Supabase dashboard.
+        </p>
+        <a
+          href="https://supabase.com/dashboard/project/_/database/backups"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Open Supabase Backups
+        </a>
       </div>
     </div>
   );

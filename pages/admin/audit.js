@@ -1,7 +1,7 @@
 import ModernLayout from '../../components/admin/ModernLayout';
 import AuditLog from '../../components/admin/AuditLog';
 import { Button } from '../../components/ui/button';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';

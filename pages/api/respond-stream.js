@@ -1,6 +1,7 @@
 import OpenAI from "openai";
-import { ObjectId } from "mongodb";
-import clientPromise from "../../lib/mongodb";
+import { randomUUID } from "crypto";
+import { admin } from "../../lib/supabase/admin";
+import { fromRow } from "../../lib/supabase/transform";
 import { getCountryFromIP } from "../../lib/privacy";
 import { widgetLimiter, runMiddleware } from "../../lib/rate-limit";
 
@@ -9,11 +10,16 @@ if (process.env.NODE_ENV === 'development') {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-const openai = new OpenAI({ 
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   timeout: 60000, // 60 second timeout for streaming
   maxRetries: 2
 });
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v) {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
 
 // Disable body parser for streaming - Next.js specific
 export const config = {
@@ -22,13 +28,21 @@ export const config = {
   },
 };
 
+async function getWidget(widgetId) {
+  let { data } = await admin.from('widgets').select('*').eq('legacy_id', String(widgetId)).maybeSingle();
+  if (!data && isUuid(widgetId)) {
+    ({ data } = await admin.from('widgets').select('*').eq('id', widgetId).maybeSingle());
+  }
+  return data ? fromRow(data) : null;
+}
+
 export default async function handler(req, res) {
   // Set CORS headers for all requests
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-elva-consent-analytics, x-elva-consent-functional');
   res.setHeader('Access-Control-Max-Age', '86400');
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -43,7 +57,7 @@ export default async function handler(req, res) {
   try {
     await runMiddleware(req, res, widgetLimiter);
   } catch (error) {
-    return res.status(429).json({ 
+    return res.status(429).json({
       error: 'Too many requests, please slow down',
       retryAfter: '60 seconds'
     });
@@ -56,17 +70,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields: widgetId, message, userId' });
     }
 
-    const client = await clientPromise;
-    const db = client.db("elva-agents");
-    
-    // Convert string ID to ObjectId if it's a valid ObjectId string
-    let queryId = widgetId;
-    if (ObjectId.isValid(widgetId)) {
-      queryId = new ObjectId(widgetId);
-    }
-    
-    // Get widget configuration
-    const widget = await db.collection("widgets").findOne({ _id: queryId });
+    // Get widget configuration (looked up by legacy embed id)
+    const widget = await getWidget(widgetId);
     if (!widget) {
       return res.status(404).json({ error: "Widget not found" });
     }
@@ -76,11 +81,11 @@ export default async function handler(req, res) {
       const { checkQuota } = await import('../../lib/quota.js');
       const orgIdString = String(widget.organizationId);
       const quotaCheck = await checkQuota(orgIdString);
-      
+
       if (quotaCheck.blocked) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'Quota exceeded',
-          message: quotaCheck.message || (quotaCheck.reason === 'trial_expired' 
+          message: quotaCheck.message || (quotaCheck.reason === 'trial_expired'
             ? 'Gratis prøveperiode udløbet. Opgrader for at fortsætte.'
             : 'Månedlig samtalekvote nået. Opgrader for at fortsætte.')
         });
@@ -90,31 +95,27 @@ export default async function handler(req, res) {
     // Get or create conversation
     let conversation;
     let isNewConversation = false;
-    
-    if (conversationId) {
-      try {
-        conversation = await db.collection("conversations").findOne({ 
-          _id: new ObjectId(conversationId) 
-        });
-      } catch (error) {
-        conversation = null;
-      }
+
+    if (conversationId && isUuid(conversationId)) {
+      const { data } = await admin.from('conversations').select('*').eq('id', conversationId).maybeSingle();
+      if (data) conversation = fromRow(data);
     }
-    
+
     if (!conversation) {
       isNewConversation = true;
       const analyticsConsent = req.headers['x-elva-consent-analytics'] === 'true';
       const rawIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '';
       const country = analyticsConsent ? await getCountryFromIP(rawIP) : null;
-      
-      const newConversation = {
-        widgetId,
-        organizationId: widget.organizationId || null,
-        sessionId: `session_${Date.now()}`,
-        userId: userId || null,
-        startTime: new Date(),
-        endTime: null,
-        messageCount: 0,
+      const sessionId = `session_${Date.now()}`;
+
+      const newRow = {
+        widget_id: widget._id,
+        widget_legacy_id: widget.legacyId || String(widgetId),
+        organization_id: widget.organizationId || null,
+        session_id: sessionId,
+        user_id: userId || null,
+        start_time: new Date().toISOString(),
+        message_count: 0,
         messages: [],
         satisfaction: null,
         tags: [],
@@ -124,12 +125,24 @@ export default async function handler(req, res) {
           referrer: analyticsConsent ? (req.headers['referer'] || null) : null,
           consentGiven: analyticsConsent
         },
-        createdAt: new Date(),
-        updatedAt: new Date()
+        openai: { lastResponseId: null, conversationHistory: [] },
+        last_response_id: null
       };
-      const result = await db.collection("conversations").insertOne(newConversation);
-      conversation = { ...newConversation, _id: result.insertedId };
-      
+      const { data: inserted, error: convErr } = await admin
+        .from('conversations').insert(newRow).select('id').single();
+      if (convErr) throw convErr;
+
+      conversation = {
+        _id: inserted.id,
+        widgetId: widget._id,
+        organizationId: widget.organizationId || null,
+        sessionId,
+        startTime: new Date(),
+        messageCount: 0,
+        messages: [],
+        openai: { lastResponseId: null, conversationHistory: [] }
+      };
+
       // Increment conversation quota count
       if (widget.organizationId) {
         try {
@@ -142,9 +155,11 @@ export default async function handler(req, res) {
       }
     }
 
+    if (!Array.isArray(conversation.messages)) conversation.messages = [];
+
     // Add user message to conversation
     const userMessage = {
-      id: new ObjectId().toString(),
+      id: randomUUID(),
       type: "user",
       content: message,
       imageUrl: imageUrl || null,
@@ -161,14 +176,14 @@ export default async function handler(req, res) {
     res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
 
     // Send conversation ID first so client knows which conversation this belongs to
-    res.write(`data: ${JSON.stringify({ 
-      type: 'conversation', 
-      conversationId: conversation._id.toString() 
+    res.write(`data: ${JSON.stringify({
+      type: 'conversation',
+      conversationId: conversation._id
     })}\n\n`);
 
     // Determine which API to use based on widget configuration
     const useResponsesApi = widget.openai?.promptId;
-    
+
     const startTime = Date.now();
     let fullResponse = '';
     let responseId = `resp_${Date.now()}`;
@@ -217,7 +232,7 @@ export default async function handler(req, res) {
         }
       }
     } else {
-      // Use Chat Completions API with streaming
+      // Use Chat Completions API with streaming (legacy widgets)
       const conversationInput = [
         { role: "system", content: widget.prompt || "You are a helpful assistant." },
         ...conversation.messages.map(msg => ({
@@ -241,7 +256,7 @@ export default async function handler(req, res) {
           fullResponse += delta;
           res.write(`data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`);
         }
-        
+
         // Capture usage from final chunk if available
         if (chunk.usage) {
           usage = chunk.usage;
@@ -253,7 +268,7 @@ export default async function handler(req, res) {
 
     // Add AI response to conversation
     const aiMessage = {
-      id: new ObjectId().toString(),
+      id: randomUUID(),
       type: "assistant",
       content: fullResponse,
       timestamp: new Date(),
@@ -275,40 +290,37 @@ export default async function handler(req, res) {
     conversation.messages.push(aiMessage);
 
     // Update conversation in database
-    const updateData = { 
+    const updateData = {
       messages: conversation.messages,
-      messageCount: conversation.messages.length,
-      updatedAt: new Date()
+      message_count: conversation.messages.length
     };
 
     // Add Responses API specific fields
     if (useResponsesApi) {
-      updateData["openai.lastResponseId"] = responseId;
-      if (!conversation.openai?.conversationHistory) {
-        updateData["openai.conversationHistory"] = [responseId];
-      } else {
-        updateData["openai.conversationHistory"] = [...(conversation.openai.conversationHistory || []), responseId];
-      }
+      const history = [...(conversation.openai?.conversationHistory || []), responseId];
+      updateData.openai = {
+        ...(conversation.openai || {}),
+        lastResponseId: responseId,
+        conversationHistory: history
+      };
+      updateData.last_response_id = responseId;
     }
 
-    await db.collection("conversations").updateOne(
-      { _id: conversation._id },
-      { $set: updateData }
-    );
+    await admin.from('conversations').update(updateData).eq('id', conversation._id);
 
     console.log('📝 Streaming complete. Total response:', fullResponse.length, 'chars in', responseTime + 'ms');
 
     // Update analytics
     try {
-      await updateAnalytics(db, widgetId, conversation, isNewConversation);
+      await updateAnalytics(widget._id, conversation, isNewConversation);
     } catch (analyticsError) {
       console.error('Analytics update error:', analyticsError);
     }
 
     // Send completion event
-    res.write(`data: ${JSON.stringify({ 
-      type: 'done', 
-      conversationId: conversation._id.toString(),
+    res.write(`data: ${JSON.stringify({
+      type: 'done',
+      conversationId: conversation._id,
       metadata: useResponsesApi ? {
         responseId: responseId,
         promptId: widget.openai.promptId,
@@ -321,16 +333,16 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Error in /api/respond-stream:', error);
-    
+
     // Try to send error as SSE event if headers already sent
     if (res.headersSent) {
-      res.write(`data: ${JSON.stringify({ 
-        type: 'error', 
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
         error: error.message || 'An error occurred during streaming'
       })}\n\n`);
       res.end();
     } else {
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -338,74 +350,31 @@ export default async function handler(req, res) {
   }
 }
 
-// Helper function to update analytics (copied from respond.js)
-async function updateAnalytics(db, widgetId, conversation, isNewConversation = false) {
-  const analytics = db.collection('analytics');
-  const date = new Date(conversation.startTime);
+// Helper function to update analytics via the atomic record_analytics_event RPC.
+async function updateAnalytics(widgetUuid, conversation, isNewConversation = false) {
+  if (!widgetUuid) return;
+
+  const date = new Date(conversation.startTime || new Date());
   const dateKey = date.toISOString().split('T')[0];
-  
-  const agentIdString = typeof widgetId === 'object' ? widgetId.toString() : String(widgetId);
-  
+
   const messageCount = conversation.messageCount || conversation.messages?.length || 0;
   const responseTimes = conversation.messages?.filter(m => m.responseTime && m.type === 'assistant').map(m => m.responseTime) || [];
-  const avgResponseTime = responseTimes.length > 0 
-    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
+  const avgResponseTime = responseTimes.length > 0
+    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
     : 0;
-  
+
   const hasAssistantMessage = conversation.messages?.some(msg => msg.type === 'assistant') || false;
   const shouldCountConversation = isNewConversation && messageCount > 0 && hasAssistantMessage;
-  
-  const uniqueUsersToday = await db.collection('conversations').distinct('sessionId', {
-    widgetId: widgetId,
-    createdAt: {
-      $gte: new Date(dateKey),
-      $lt: new Date(new Date(dateKey).getTime() + 24 * 60 * 60 * 1000)
-    },
-    messageCount: { $gt: 0 },
-    'messages.type': 'assistant'
-  });
-  
-  const existingDoc = await analytics.findOne({ 
-    agentId: agentIdString, 
-    date: new Date(dateKey) 
-  });
-  
-  if (existingDoc) {
-    await analytics.updateOne(
-      { _id: existingDoc._id },
-      {
-        $inc: {
-          'metrics.conversations': shouldCountConversation ? 1 : 0,
-          'metrics.messages': messageCount
-        },
-        $set: {
-          'metrics.avgResponseTime': Math.round((existingDoc.metrics.avgResponseTime + avgResponseTime) / 2),
-          'metrics.uniqueUsers': uniqueUsersToday.length,
-          [`hourly.${date.getHours()}`]: (existingDoc.hourly[date.getHours().toString()] || 0) + 1
-        }
-      }
-    );
-  } else {
-    const hourly = Array(24).fill(0);
-    hourly[date.getHours()] = 1;
-    
-    await analytics.insertOne({
-      agentId: agentIdString,
-      date: new Date(dateKey),
-      metrics: {
-        conversations: shouldCountConversation ? 1 : 0,
-        messages: messageCount,
-        uniqueUsers: uniqueUsersToday.length,
-        responseRate: 100,
-        avgResponseTime: Math.round(avgResponseTime),
-        satisfaction: null
-      },
-      hourly: hourly.reduce((acc, count, hour) => {
-        acc[hour.toString()] = count;
-        return acc;
-      }, {}),
-      createdAt: new Date()
-    });
-  }
-}
+  const sessionId = conversation.sessionId ? String(conversation.sessionId) : null;
 
+  const { error } = await admin.rpc('record_analytics_event', {
+    p_widget_id: widgetUuid,
+    p_date: dateKey,
+    p_hour: date.getHours(),
+    p_message_count: messageCount,
+    p_avg_response_time: avgResponseTime,
+    p_count_conversation: shouldCountConversation,
+    p_session_id: sessionId
+  });
+  if (error) console.error('❌ Analytics RPC error:', error.message);
+}

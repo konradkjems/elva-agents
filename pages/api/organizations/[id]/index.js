@@ -1,63 +1,67 @@
 /**
  * Single Organization API
- * 
+ *
  * GET /api/organizations/[id] - Get organization details
  * PUT /api/organizations/[id] - Update organization
  * DELETE /api/organizations/[id] - Delete organization (soft)
  */
+import { admin } from '../../../../lib/supabase/admin';
+import { getSessionContext } from '../../../../lib/supabase/session';
+import { fromRow, fromRows } from '../../../../lib/supabase/transform';
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
-import clientPromise from '../../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Helper to check user's role in organization
-async function getUserRole(db, userId, orgId) {
-  const membership = await db.collection('team_members').findOne({
-    organizationId: new ObjectId(orgId),
-    userId: new ObjectId(userId),
-    status: 'active'
-  });
-  return membership ? membership.role : null;
+function getConversationLimit(planType) {
+  switch (planType) {
+    case 'pro': return 750;
+    case 'growth': return 300;
+    case 'basic': return 100;
+    case 'free': return 100;
+    default: return 100;
+  }
 }
 
-// Helper to check if user is platform admin
-async function isPlatformAdmin(db, userId) {
-  const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
-  return user && user.role === 'platform_admin';
+// Helper to check user's role in organization
+async function getUserRole(userId, orgId) {
+  const { data } = await admin.from('team_members')
+    .select('role')
+    .eq('organization_id', orgId)
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .maybeSingle();
+  return data?.role || null;
 }
 
 export default async function handler(req, res) {
   try {
     // Check authentication
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
     if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const client = await clientPromise;
-    // Using elva-agents database for multi-tenancy
-    const db = client.db('elva-agents');
-    const userId = new ObjectId(session.user.id);
+    const userId = session.user.id;
     const { id: orgId } = req.query;
 
-    if (!orgId || !ObjectId.isValid(orgId)) {
+    if (!orgId || !UUID_RE.test(orgId)) {
       return res.status(400).json({ error: 'Invalid organization ID' });
     }
 
-    // Get organization
-    const organization = await db.collection('organizations').findOne({
-      _id: new ObjectId(orgId),
-      deletedAt: { $exists: false }
-    });
+    // Get organization (not soft-deleted)
+    const { data: organizationRow } = await admin.from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .is('deleted_at', null)
+      .maybeSingle();
 
-    if (!organization) {
+    if (!organizationRow) {
       return res.status(404).json({ error: 'Organization not found' });
     }
+    const organization = fromRow(organizationRow);
 
     // Check permissions
-    const userRole = await getUserRole(db, userId, orgId);
-    const isAdmin = await isPlatformAdmin(db, userId);
+    const userRole = await getUserRole(userId, orgId);
+    const isAdmin = session.user.role === 'platform_admin';
 
     if (!userRole && !isAdmin) {
       return res.status(403).json({ error: 'Access denied' });
@@ -67,71 +71,45 @@ export default async function handler(req, res) {
     // GET - Get organization details
     // ========================================
     if (req.method === 'GET') {
-      // Get team members
-      const members = await db
-        .collection('team_members')
-        .aggregate([
-          {
-            $match: {
-              organizationId: new ObjectId(orgId),
-              status: { $in: ['active', 'invited'] }
-            }
-          },
-          {
-            $lookup: {
-              from: 'users',
-              localField: 'userId',
-              foreignField: '_id',
-              as: 'user'
-            }
-          },
-          {
-            $unwind: '$user'
-          },
-          {
-            $project: {
-              _id: 1,
-              role: 1,
-              status: 1,
-              joinedAt: 1,
-              invitedAt: 1,
-              createdAt: 1,
-              user: {
-                _id: 1,
-                name: 1,
-                email: 1,
-                image: 1
-              }
-            }
-          },
-          { $sort: { createdAt: 1 } }
-        ])
-        .toArray();
+      // Get team members (team_members → users; disambiguate the double FK)
+      const { data: memberRows } = await admin.from('team_members')
+        .select('id, role, status, joined_at, invited_at, created_at, users!team_members_user_id_fkey(id, name, email, image)')
+        .eq('organization_id', orgId)
+        .in('status', ['active', 'invited'])
+        .order('created_at', { ascending: true });
 
-      // Get widget count
-      const widgetCount = await db.collection('widgets').countDocuments({
-        organizationId: new ObjectId(orgId),
-        isDemoMode: { $ne: true }
-      });
+      const members = (memberRows || []).map(m => ({
+        _id: m.id,
+        role: m.role,
+        status: m.status,
+        joinedAt: m.joined_at,
+        invitedAt: m.invited_at,
+        createdAt: m.created_at,
+        user: m.users ? { _id: m.users.id, name: m.users.name, email: m.users.email, image: m.users.image } : null
+      }));
 
-      // Get conversation count
-      const conversationCount = await db.collection('conversations').countDocuments({
-        organizationId: new ObjectId(orgId)
-      });
+      // Counts
+      const { count: widgetCount } = await admin.from('widgets')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId).eq('is_demo_mode', false);
+      const { count: conversationCount } = await admin.from('conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId);
 
-      // Get pending invitations
-      const invitations = await db.collection('invitations').find({
-        organizationId: new ObjectId(orgId),
-        status: 'pending',
-        expiresAt: { $gt: new Date() }
-      }).toArray();
+      // Pending invitations
+      const { data: invRows } = await admin.from('invitations')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString());
+      const invitations = fromRows(invRows);
 
-      // Get usage stats for quota tracking
+      // Usage stats for quota tracking
       let usageStats = null;
       if (organization.usage?.conversations) {
         const { getUsageStats } = await import('../../../../lib/quota.js');
         try {
-          usageStats = await getUsageStats(new ObjectId(orgId));
+          usageStats = await getUsageStats(orgId);
         } catch (error) {
           console.error('Error getting usage stats:', error);
         }
@@ -143,8 +121,8 @@ export default async function handler(req, res) {
           role: userRole || 'platform_admin',
           stats: {
             members: members.length,
-            widgets: widgetCount,
-            conversations: conversationCount,
+            widgets: widgetCount || 0,
+            conversations: conversationCount || 0,
             pendingInvitations: invitations.length
           },
           usageStats: usageStats
@@ -158,7 +136,6 @@ export default async function handler(req, res) {
     // PUT - Update organization
     // ========================================
     if (req.method === 'PUT') {
-      // Check permissions - must be owner/admin or platform admin
       if (!isAdmin && !['owner', 'admin'].includes(userRole)) {
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
@@ -166,121 +143,71 @@ export default async function handler(req, res) {
       const { name, slug, logo, primaryColor, domain, plan, settings } = req.body;
 
       const updates = {};
-      const unsetFields = {};
-      
+
       if (name !== undefined) updates.name = name.trim();
       if (slug !== undefined) updates.slug = slug.trim();
       if (logo !== undefined) updates.logo = logo;
-      if (primaryColor !== undefined) updates.primaryColor = primaryColor;
+      if (primaryColor !== undefined) updates.primary_color = primaryColor;
       if (domain !== undefined) updates.domain = domain;
       if (plan !== undefined) {
         updates.plan = plan;
-        
-        // Helper function to get conversation limits
-        const getConversationLimit = (planType) => {
-          switch(planType) {
-            case 'pro': return 750;
-            case 'growth': return 300;
-            case 'basic': return 100;
-            case 'free': return 100;
-            default: return 100;
-          }
-        };
-        
-        // Update limits based on new plan
         updates.limits = {
           maxWidgets: plan === 'pro' ? 50 : plan === 'growth' ? 25 : plan === 'basic' ? 10 : 10,
           maxTeamMembers: plan === 'pro' ? 30 : plan === 'growth' ? 15 : plan === 'basic' ? 5 : 5,
           maxConversations: plan === 'pro' ? 100000 : plan === 'growth' ? 50000 : plan === 'basic' ? 10000 : 10000,
-          maxDemos: organization.limits?.maxDemos || 0 // Preserve existing maxDemos
+          maxDemos: organization.limits?.maxDemos || 0
         };
-        
-        // Update conversation quota limit based on new plan
+
+        // Update conversation quota limit within the usage JSONB
         if (organization.usage?.conversations) {
-          updates['usage.conversations.limit'] = getConversationLimit(plan);
+          updates.usage = {
+            ...organization.usage,
+            conversations: {
+              ...organization.usage.conversations,
+              limit: getConversationLimit(plan)
+            }
+          };
         }
-        
-        // Update subscription status
+
         if (plan === 'free' && organization.plan !== 'free') {
-          // Downgrading to free - set trial period
-          updates.subscriptionStatus = 'trial';
-          updates.trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          updates.subscription_status = 'trial';
+          updates.trial_ends_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         } else if (plan !== 'free' && organization.plan === 'free') {
-          // Upgrading from free - set active
-          updates.subscriptionStatus = 'active';
-          // Remove trialEndsAt field instead of setting to null
-          unsetFields.trialEndsAt = '';
+          updates.subscription_status = 'active';
+          updates.trial_ends_at = null;
         }
       }
       if (settings !== undefined) {
-        // Merge settings
         updates.settings = { ...organization.settings, ...settings };
       }
-      updates.updatedAt = new Date();
 
-      const updateOperation = { $set: updates };
-      if (Object.keys(unsetFields).length > 0) {
-        updateOperation.$unset = unsetFields;
-      }
+      const { data: updatedRow, error: updErr } = await admin.from('organizations')
+        .update(updates).eq('id', orgId).select('*').single();
+      if (updErr) throw updErr;
 
-      await db.collection('organizations').updateOne(
-        { _id: new ObjectId(orgId) },
-        updateOperation
-      );
-
-      const updatedOrg = await db.collection('organizations').findOne({
-        _id: new ObjectId(orgId)
-      });
-
-      return res.status(200).json({ organization: updatedOrg });
+      return res.status(200).json({ organization: fromRow(updatedRow) });
     }
 
     // ========================================
     // DELETE - Soft delete organization
     // ========================================
     if (req.method === 'DELETE') {
-      // Check permissions - must be owner or platform admin
       if (!isAdmin && userRole !== 'owner') {
         return res.status(403).json({ error: 'Only the owner can delete the organization' });
       }
 
-      // Soft delete (set deletedAt)
-      await db.collection('organizations').updateOne(
-        { _id: new ObjectId(orgId) },
-        {
-          $set: {
-            deletedAt: new Date(),
-            updatedAt: new Date()
-          }
-        }
-      );
+      await admin.from('organizations')
+        .update({ deleted_at: new Date().toISOString() }).eq('id', orgId);
 
-      // Mark all team members as removed
-      await db.collection('team_members').updateMany(
-        { organizationId: new ObjectId(orgId) },
-        {
-          $set: {
-            status: 'removed',
-            updatedAt: new Date()
-          }
-        }
-      );
+      await admin.from('team_members')
+        .update({ status: 'removed' }).eq('organization_id', orgId);
 
-      // Cancel all pending invitations
-      await db.collection('invitations').updateMany(
-        { organizationId: new ObjectId(orgId), status: 'pending' },
-        {
-          $set: {
-            status: 'cancelled',
-            updatedAt: new Date()
-          }
-        }
-      );
+      await admin.from('invitations')
+        .update({ status: 'cancelled' }).eq('organization_id', orgId).eq('status', 'pending');
 
       return res.status(200).json({ message: 'Organization deleted successfully' });
     }
 
-    // Method not allowed
     return res.status(405).json({ error: 'Method not allowed' });
 
   } catch (error) {
@@ -288,4 +215,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
-

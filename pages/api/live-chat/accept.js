@@ -1,11 +1,15 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]';
+import { randomUUID } from 'crypto';
+import { admin } from '../../../lib/supabase/admin';
+import { getSessionContext } from '../../../lib/supabase/session';
+import { fromRow } from '../../../lib/supabase/transform';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v) {
+  return typeof v === 'string' && UUID_RE.test(v);
+}
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
-  
+  const session = await getSessionContext(req, res);
+
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -21,13 +25,14 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'conversationId is required' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
+    if (!isUuid(conversationId)) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
 
     // Get user
-    const user = await db.collection('users').findOne({ 
-      email: session.user.email 
-    });
+    const { data: userRow } = await admin
+      .from('users').select('*').eq('email', session.user.email).maybeSingle();
+    const user = userRow ? fromRow(userRow) : null;
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -35,15 +40,15 @@ export default async function handler(req, res) {
 
     // Check if user has agent profile and is available
     if (!user.agentProfile?.isAvailable) {
-      return res.status(403).json({ 
-        error: 'You are not available as an agent. Please update your agent profile settings.' 
+      return res.status(403).json({
+        error: 'You are not available as an agent. Please update your agent profile settings.'
       });
     }
 
     // Get conversation
-    const conversation = await db.collection('conversations').findOne({
-      _id: new ObjectId(conversationId)
-    });
+    const { data: convRow } = await admin
+      .from('conversations').select('*').eq('id', conversationId).maybeSingle();
+    const conversation = convRow ? fromRow(convRow) : null;
 
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
@@ -52,7 +57,7 @@ export default async function handler(req, res) {
     // Check if already accepted by someone else
     if (conversation.liveChat?.status === 'active' && conversation.liveChat?.acceptedBy) {
       if (conversation.liveChat.acceptedBy.toString() !== user._id.toString()) {
-        return res.status(409).json({ 
+        return res.status(409).json({
           error: 'This chat has already been accepted by another agent',
           acceptedBy: conversation.liveChat.acceptedBy
         });
@@ -67,32 +72,32 @@ export default async function handler(req, res) {
 
     // Verify conversation is in requested status
     if (conversation.liveChat?.status !== 'requested') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Conversation is not in requested status',
         currentStatus: conversation.liveChat?.status
       });
     }
 
     // Verify user has access to this conversation's organization
-    // Convert widgetId to ObjectId if it's a valid ObjectId string
-    let widgetQuery = conversation.widgetId;
-    if (ObjectId.isValid(conversation.widgetId) && typeof conversation.widgetId === 'string') {
-      widgetQuery = new ObjectId(conversation.widgetId);
+    // (widget_id is a uuid FK on conversations)
+    let widget = null;
+    if (isUuid(conversation.widgetId)) {
+      const { data: widgetRow } = await admin
+        .from('widgets').select('*').eq('id', conversation.widgetId).maybeSingle();
+      widget = widgetRow ? fromRow(widgetRow) : null;
     }
-    
-    const widget = await db.collection('widgets').findOne({
-      _id: widgetQuery
-    });
 
     if (!widget || !widget.organizationId) {
       return res.status(404).json({ error: 'Widget or organization not found' });
     }
 
-    const membership = await db.collection('team_members').findOne({
-      userId: user._id,
-      organizationId: widget.organizationId,
-      status: 'active'
-    });
+    const { data: membershipRow } = await admin
+      .from('team_members').select('*')
+      .eq('user_id', user._id)
+      .eq('organization_id', widget.organizationId)
+      .eq('status', 'active')
+      .maybeSingle();
+    const membership = membershipRow ? fromRow(membershipRow) : null;
 
     if (!membership) {
       return res.status(403).json({ error: 'You do not have access to this organization' });
@@ -105,37 +110,36 @@ export default async function handler(req, res) {
       avatarUrl: user.agentProfile?.avatarUrl || null
     };
 
-    // Update conversation
-    const updateResult = await db.collection('conversations').updateOne(
-      { _id: new ObjectId(conversationId) },
-      {
-        $set: {
-          'liveChat.status': 'active',
-          'liveChat.acceptedAt': new Date(),
-          'liveChat.acceptedBy': user._id,
-          'liveChat.agentInfo': agentInfo,
-          updatedAt: new Date()
-        }
-      }
-    );
+    // Update conversation (dot-path $set into the live_chat JSONB column →
+    // mutate the object and write it back whole)
+    const liveChat = conversation.liveChat || {};
+    liveChat.status = 'active';
+    liveChat.acceptedAt = new Date();
+    liveChat.acceptedBy = user._id;
+    liveChat.agentInfo = agentInfo;
 
-    if (updateResult.modifiedCount === 0) {
+    const { error: updateError } = await admin
+      .from('conversations').update({ live_chat: liveChat }).eq('id', conversationId);
+
+    if (updateError) {
       return res.status(500).json({ error: 'Failed to accept conversation' });
     }
 
-    // Add agent info to user's active chats
-    await db.collection('users').updateOne(
-      { _id: user._id },
-      {
-        $addToSet: {
-          'agentProfile.currentActiveChats': conversationId
-        }
-      }
-    );
+    // Add this conversation to the user's active chats ($addToSet into the
+    // agent_profile JSONB column → mutate and write back whole)
+    const agentProfile = user.agentProfile || {};
+    const activeChats = Array.isArray(agentProfile.currentActiveChats)
+      ? [...agentProfile.currentActiveChats]
+      : [];
+    if (!activeChats.includes(conversationId)) {
+      activeChats.push(conversationId);
+    }
+    agentProfile.currentActiveChats = activeChats;
+    await admin.from('users').update({ agent_profile: agentProfile }).eq('id', user._id);
 
-    // Add welcome message from agent
+    // Add welcome message from agent ($push into the messages JSONB column)
     const welcomeMessage = {
-      id: new ObjectId().toString(),
+      id: randomUUID(),
       type: 'agent',
       role: 'agent',
       content: `Hej! Jeg er ${agentInfo.displayName}${agentInfo.title ? ` - ${agentInfo.title}` : ''}. Hvordan kan jeg hjælpe dig?`,
@@ -143,14 +147,12 @@ export default async function handler(req, res) {
       agentInfo: agentInfo
     };
 
-    await db.collection('conversations').updateOne(
-      { _id: new ObjectId(conversationId) },
-      {
-        $push: { messages: welcomeMessage },
-        $inc: { messageCount: 1 },
-        $set: { updatedAt: new Date() }
-      }
-    );
+    const messages = Array.isArray(conversation.messages) ? conversation.messages : [];
+    messages.push(welcomeMessage);
+    await admin.from('conversations').update({
+      messages: messages,
+      message_count: messages.length
+    }).eq('id', conversationId);
 
     // Broadcast status change and welcome message to SSE connections
     try {
@@ -181,10 +183,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error accepting live chat:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
-

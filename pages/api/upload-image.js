@@ -1,8 +1,11 @@
+import fs from 'fs';
 import { IncomingForm } from 'formidable';
-import { uploadToCloudinary } from '../../lib/cloudinary';
-import clientPromise from '../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { uploadToStorage, resizeImage } from '../../lib/supabase/storage';
+import { admin } from '../../lib/supabase/admin';
+import { fromRow } from '../../lib/supabase/transform';
 import { widgetLimiter, runMiddleware } from '../../lib/rate-limit';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Disable body parser for multipart/form-data
 export const config = {
@@ -54,19 +57,16 @@ export default async function handler(req, res) {
     }
 
     // Get widget configuration to check if image upload is enabled
-    const client = await clientPromise;
-    const db = client.db("elva-agents");
-    
-    let queryId = widgetId;
-    if (ObjectId.isValid(widgetId)) {
-      queryId = new ObjectId(widgetId);
+    // (looked up by the embed id stored as legacy_id, falling back to uuid)
+    let { data: widgetRow } = await admin.from('widgets').select('*').eq('legacy_id', String(widgetId)).maybeSingle();
+    if (!widgetRow && UUID_RE.test(widgetId)) {
+      ({ data: widgetRow } = await admin.from('widgets').select('*').eq('id', widgetId).maybeSingle());
     }
-    
-    const widget = await db.collection("widgets").findOne({ _id: queryId });
-    
-    if (!widget) {
+
+    if (!widgetRow) {
       return res.status(404).json({ error: 'Widget not found' });
     }
+    const widget = fromRow(widgetRow);
 
     // Check if image upload is enabled for this widget (check multiple possible locations)
     const imageUploadEnabled = widget.settings?.imageUpload?.enabled || 
@@ -89,43 +89,38 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed' });
     }
 
-    console.log('📤 Uploading image to Cloudinary:', {
+    console.log('📤 Uploading chat image to Supabase Storage:', {
       widgetId,
       fileName: imageFile.originalFilename,
       fileSize: imageFile.size,
       mimeType: imageFile.mimetype
     });
 
-    // Upload to Cloudinary with compression and optimization
-    const result = await uploadToCloudinary(imageFile.filepath, {
-      folder: 'elva-agents/chat-images',
-      transformation: [
-        { width: 1024, height: 1024, crop: 'limit' }, // Max 1024x1024 for OpenAI vision
-        { quality: 'auto' }, // Auto-optimize quality
-        { fetch_format: 'auto' } // Convert to most efficient format
-      ],
-      resource_type: 'image'
+    // Resize to max 1024x1024 for OpenAI vision, re-encode to webp.
+    const raw = fs.readFileSync(imageFile.filepath);
+    const { buffer, contentType, ext } = await resizeImage(raw, {
+      width: 1024, height: 1024, fit: 'inside', format: 'webp'
     });
 
+    // Path: {org}/{widget}/{ts}.webp so chat uploads are scoped per widget.
+    const orgSeg = widget.organizationId || 'no-org';
+    const path = `${orgSeg}/${String(widgetId)}/${Date.now()}.${ext}`;
+    const result = await uploadToStorage('chat-uploads', path, buffer, contentType);
+
+    try { fs.unlinkSync(imageFile.filepath); } catch (_) {}
+
     if (!result.success) {
-      console.error('Cloudinary upload failed:', result.error);
+      console.error('Storage upload failed:', result.error);
       return res.status(500).json({ error: 'Failed to upload image' });
     }
 
-    console.log('✅ Image uploaded successfully:', {
-      url: result.url,
-      width: result.width,
-      height: result.height,
-      format: result.format
-    });
+    console.log('✅ Image uploaded successfully:', result.url);
 
     res.json({
       success: true,
       url: result.url,
-      width: result.width,
-      height: result.height,
-      format: result.format,
-      public_id: result.public_id
+      format: ext,
+      path: result.path
     });
 
   } catch (error) {

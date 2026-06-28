@@ -50,10 +50,9 @@ export default function PrivacyPolicy() {
             <p>Vi videregiver oplysninger til følgende databehandlere:</p>
             <ul>
               <li><strong>OpenAI:</strong> AI processing af beskeder</li>
-              <li><strong>MongoDB Atlas:</strong> Database hosting</li>
+              <li><strong>Supabase:</strong> Database, autentificering og fil-hosting</li>
               <li><strong>Vercel:</strong> Hosting og infrastructure</li>
               <li><strong>Resend:</strong> Email notifikationer</li>
-              <li><strong>Cloudinary:</strong> Billed hosting</li>
             </ul>
             <p>Alle databehandlere har underskrevet Data Processing Agreements (DPA).</p>
 

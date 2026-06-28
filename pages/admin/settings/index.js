@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/supabase/auth-context';
 import Head from 'next/head';
 import ModernLayout from '../../../components/admin/ModernLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -114,7 +114,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600">
+            <div className="p-2 rounded-lg bg-primary">
               <Settings className="h-6 w-6 text-white" />
             </div>
             <div>

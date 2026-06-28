@@ -1,34 +1,46 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from './auth/[...nextauth]';
-import clientPromise from '../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../lib/supabase/admin';
+import { getSessionContext } from '../../lib/supabase/session';
+import { fromRow, fromRows } from '../../lib/supabase/transform';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
-  
+  const session = await getSessionContext(req, res);
+
   if (!session) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  const client = await clientPromise;
-  const db = client.db('elva-agents');
-  
+  if (!UUID_RE.test(session.user.id)) {
+    return res.status(400).json({ error: 'Invalid user id' });
+  }
+
   // Get user from database
-  const user = await db.collection('users').findOne({ 
-    _id: new ObjectId(session.user.id) 
-  });
+  const { data: userRow } = await admin
+    .from('users')
+    .select('*')
+    .eq('id', session.user.id)
+    .maybeSingle();
+  const user = userRow ? fromRow(userRow) : null;
 
   // Get user's team memberships
-  const memberships = await db.collection('team_members').find({
-    userId: new ObjectId(session.user.id),
-    status: 'active'
-  }).toArray();
+  const { data: membershipRows } = await admin
+    .from('team_members')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .eq('status', 'active');
+  const memberships = fromRows(membershipRows);
 
   // Get organizations
-  const orgIds = memberships.map(m => m.organizationId);
-  const organizations = await db.collection('organizations').find({
-    _id: { $in: orgIds }
-  }).toArray();
+  const orgIds = memberships.map(m => m.organizationId).filter(Boolean);
+  let organizations = [];
+  if (orgIds.length > 0) {
+    const { data: orgRows } = await admin
+      .from('organizations')
+      .select('*')
+      .in('id', orgIds);
+    organizations = fromRows(orgRows);
+  }
 
   return res.json({
     session: {
@@ -56,4 +68,3 @@ export default async function handler(req, res) {
     }))
   });
 }
-

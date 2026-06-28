@@ -1,9 +1,20 @@
-import clientPromise from '../../../../lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { admin } from '../../../../lib/supabase/admin';
+import { getSessionContext } from '../../../../lib/supabase/session';
+import { fromRow } from '../../../../lib/supabase/transform';
 import { withAdmin } from '../../../../lib/auth';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
 import { requireRole } from '../../../../lib/roleCheck';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// A widget's public/embed id is stored as legacy_id; the same URL param may
+// also be the uuid primary key. Resolve by legacy_id first, then by uuid.
+async function findWidgetRowById(id) {
+  let { data } = await admin.from('widgets').select('*').eq('legacy_id', id).maybeSingle();
+  if (!data && UUID_RE.test(id)) {
+    ({ data } = await admin.from('widgets').select('*').eq('id', id).maybeSingle());
+  }
+  return data;
+}
 
 // Mock data for testing (fallback when MongoDB is unavailable)
 const mockWidgets = [
@@ -236,7 +247,7 @@ const mockWidgets = [
 async function handler(req, res) {
   try {
     // Get session for organization context
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getSessionContext(req, res);
     if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -246,25 +257,17 @@ async function handler(req, res) {
     const { id } = req.query;
 
     if (req.method === 'GET') {
-      // Get widget from MongoDB
+      // Get widget from Supabase
       try {
-        const client = await clientPromise;
-        const db = client.db('elva-agents'); // Use new database
-        
-        // Convert string ID to ObjectId if it's a valid ObjectId string
-        let queryId = id;
-        if (ObjectId.isValid(id)) {
-          queryId = new ObjectId(id);
-        }
-        
-        const widget = await db.collection('widgets').findOne({ _id: queryId });
-        
-        if (widget) {
+        const widgetRow = await findWidgetRowById(id);
+
+        if (widgetRow) {
+          const widget = fromRow(widgetRow);
           // Verify widget belongs to user's organization (unless platform admin)
           if (!isPlatformAdmin && widget.organizationId?.toString() !== currentOrgId) {
             return res.status(403).json({ error: 'Access denied' });
           }
-          
+
           return res.status(200).json(widget);
         }
       } catch (dbError) {
@@ -286,56 +289,60 @@ async function handler(req, res) {
         return res.status(403).json({ error: roleCheck.error });
       }
       
-      // Update widget in MongoDB
+      // Update widget in Supabase
       try {
-        const client = await clientPromise;
-        const db = client.db('elva-agents'); // Use new database
-        
-        // Convert string ID to ObjectId if it's a valid ObjectId string
-        let queryId = id;
-        if (ObjectId.isValid(id)) {
-          queryId = new ObjectId(id);
-        }
-        
-        // First, verify widget belongs to user's organization
-        const widget = await db.collection('widgets').findOne({ _id: queryId });
-        if (widget && !isPlatformAdmin && widget.organizationId?.toString() !== currentOrgId) {
+        // First, resolve the widget and verify it belongs to user's organization
+        const existing = await findWidgetRowById(id);
+
+        if (existing && !isPlatformAdmin && fromRow(existing).organizationId?.toString() !== currentOrgId) {
           return res.status(403).json({ error: 'Access denied' });
         }
-        
-        const updateData = {
-          ...req.body,
-          lastEditedBy: new ObjectId(session.user.id),
-          lastEditedAt: new Date(),
-          updatedAt: new Date()
-        };
-        
-        // Remove _id from update data as it's immutable
-        delete updateData._id;
-        
-        // Preserve organizationId as ObjectId if it exists
-        if (updateData.organizationId && typeof updateData.organizationId === 'string') {
-          updateData.organizationId = new ObjectId(updateData.organizationId);
-        }
-        
-        // Use updateOne instead of findOneAndUpdate for better compatibility
-        const updateResult = await db.collection('widgets').updateOne(
-          { _id: queryId },
-          { $set: updateData }
-        );
-        
-        if (updateResult.modifiedCount > 0) {
-          // Fetch the updated document
-          const updatedWidget = await db.collection('widgets').findOne({ _id: queryId });
-          return res.status(200).json(updatedWidget);
-        } else if (updateResult.matchedCount === 0) {
-          // Document not found
+
+        if (!existing) {
           return res.status(404).json({ error: 'Widget not found' });
-        } else {
-          // Document found but not modified (no changes)
-          const widget = await db.collection('widgets').findOne({ _id: queryId });
-          return res.status(200).json(widget);
         }
+
+        const body = req.body || {};
+
+        // Build a snake_case patch from known columns only. Unknown keys from the
+        // editor's payload (e.g. _id, stats, createdAt) are naturally excluded;
+        // undefined values are dropped by the client so absent fields untouched.
+        // updated_at is maintained by a trigger.
+        const patch = {
+          last_edited_by: session.user.id,
+          last_edited_at: new Date().toISOString(),
+          status: body.status,
+          is_demo_mode: body.isDemoMode,
+          organization_id: body.organizationId,
+          name: body.name,
+          description: body.description,
+          prompt: body.prompt,
+          theme: body.theme,
+          timezone: body.timezone,
+          openai: body.openai,
+          appearance: body.appearance,
+          messages: body.messages,
+          branding: body.branding,
+          advanced: body.advanced,
+          analytics: body.analytics,
+          behavior: body.behavior,
+          consent: body.consent,
+          demo_settings: body.demoSettings,
+          imageupload: body.imageupload,
+          integrations: body.integrations,
+          manual_review: body.manualReview,
+          satisfaction: body.satisfaction
+        };
+
+        const { data: updatedWidget, error: updateError } = await admin
+          .from('widgets')
+          .update(patch)
+          .eq('id', existing.id)
+          .select('*')
+          .single();
+        if (updateError) throw updateError;
+
+        return res.status(200).json(fromRow(updatedWidget));
       } catch (dbError) {
         console.error('Database error, falling back to mock data:', dbError);
       }
@@ -364,26 +371,22 @@ async function handler(req, res) {
         return res.status(403).json({ error: roleCheck.error });
       }
       
-      // Delete widget from MongoDB
+      // Delete widget from Supabase
       try {
-        const client = await clientPromise;
-        const db = client.db('elva-agents'); // Use new database
-        
-        // Convert string ID to ObjectId if it's a valid ObjectId string
-        let queryId = id;
-        if (ObjectId.isValid(id)) {
-          queryId = new ObjectId(id);
-        }
-        
-        // First, verify widget belongs to user's organization
-        const widget = await db.collection('widgets').findOne({ _id: queryId });
-        if (widget && !isPlatformAdmin && widget.organizationId?.toString() !== currentOrgId) {
+        // First, resolve the widget and verify it belongs to user's organization
+        const existing = await findWidgetRowById(id);
+
+        if (existing && !isPlatformAdmin && fromRow(existing).organizationId?.toString() !== currentOrgId) {
           return res.status(403).json({ error: 'Access denied' });
         }
-        
-        const result = await db.collection('widgets').deleteOne({ _id: queryId });
-        
-        if (result.deletedCount > 0) {
+
+        if (existing) {
+          const { error: deleteError } = await admin
+            .from('widgets')
+            .delete()
+            .eq('id', existing.id);
+          if (deleteError) throw deleteError;
+
           return res.status(200).json({ message: 'Widget deleted successfully' });
         }
       } catch (dbError) {

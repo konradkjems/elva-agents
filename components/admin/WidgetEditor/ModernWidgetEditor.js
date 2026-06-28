@@ -268,7 +268,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="bg-[#075ef0] text-white hover:bg-blue-600 gap-2 shadow-lg shadow-[#075ef0]/20"
+              className="bg-[#075ef0] text-white hover:bg-primary gap-2 shadow-lg shadow-[#075ef0]/20"
             >
               {isSaving ? (
                 <>
@@ -331,7 +331,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
               <AccordionItem value="appearance" className={`border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
                 <AccordionTrigger className={`px-6 hover:no-underline ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-blue-50 text-[#075ef0]'}`}>
+                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-primary/10 text-[#075ef0]'}`}>
                       <Palette size={18} />
                     </div>
                     <span className={isDarkMode ? 'text-slate-200' : 'text-slate-700'}>Appearance</span>
@@ -402,7 +402,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
               <AccordionItem value="messages" className={`border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
                 <AccordionTrigger className={`px-6 hover:no-underline ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-blue-50 text-[#075ef0]'}`}>
+                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-primary/10 text-[#075ef0]'}`}>
                       <MessageCircle size={18} />
                     </div>
                     <span className={isDarkMode ? 'text-slate-200' : 'text-slate-700'}>Messages & Texts</span>
@@ -444,7 +444,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
               <AccordionItem value="branding" className={`border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
                 <AccordionTrigger className={`px-6 hover:no-underline ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-blue-50 text-[#075ef0]'}`}>
+                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-primary/10 text-[#075ef0]'}`}>
                       <Sparkles size={18} />
                     </div>
                     <span className={isDarkMode ? 'text-slate-200' : 'text-slate-700'}>Branding</span>
@@ -483,7 +483,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
               <AccordionItem value="advanced" className={`border-b ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
                 <AccordionTrigger className={`px-6 hover:no-underline ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-blue-50 text-[#075ef0]'}`}>
+                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-primary/10 text-[#075ef0]'}`}>
                       <Settings size={18} />
                     </div>
                     <span className={isDarkMode ? 'text-slate-200' : 'text-slate-700'}>Advanced</span>
@@ -552,7 +552,7 @@ export default function ModernWidgetEditor({ widget, isNew = false }) {
               <AccordionItem value="privacy" className={`border-b-0`}>
                 <AccordionTrigger className={`px-6 hover:no-underline ${isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-blue-50 text-[#075ef0]'}`}>
+                    <div className={`p-1.5 rounded ${isDarkMode ? 'bg-slate-800 text-[#075ef0]' : 'bg-primary/10 text-[#075ef0]'}`}>
                       <Shield size={18} />
                     </div>
                     <span className={isDarkMode ? 'text-slate-200' : 'text-slate-700'}>Privacy</span>

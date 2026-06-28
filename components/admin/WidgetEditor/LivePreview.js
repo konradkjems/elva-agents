@@ -311,7 +311,7 @@ export default function LivePreview({ widget, settings }) {
     <div ref={containerRef} className="relative h-full flex flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 overflow-hidden" style={{ minHeight: 0 }}>
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-primary/10 to-primary/5 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-emerald-500/10 to-cyan-500/10 rounded-full blur-3xl" />
         <div 
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-30"
@@ -334,7 +334,7 @@ export default function LivePreview({ widget, settings }) {
               }}
               className={`p-2 rounded-lg transition-all duration-300 ${
                 deviceView === 'desktop'
-                  ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  ? 'bg-white dark:bg-slate-600 text-primary dark:text-primary shadow-sm'
                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
               title="Desktop view"
@@ -349,7 +349,7 @@ export default function LivePreview({ widget, settings }) {
               }}
               className={`p-2 rounded-lg transition-all duration-300 ${
                 deviceView === 'mobile'
-                  ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  ? 'bg-white dark:bg-slate-600 text-primary dark:text-primary shadow-sm'
                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
               title="Mobile view"
@@ -387,7 +387,7 @@ export default function LivePreview({ widget, settings }) {
             onClick={() => setShowWebsiteBackground(!showWebsiteBackground)}
             className={`p-2 rounded-lg transition-all ${
               showWebsiteBackground 
-                ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' 
+                ? 'text-primary dark:text-primary bg-primary/10 dark:bg-primary/20' 
                 : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
             }`}
             title={showWebsiteBackground ? 'Skjul website baggrund' : 'Vis website baggrund'}
@@ -398,7 +398,7 @@ export default function LivePreview({ widget, settings }) {
           {/* Reset Button */}
           <button
             onClick={resetPreview}
-            className={`p-2 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all ${isAnimating ? 'animate-spin' : ''}`}
+            className={`p-2 text-slate-400 hover:text-primary dark:hover:text-primary rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all ${isAnimating ? 'animate-spin' : ''}`}
             title="Nulstil preview"
           >
             <RefreshCw size={16} />
@@ -409,7 +409,7 @@ export default function LivePreview({ widget, settings }) {
             onClick={() => setZoomLevel(autoZoom)}
             className={`p-2 rounded-lg transition-colors ${
               zoomLevel === autoZoom 
-                ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30' 
+                ? 'text-primary dark:text-primary bg-primary/10 dark:bg-primary/20' 
                 : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
             }`}
             title="Tilpas til vindue"
@@ -490,7 +490,7 @@ export default function LivePreview({ widget, settings }) {
                       <div className="absolute inset-0 top-[54px] bg-gradient-to-b from-slate-50 to-white overflow-y-auto">
                         {/* Mobile App Header */}
                         <div className="h-12 bg-white border-b border-slate-100 flex items-center justify-between px-4">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg" />
+                          <div className="w-8 h-8 bg-slate-300 dark:bg-slate-700 rounded-lg" />
                           <div className="flex-1 mx-4 h-8 bg-slate-100 rounded-full flex items-center px-3">
                             <svg className="w-4 h-4 text-slate-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -525,7 +525,7 @@ export default function LivePreview({ widget, settings }) {
                                 </div>
                                 <div className="p-2">
                                   <div className="text-xs font-medium text-slate-700 mb-1">{product.title}</div>
-                                  <div className="text-xs font-bold text-blue-600">{product.price}</div>
+                                  <div className="text-xs font-bold text-slate-900">{product.price}</div>
                                 </div>
                               </div>
                             ))}
@@ -833,7 +833,7 @@ export default function LivePreview({ widget, settings }) {
                     {/* Nav */}
                     <div className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8">
                       <div className="flex items-center gap-8">
-                        <div className="w-32 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg" />
+                        <div className="w-32 h-8 bg-slate-300 dark:bg-slate-700 rounded-lg" />
                         <div className="flex gap-6">
                           {['Produkter', 'Priser', 'Om os', 'Kontakt'].map(item => (
                             <span key={item} className="text-sm text-slate-600 hover:text-slate-900 cursor-pointer">{item}</span>
@@ -854,14 +854,14 @@ export default function LivePreview({ widget, settings }) {
                     {/* Hero (no background image) */}
                     <div className="h-80 bg-gradient-to-br from-slate-100 via-slate-50 to-white flex items-center justify-center relative overflow-hidden">
                       <div className="absolute inset-0 opacity-40">
-                        <div className="absolute top-10 left-20 w-40 h-40 bg-blue-200 rounded-full blur-3xl" />
-                        <div className="absolute bottom-10 right-20 w-60 h-60 bg-purple-200 rounded-full blur-3xl" />
+                        <div className="absolute top-10 left-20 w-40 h-40 bg-slate-200 rounded-full blur-3xl" />
+                        <div className="absolute bottom-10 right-20 w-60 h-60 bg-slate-200 rounded-full blur-3xl" />
                       </div>
                       <div className="text-center relative z-10">
                         <div className="text-4xl font-bold text-slate-800 mb-4">Velkommen til vores shop</div>
                         <div className="text-lg text-slate-600 mb-6">Find de bedste produkter til de bedste priser</div>
                         <div className="flex gap-3 justify-center">
-                          <div className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium shadow-lg">Se produkter</div>
+                          <div className="px-6 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-medium shadow-lg">Se produkter</div>
                           <div className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-medium shadow">Læs mere</div>
                         </div>
                       </div>
@@ -885,9 +885,9 @@ export default function LivePreview({ widget, settings }) {
                               <div className="text-sm font-semibold text-slate-800 mb-1">{product.name}</div>
                               <div className="text-xs text-slate-500 mb-3">{product.desc}</div>
                               <div className="flex justify-between items-center">
-                                <div className="text-base font-bold text-blue-600">{product.price}</div>
-                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="text-base font-bold text-slate-900">{product.price}</div>
+                                <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center">
+                                  <svg className="w-4 h-4 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                   </svg>
                                 </div>

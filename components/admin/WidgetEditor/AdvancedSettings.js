@@ -41,7 +41,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="checkbox"
                   checked={settings.advanced?.showCloseButton ?? true}
                   onChange={(e) => updateSetting('advanced', 'showCloseButton', e.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  className="rounded border-gray-300 dark:border-gray-600 text-primary dark:text-primary shadow-sm focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                 />
                 <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Show close button</span>
               </label>
@@ -51,7 +51,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="checkbox"
                   checked={settings.advanced?.showConversationHistory ?? true}
                   onChange={(e) => updateSetting('advanced', 'showConversationHistory', e.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  className="rounded border-gray-300 dark:border-gray-600 text-primary dark:text-primary shadow-sm focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                 />
                 <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Show conversation history</span>
               </label>
@@ -61,7 +61,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="checkbox"
                   checked={settings.advanced?.showNewChatButton ?? true}
                   onChange={(e) => updateSetting('advanced', 'showNewChatButton', e.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  className="rounded border-gray-300 dark:border-gray-600 text-primary dark:text-primary shadow-sm focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                 />
                 <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Show new chat button</span>
               </label>
@@ -77,7 +77,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="checkbox"
                   checked={settings.advanced?.enableAnalytics ?? true}
                   onChange={(e) => updateSetting('advanced', 'enableAnalytics', e.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                  className="rounded border-gray-300 dark:border-gray-600 text-primary dark:text-primary shadow-sm focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                 />
                 <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Enable analytics tracking</span>
               </label>
@@ -99,7 +99,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                             : events.filter(e => e !== event);
                           updateSetting('advanced', 'trackEvents', newEvents);
                         }}
-                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
+                        className="rounded border-gray-300 dark:border-gray-600 text-primary dark:text-primary shadow-sm focus:border-primary dark:focus:border-primary focus:ring-primary dark:focus:ring-primary"
                       />
                       <span className="ml-2 text-sm text-gray-700 capitalize">
                         {event.replace('_', ' ')}
@@ -123,7 +123,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="number"
                   value={settings.advanced?.conversationRetention ?? 30}
                   onChange={(e) => updateSetting('advanced', 'conversationRetention', parseInt(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                   min="1"
                   max="365"
                 />
@@ -137,7 +137,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                   type="number"
                   value={settings.advanced?.maxConversations ?? 100}
                   onChange={(e) => updateSetting('advanced', 'maxConversations', parseInt(e.target.value))}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                   min="1"
                   max="1000"
                 />
@@ -156,7 +156,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                 <select
                   value={settings.advanced?.language ?? 'da'}
                   onChange={(e) => updateSetting('advanced', 'language', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                 >
                   <option value="da">Dansk</option>
                   <option value="en">English</option>
@@ -171,7 +171,7 @@ export default function AdvancedSettings({ settings, onChange }) {
                 <select
                   value={settings.advanced?.timezone ?? 'Europe/Copenhagen'}
                   onChange={(e) => updateSetting('advanced', 'timezone', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                 >
                   <option value="Europe/Copenhagen">Europe/Copenhagen</option>
                   <option value="Europe/London">Europe/London</option>

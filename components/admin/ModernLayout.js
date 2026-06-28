@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut } from '@/lib/supabase/auth-context';
 import { useRouter } from 'next/router';
 import ModernSidebar from './ModernSidebar';
 import OrganizationSwitcher from './OrganizationSwitcher';

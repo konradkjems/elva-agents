@@ -118,7 +118,7 @@ export default function FileUpload({
         <div
           className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
             isDragOver 
-              ? 'border-blue-500 bg-blue-50' 
+              ? 'border-primary bg-primary/10' 
               : 'border-gray-300 hover:border-gray-400'
           }`}
           onDragOver={handleDragOver}
@@ -131,7 +131,7 @@ export default function FileUpload({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary bg-primary/15 hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
             >
               {uploading ? 'Uploading...' : 'Upload Image'}
             </button>

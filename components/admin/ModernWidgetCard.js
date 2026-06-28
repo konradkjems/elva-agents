@@ -174,7 +174,7 @@ export default function ModernWidgetCard({ widget, isReadOnly = false }) {
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+              <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                 {getInitials(widget.name)}
               </AvatarFallback>
             </Avatar>
@@ -261,7 +261,7 @@ export default function ModernWidgetCard({ widget, isReadOnly = false }) {
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
-              <MessageCircle className="h-4 w-4 text-blue-500" />
+              <MessageCircle className="h-4 w-4 text-primary" />
             </div>
             <div className="text-lg font-semibold">
               {widget.stats?.totalConversations || 0}
@@ -279,7 +279,7 @@ export default function ModernWidgetCard({ widget, isReadOnly = false }) {
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center mb-1">
-              <Zap className="h-4 w-4 text-purple-500" />
+              <Zap className="h-4 w-4 text-primary" />
             </div>
             <div className="text-lg font-semibold">
               {widget.stats?.responseTime ? `${(widget.stats.responseTime / 1000).toFixed(1)}s` : '0s'}

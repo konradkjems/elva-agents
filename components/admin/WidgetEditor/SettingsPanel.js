@@ -329,7 +329,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
           <AccordionItem value="appearance" className="border-0">
             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                <div className="p-1.5 rounded-md bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary">
                   <Palette className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Appearance</span>
@@ -381,7 +381,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         onClick={() => handleFieldChange('appearance', 'theme', theme.value)}
                         className={`p-3 rounded-lg border transition-all duration-200 ${
                           settings.appearance?.theme === theme.value
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                            ? 'border-primary bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary'
                             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
                         }`}
                       >
@@ -429,7 +429,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="number"
                         value={settings.appearance?.width || 450}
                         onChange={(e) => handleFieldChange('appearance', 'width', parseInt(e.target.value))}
-                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${validationErrors['appearance.width'] ? 'border-red-300 dark:border-red-600' : ''}`}
+                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary ${validationErrors['appearance.width'] ? 'border-red-300 dark:border-red-600' : ''}`}
                         min="300"
                         max="800"
                       />
@@ -440,7 +440,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="number"
                         value={settings.appearance?.height || 600}
                         onChange={(e) => handleFieldChange('appearance', 'height', parseInt(e.target.value))}
-                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${validationErrors['appearance.height'] ? 'border-red-300 dark:border-red-600' : ''}`}
+                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary ${validationErrors['appearance.height'] ? 'border-red-300 dark:border-red-600' : ''}`}
                         min="400"
                         max="800"
                       />
@@ -451,7 +451,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="number"
                         value={settings.appearance?.borderRadius || 20}
                         onChange={(e) => handleFieldChange('appearance', 'borderRadius', parseInt(e.target.value))}
-                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 ${validationErrors['appearance.borderRadius'] ? 'border-red-300 dark:border-red-600' : ''}`}
+                        className={`w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary ${validationErrors['appearance.borderRadius'] ? 'border-red-300 dark:border-red-600' : ''}`}
                         min="0"
                         max="50"
                       />
@@ -461,7 +461,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       <select
                         value={settings.appearance?.placement || 'bottom-right'}
                         onChange={(e) => handleFieldChange('appearance', 'placement', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700 dark:text-slate-200"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-700 dark:text-slate-200"
                       >
                         <option value="bottom-right">Bottom Right</option>
                         <option value="bottom-left">Bottom Left</option>
@@ -481,7 +481,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     value={settings.appearance?.customCSS || ''}
                     onChange={(e) => handleFieldChange('appearance', 'customCSS', e.target.value)}
                     rows={4}
-                    className="w-full font-mono text-xs bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                    className="w-full font-mono text-xs bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                     placeholder="/* Add custom CSS here */&#10;.widget-container { }"
                   />
                   <p className="text-[10px] text-slate-400 dark:text-slate-500">
@@ -513,7 +513,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     value={settings.messages?.welcomeMessage || ''}
                     onChange={(e) => handleFieldChange('messages', 'welcomeMessage', e.target.value)}
                     rows={3}
-                    className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                    className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                     placeholder="Hej! 😊 Hvordan kan jeg hjælpe dig i dag?"
                   />
                   <p className="text-[10px] text-slate-400">This message appears when users first open the chat</p>
@@ -528,7 +528,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     type="text"
                     value={settings.messages?.inputPlaceholder || ''}
                     onChange={(e) => handleFieldChange('messages', 'inputPlaceholder', e.target.value)}
-                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     placeholder="Skriv din besked her..."
                   />
                 </div>
@@ -542,7 +542,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     type="text"
                     value={settings.messages?.bannerText || ''}
                     onChange={(e) => handleFieldChange('messages', 'bannerText', e.target.value)}
-                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     placeholder="Velkommen til vores kundeservice chat!"
                   />
                 </div>
@@ -556,7 +556,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     type="text"
                     value={settings.messages?.typingText || ''}
                     onChange={(e) => handleFieldChange('messages', 'typingText', e.target.value)}
-                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     placeholder="AI tænker..."
                   />
                   <div className="flex items-center justify-between py-2 px-1">
@@ -580,7 +580,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="text"
                         value={settings.messages?.popupMessage || ''}
                         onChange={(e) => handleFieldChange('messages', 'popupMessage', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="Hej! 👋 Har du brug for hjælp?"
                       />
                     </div>
@@ -590,7 +590,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="text"
                         value={settings.messages?.disclaimerText || ''}
                         onChange={(e) => handleFieldChange('messages', 'disclaimerText', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="Opgiv ikke personlige oplysninger"
                       />
                     </div>
@@ -764,7 +764,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                 </div>
 
                                 <details className="mt-4">
-                                  <summary className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer hover:text-blue-800 dark:hover:text-blue-300">
+                                  <summary className="text-xs text-primary dark:text-primary cursor-pointer hover:text-primary dark:hover:text-primary">
                                     Show all labels
                                   </summary>
                                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -848,7 +848,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.newConversationLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'newConversationLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="Ny samtale"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -864,7 +864,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.conversationHistoryLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'conversationHistoryLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="Tidligere samtaler"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -880,7 +880,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.conversationLoadedLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'conversationLoadedLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="Samtale indlæst"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -909,7 +909,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.todayLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'todayLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="I dag"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -925,7 +925,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.yesterdayLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'yesterdayLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="I går"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -941,7 +941,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.daysAgoSuffix || ''}
                                   onChange={(e) => handleFieldChange('messages', 'daysAgoSuffix', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="d"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -970,7 +970,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.messagesLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'messagesLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="beskeder"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -986,7 +986,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.noConversationsLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'noConversationsLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="Ingen tidligere samtaler"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1002,7 +1002,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                                   type="text"
                                   value={settings.messages?.startConversationLabel || ''}
                                   onChange={(e) => handleFieldChange('messages', 'startConversationLabel', e.target.value)}
-                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                  className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                                   placeholder="Start en samtale for at se den her"
                                 />
                                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1075,7 +1075,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Suggested Responses */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <MessageCircle className="w-5 h-5 mr-2 text-purple-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-primary" />
                     Suggested Responses (Max 5)
                   </h4>
 
@@ -1185,7 +1185,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Voice Input Settings */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <MessageCircle className="w-5 h-5 mr-2 text-indigo-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-primary" />
                     Voice Input (Diktering)
                   </h4>
 
@@ -1222,7 +1222,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                               ...settings.messages?.voiceInput,
                               language: e.target.value
                             })}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           >
                             <option value="da-DK">Dansk (Danmark)</option>
                             <option value="en-US">English (US)</option>
@@ -1248,7 +1248,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                               ...settings.messages?.voiceInput,
                               buttonPosition: e.target.value
                             })}
-                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                            className="block w-full rounded-lg border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-primary focus:border-transparent sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           >
                             <option value="left">Left side of input</option>
                             <option value="right">Right side of input</option>
@@ -1297,10 +1297,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     )}
 
                     {/* Information Panel */}
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary rounded-lg p-4">
                       <div className="flex items-start">
-                        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
-                        <div className="text-sm text-blue-800 dark:text-blue-300">
+                        <Info className="w-5 h-5 text-primary dark:text-primary mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-primary dark:text-primary">
                           <p className="font-medium mb-1">Voice Input Information</p>
                           <ul className="space-y-1 text-xs">
                             <li>• Uses browser's built-in speech recognition</li>
@@ -1318,7 +1318,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                 {/* Image Upload Settings */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-                    <MessageCircle className="w-5 h-5 mr-2 text-purple-600" />
+                    <MessageCircle className="w-5 h-5 mr-2 text-primary" />
                     Image Upload (GPT-4.1 Vision)
                   </h4>
 
@@ -1340,10 +1340,10 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                     </div>
 
                     {/* Information Panel */}
-                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                    <div className="bg-primary/10 dark:bg-primary/20 border border-primary/30 dark:border-primary rounded-lg p-4">
                       <div className="flex items-start">
-                        <Info className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 mr-3 flex-shrink-0" />
-                        <div className="text-sm text-purple-800 dark:text-purple-300">
+                        <Info className="w-5 h-5 text-primary dark:text-primary mt-0.5 mr-3 flex-shrink-0" />
+                        <div className="text-sm text-primary dark:text-primary">
                           <p className="font-medium mb-1">Image Upload Information</p>
                           <ul className="space-y-1 text-xs">
                             <li>• Maximum file size: 5MB</li>
@@ -1537,7 +1537,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
           <AccordionItem value="branding" className="border-0">
             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-md bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                <div className="p-1.5 rounded-md bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary">
                   <Building2 className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Branding</span>
@@ -1558,7 +1558,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="text"
                         value={settings.branding?.title || ''}
                         onChange={(e) => handleFieldChange('branding', 'title', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="AI Assistant"
                       />
                     </div>
@@ -1568,7 +1568,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="text"
                         value={settings.branding?.assistantName || ''}
                         onChange={(e) => handleFieldChange('branding', 'assistantName', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="Elva"
                       />
                     </div>
@@ -1578,7 +1578,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="text"
                         value={settings.branding?.companyName || ''}
                         onChange={(e) => handleFieldChange('branding', 'companyName', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="Elva Solutions"
                       />
                     </div>
@@ -1588,7 +1588,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="text"
                         value={settings.branding?.poweredByText || ''}
                         onChange={(e) => handleFieldChange('branding', 'poweredByText', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="Powered by Elva"
                       />
                     </div>
@@ -1598,7 +1598,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="text"
                         value={settings.messages?.availableNowText || ''}
                         onChange={(e) => handleFieldChange('messages', 'availableNowText', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="Tilgængelig nu"
                       />
                     </div>
@@ -1672,7 +1672,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
           <AccordionItem value="privacy" className="border-0">
             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-md bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                <div className="p-1.5 rounded-md bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Privacy & Cookies</span>
@@ -1699,7 +1699,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       type="text"
                       value={settings.consent?.title || '🍪 Vi respekterer dit privatliv'}
                       onChange={(e) => handleFieldChange('consent', 'title', e.target.value)}
-                      className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                   </div>
                   <div>
@@ -1708,7 +1708,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                       value={settings.consent?.description || 'Vi bruger localStorage til at gemme din samtalehistorik...'}
                       onChange={(e) => handleFieldChange('consent', 'description', e.target.value)}
                       rows={2}
-                      className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                      className="w-full text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1718,7 +1718,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="url"
                         value={settings.consent?.privacyUrl || ''}
                         onChange={(e) => handleFieldChange('consent', 'privacyUrl', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="https://..."
                       />
                     </div>
@@ -1728,7 +1728,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         type="url"
                         value={settings.consent?.cookiesUrl || ''}
                         onChange={(e) => handleFieldChange('consent', 'cookiesUrl', e.target.value)}
-                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full h-9 text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         placeholder="https://..."
                       />
                     </div>
@@ -1970,7 +1970,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
           <AccordionItem value="embed" className="border-0">
             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-1.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                <div className="p-1.5 rounded-md bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary">
                   <Code className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Embed Code</span>
@@ -1978,8 +1978,8 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
             </AccordionTrigger>
             <AccordionContent className="px-5 pb-5 pt-0">
               <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                <div className="p-3 rounded-lg bg-primary/10 dark:bg-primary/20 border border-primary/20 dark:border-primary">
+                  <p className="text-xs text-primary dark:text-primary">
                     Add this code before the closing &lt;/body&gt; tag on your website.
                   </p>
                 </div>
@@ -2017,7 +2017,7 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
                         const code = `<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com'}/api/widget-embed/${settings._id || 'widget-id'}"></script>`;
                         navigator.clipboard.writeText(code);
                       }}
-                      className="absolute top-2 right-2 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] transition-colors flex items-center gap-1"
+                      className="absolute top-2 right-2 px-2 py-1 bg-primary hover:bg-primary text-white rounded text-[10px] transition-colors flex items-center gap-1"
                     >
                       <Copy className="w-3 h-3" />
                       Copy

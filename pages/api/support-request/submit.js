@@ -1,6 +1,7 @@
-import { ObjectId } from 'mongodb';
-import clientPromise from '../../../lib/mongodb';
+import { admin } from '../../../lib/supabase/admin';
 import { sendSupportRequestEmail } from '../../../lib/email';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
@@ -8,7 +9,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-elva-consent-analytics, x-elva-consent-functional');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -24,74 +25,69 @@ export default async function handler(req, res) {
 
     // Validate required fields
     if (!widgetId || !conversationId || !contactInfo) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: widgetId, conversationId, and contactInfo are required' 
+      return res.status(400).json({
+        error: 'Missing required fields: widgetId, conversationId, and contactInfo are required'
       });
     }
 
     // Validate contact info structure
     const { name, email } = contactInfo;
     if (!email) {
-      return res.status(400).json({ 
-        error: 'Email is required' 
-      });
+      return res.status(400).json({ error: 'Email is required' });
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        error: 'Invalid email format' 
-      });
+      return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const client = await clientPromise;
-    const db = client.db('elva-agents');
-
-    // Verify widget exists
-    const widget = await db.collection('widgets').findOne({ 
-      _id: new ObjectId(widgetId) 
-    });
-
+    // Verify widget exists (looked up by embed id, then uuid)
+    let { data: widget } = await admin
+      .from('widgets').select('id, organization_id, name')
+      .eq('legacy_id', String(widgetId)).maybeSingle();
+    if (!widget && UUID_RE.test(widgetId)) {
+      ({ data: widget } = await admin
+        .from('widgets').select('id, organization_id, name')
+        .eq('id', widgetId).maybeSingle());
+    }
     if (!widget) {
-      return res.status(404).json({ 
-        error: 'Widget not found' 
-      });
+      return res.status(404).json({ error: 'Widget not found' });
     }
 
     // Verify conversation exists
-    const conversation = await db.collection('conversations').findOne({ 
-      _id: new ObjectId(conversationId) 
-    });
-
+    if (!UUID_RE.test(conversationId)) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    const { data: conversation } = await admin
+      .from('conversations').select('id, messages')
+      .eq('id', conversationId).maybeSingle();
     if (!conversation) {
-      return res.status(404).json({ 
-        error: 'Conversation not found' 
-      });
+      return res.status(404).json({ error: 'Conversation not found' });
     }
 
     // Create support request
-    const supportRequest = {
-      _id: new ObjectId(),
-      widgetId: new ObjectId(widgetId),
-      organizationId: new ObjectId(widget.organizationId),
-      conversationId: new ObjectId(conversationId),
-      contactInfo: {
-        name: name ? name.trim() : null,
-        email: email.toLowerCase().trim()
-      },
-      message: message ? message.trim() : null,
-      status: 'pending', // pending, in_review, completed, rejected
-      submittedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const { data: created, error: insErr } = await admin
+      .from('support_requests')
+      .insert({
+        widget_id: widget.id,
+        organization_id: widget.organization_id,
+        conversation_id: conversationId,
+        contact_info: {
+          name: name ? name.trim() : null,
+          email: email.toLowerCase().trim()
+        },
+        message: message ? message.trim() : null,
+        status: 'pending',
+        submitted_at: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+    if (insErr) throw insErr;
 
-    // Insert support request
-    const result = await db.collection('support_requests').insertOne(supportRequest);
-
+    const requestId = created.id;
     console.log('✅ Support request submitted:', {
-      requestId: result.insertedId,
+      requestId,
       widgetId,
       conversationId,
       contactName: name,
@@ -99,14 +95,17 @@ export default async function handler(req, res) {
     });
 
     // Get organization details for email
-    const organization = await db.collection('organizations').findOne({
-      _id: widget.organizationId
-    });
+    let organization = null;
+    if (widget.organization_id) {
+      ({ data: organization } = await admin
+        .from('organizations').select('name, settings')
+        .eq('id', widget.organization_id).maybeSingle());
+    }
 
     // Send email notification to support
     try {
       const supportEmail = organization?.settings?.supportEmail || organization?.settings?.manualReviewEmail;
-      
+
       if (supportEmail) {
         await sendSupportRequestEmail({
           supportEmail,
@@ -116,7 +115,7 @@ export default async function handler(req, res) {
           widgetName: widget.name,
           organizationName: organization?.name || 'Unknown Organization',
           conversationId: conversationId,
-          requestId: result.insertedId.toString(),
+          requestId: String(requestId),
           conversationMessages: conversation?.messages || []
         });
         console.log('✅ Support request email sent to:', supportEmail);
@@ -130,13 +129,13 @@ export default async function handler(req, res) {
 
     res.status(201).json({
       success: true,
-      requestId: result.insertedId,
+      requestId: requestId,
       message: 'Support request submitted successfully'
     });
 
   } catch (error) {
     console.error('❌ Error submitting support request:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
