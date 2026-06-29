@@ -7,6 +7,9 @@ import { resolveWidgetForOrg } from '@/lib/rag/access';
 import { startSiteCrawl } from '@/lib/crawl/firecrawl';
 import { processKnowledgeQueue } from '@/lib/rag/worker';
 
+// Starting a crawl + a best-effort worker pass can run long; raise above the 30s cap.
+export const config = { maxDuration: 60 };
+
 // Knowledge-base sources for a widget.
 //   GET  — list documents (status + chunk_count) for the widget
 //   POST — add a source: { type: 'website', url } | { type: 'text', title, content }

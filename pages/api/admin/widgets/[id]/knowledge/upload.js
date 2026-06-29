@@ -11,7 +11,7 @@ import { processKnowledgeQueue } from '@/lib/rag/worker';
 
 // File upload as a knowledge source. Extracts text (pdf/docx/txt/md), stores it as
 // a 'file' document, then runs a best-effort worker pass to chunk + embed it.
-export const config = { api: { bodyParser: false } };
+export const config = { api: { bodyParser: false }, maxDuration: 60 };
 
 const DOC_FIELDS = 'id, source_type, title, source_url, status, chunk_count, error, metadata, created_at, updated_at';
 

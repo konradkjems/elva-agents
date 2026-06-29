@@ -4,6 +4,9 @@ import { apiLimiter, runMiddleware } from '@/lib/rate-limit';
 import { gatherSiteContent } from '@/lib/crawl/firecrawl';
 import { generateChatbotConfig } from '@/lib/ai/autocreate';
 
+// Crawl + LLM synthesis can exceed the project-wide 30s cap; give it headroom.
+export const config = { maxDuration: 60 };
+
 // POST /api/admin/widgets/generate-from-website
 // Crawls a URL (Firecrawl) and synthesizes a starter chatbot config (LLM).
 // Returns a DRAFT only — writes nothing to the DB. The create flow pre-fills the
