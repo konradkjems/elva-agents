@@ -138,8 +138,10 @@ export default async function handler(req, res) {
 
     // Debug log for widget configuration (disabled in production)
 
-    // Auto-detect if this should use Responses API or legacy
-    const useResponsesAPI = widget.openai?.promptId && widget.openai?.promptId !== 'demo-prompt';
+    // Auto-detect which chat engine this widget uses.
+    // Order: in-platform (new multi-provider) → openai-hosted (`pmpt_…`) → legacy.
+    const useInPlatform = widget.ai?.engine === 'in-platform' && !!widget.promptId;
+    const useResponsesAPI = !useInPlatform && widget.openai?.promptId && widget.openai?.promptId !== 'demo-prompt';
     
     // Generate the widget JavaScript with embedded configuration
     const widgetScript = `
@@ -519,8 +521,9 @@ export default async function handler(req, res) {
       availableNowText: widget.messages?.availableNowText || widget.branding?.availableNowText || widget.settings?.branding?.availableNowText || null
     },
     apiUrl: process.env.NEXT_PUBLIC_API_URL || 'https://www.elva-agents.com/',
-    apiType: useResponsesAPI ? 'responses' : 'legacy',
+    apiType: useInPlatform ? 'in-platform' : (useResponsesAPI ? 'responses' : 'legacy'),
     streaming: widget.settings?.streaming?.enabled !== false, // Enable streaming by default
+    // In-platform widgets resolve prompt/model server-side — nothing leaks to the browser.
     openai: useResponsesAPI ? {
       promptId: widget.openai.promptId,
       version: widget.openai.version || 'latest'
@@ -5323,8 +5326,10 @@ export default async function handler(req, res) {
     }
 
     // Use appropriate API endpoint based on widget type (non-streaming fallback)
-    const apiEndpoint = WIDGET_CONFIG.apiType === 'responses' ? 
-      \`\${WIDGET_CONFIG.apiUrl}/api/respond-responses\` : 
+    const apiEndpoint = WIDGET_CONFIG.apiType === 'in-platform' ?
+      \`\${WIDGET_CONFIG.apiUrl}/api/respond-v2\` :
+      WIDGET_CONFIG.apiType === 'responses' ?
+      \`\${WIDGET_CONFIG.apiUrl}/api/respond-responses\` :
       \`\${WIDGET_CONFIG.apiUrl}/api/respond\`;
 
     try {

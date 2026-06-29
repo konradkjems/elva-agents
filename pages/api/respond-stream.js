@@ -4,6 +4,9 @@ import { admin } from "../../lib/supabase/admin";
 import { fromRow } from "../../lib/supabase/transform";
 import { getCountryFromIP } from "../../lib/privacy";
 import { widgetLimiter, runMiddleware } from "../../lib/rate-limit";
+import { resolvePromptVersion } from "../../lib/chat/prompts";
+import { streamChatResponse, toAiMessages, normalizeUsage } from "../../lib/ai/engine";
+import { retrieveContext } from "../../lib/rag/retrieve";
 
 // Set environment variable to handle SSL certificate issues in development
 if (process.env.NODE_ENV === 'development') {
@@ -181,15 +184,61 @@ export default async function handler(req, res) {
       conversationId: conversation._id
     })}\n\n`);
 
-    // Determine which API to use based on widget configuration
-    const useResponsesApi = widget.openai?.promptId;
+    // Determine which engine to use based on widget configuration.
+    // Order: in-platform (new multi-provider) → openai-hosted (`pmpt_…`) → legacy.
+    const usesInPlatform = widget.ai?.engine === 'in-platform' && !!widget.promptId;
+    const useResponsesApi = !usesInPlatform && widget.openai?.promptId;
 
     const startTime = Date.now();
     let fullResponse = '';
     let responseId = `resp_${Date.now()}`;
     let usage = { total_tokens: 0 };
+    let engineMeta = null; // populated by the in-platform branch
 
-    if (useResponsesApi) {
+    if (usesInPlatform) {
+      // In-platform engine: resolve the pinned prompt version, replay the stored
+      // conversation as the message array (no server-side response id), and stream
+      // through the Vercel AI SDK + AI Gateway.
+      const resolved = await resolvePromptVersion(widget);
+      engineMeta = { provider: resolved.provider, model: resolved.model, promptVersion: resolved.version };
+      console.log(`🚀 Starting in-platform streaming via ${resolved.provider}/${resolved.model}...`);
+
+      // RAG: prepend relevant knowledge-base context (gated on the widget binding;
+      // retrieveContext never throws, returns empty context on any failure).
+      if (widget.knowledgeBase?.enabled === true) {
+        const { contextText } = await retrieveContext({
+          widgetId: widget.id,
+          query: message,
+          topK: widget.knowledgeBase?.topK,
+        });
+        if (contextText) {
+          resolved.systemPrompt = `${contextText}\n\n${resolved.systemPrompt || ''}`.trim();
+        }
+      }
+
+      const aiMessages = toAiMessages(conversation.messages, {
+        provider: resolved.provider,
+        model: resolved.model,
+      });
+
+      const result = streamChatResponse({
+        provider: resolved.provider,
+        model: resolved.model,
+        systemPrompt: resolved.systemPrompt,
+        messages: aiMessages,
+        temperature: resolved.temperature,
+        maxTokens: resolved.maxTokens,
+      });
+
+      for await (const delta of result.textStream) {
+        if (delta) {
+          fullResponse += delta;
+          res.write(`data: ${JSON.stringify({ type: 'delta', content: delta })}\n\n`);
+        }
+      }
+
+      usage = normalizeUsage(await result.usage);
+    } else if (useResponsesApi) {
       // Use Responses API with streaming
       const responsePayload = {
         prompt: { id: widget.openai.promptId },
@@ -287,6 +336,11 @@ export default async function handler(req, res) {
       };
     }
 
+    // Add provider/model metadata if using the in-platform engine
+    if (usesInPlatform && engineMeta) {
+      aiMessage.ai = { ...engineMeta, usage };
+    }
+
     conversation.messages.push(aiMessage);
 
     // Update conversation in database
@@ -326,7 +380,7 @@ export default async function handler(req, res) {
         promptId: widget.openai.promptId,
         promptVersion: widget.openai.version || 'latest',
         usage: usage
-      } : { usage }
+      } : { usage, ...(engineMeta || {}) }
     })}\n\n`);
 
     res.end();

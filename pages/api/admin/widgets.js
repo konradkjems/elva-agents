@@ -529,6 +529,10 @@ async function handler(req, res) {
           theme: body.theme,
           timezone: body.timezone,
           openai: body.openai,
+          // In-platform prompt engine binding (coexists with legacy openai.promptId)
+          prompt_id: body.promptId,
+          prompt_version: body.promptVersion,
+          ai: body.ai,
           appearance: body.appearance,
           messages: body.messages,
           branding: body.branding,

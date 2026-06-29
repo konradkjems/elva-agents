@@ -17,7 +17,9 @@ import {
   ClipboardList,
   ShieldCheck,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import {
   Accordion,
@@ -32,6 +34,8 @@ import { Label } from '@/components/ui/label';
 import ColorPicker from './ColorPicker';
 import FileUpload from './FileUpload';
 import AdvancedSettings from './AdvancedSettings';
+import AISettings from './AISettings';
+import KnowledgeBaseSettings from './KnowledgeBaseSettings';
 import ImageZoomModal from './ImageZoomModal';
 
 // Default enabled languages
@@ -325,7 +329,35 @@ export default function SettingsPanel({ settings, onChange, onSave, saving }) {
 
   return (
     <div className="h-full bg-white dark:bg-[#111]">
-      <Accordion type="single" collapsible defaultValue="appearance" className="divide-y divide-slate-100 dark:divide-slate-800">
+      <Accordion type="single" collapsible defaultValue="ai" className="divide-y divide-slate-100 dark:divide-slate-800">
+          <AccordionItem value="ai" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-md bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">AI &amp; Prompt</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-5 pb-5 pt-0">
+              <AISettings settings={settings} onChange={onChange} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="knowledge" className="border-0">
+            <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-1.5 rounded-md bg-primary/10 dark:bg-primary/30 text-primary dark:text-primary">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Vidensbase</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-5 pb-5 pt-0">
+              <KnowledgeBaseSettings settings={settings} onChange={onChange} />
+            </AccordionContent>
+          </AccordionItem>
+
           <AccordionItem value="appearance" className="border-0">
             <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex items-center gap-3">
