@@ -15,11 +15,20 @@ const nextConfig = {
         ],
       },
       {
-        // Apply CORS headers to widget files
-        source: '/widget/:path*',
+        // Legacy v0 widget script (rewritten to /api/widget/:widgetId below).
+        // Scoped to widget.js only: /widget/* also hosts the v2 chat app.
+        source: '/widget/:widgetId/widget.js',
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Content-Type', value: 'application/javascript' },
+        ],
+      },
+      {
+        // v2 chat app build (widget-app/ → public/widget/). Hashed assets are immutable.
+        source: '/widget/assets/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
     ];

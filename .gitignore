@@ -116,3 +116,5 @@ backups/
 # Test coverage
 coverage/
 *.lcov
+# Built by widget-app (npm run build:widget)
+/public/widget/
