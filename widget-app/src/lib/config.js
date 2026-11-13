@@ -10,15 +10,26 @@ export function resolveConfig(raw, page = {}) {
   const m = raw.messages || {};
   const base = LANGS.includes(raw.advanced?.language) ? raw.advanced.language : 'da';
 
+  // Multi-language widgets keep per-language packs for the main copy, but the
+  // support form, rating and footer texts exist once, in whatever language the
+  // customer wrote them. Work out that language, and only use those
+  // single-language texts when the visitor is shown that language; otherwise
+  // the built-in translation keeps every label in one language.
+  const packs = (m.customLanguage && m.languagePacks) || {};
+  const contentLang = m.customLanguage ? detectContentLang(m, packs, base) : base;
+
   let lang = base;
   let pack = null;
   if (m.customLanguage) {
+    const enabled = (m.enabledLanguages || LANGS).filter((l) => LANGS.includes(l));
     const detected = String(page.lang || '').toLowerCase().split('-')[0];
-    if (LANGS.includes(detected) && (m.enabledLanguages || LANGS).includes(detected)) {
-      lang = detected;
-      pack = (m.languagePacks && m.languagePacks[detected]) || {};
-    }
+    if (enabled.includes(detected)) lang = detected;
+    else if (enabled.includes(base) && packs[base]) lang = base;
+    else lang = contentLang;
+    // The pack wins; the language the base texts are written in falls back to them.
+    pack = lang === contentLang ? null : packs[lang] || {};
   }
+  const own = lang === contentLang;
 
   const defaults = PACK[lang];
   const pick = (key) => {
@@ -42,8 +53,8 @@ export function resolveConfig(raw, page = {}) {
   }
 
   const ui = UI[lang];
-  const mr = raw.manualReview || {};
-  const sat = raw.satisfaction || {};
+  const mr = own ? customOnly(raw.manualReview, lang) : {};
+  const sat = own ? customOnly(raw.satisfaction, lang) : {};
   const support = {
     buttonText: mr.buttonText || ui.support,
     formTitle: mr.formTitle || ui.formTitle,
@@ -68,6 +79,7 @@ export function resolveConfig(raw, page = {}) {
   const b = raw.branding || {};
   return {
     ...raw,
+    branding: { ...b, poweredByText: own && !(lang !== 'en' && V1_EN_DEFAULTS.has(norm(b.poweredByText))) ? b.poweredByText : null },
     lang,
     locale: LOCALES[lang],
     copy,
@@ -82,6 +94,45 @@ export function resolveConfig(raw, page = {}) {
       assistant: b.assistantName || b.title || raw.name || 'AI Assistant',
     },
   };
+}
+
+// Older widgets saved v1's English defaults into the database. On a non-English
+// widget they are not the customer's words, so the translated defaults win.
+const V1_EN_DEFAULTS = new Set(
+  [
+    'Powered by',
+    'Request Manual Review',
+    'Please provide your contact information and describe what you need help with. Our team will review your conversation and get back to you.',
+    'Thank you for your request! Our team will review your conversation and contact you within 24 hours.',
+    'How would you rate this conversation so far?',
+    'Optional feedback...',
+    '📧 Email Support',
+    '💬 Live Chat',
+    'Cancel',
+    'Send Request',
+  ].map((s) => s.replace(/\s+/g, ' ').trim().toLowerCase())
+);
+function customOnly(obj, lang) {
+  const out = {};
+  for (const [k, v] of Object.entries(obj || {})) {
+    if (typeof v === 'string' && lang !== 'en' && V1_EN_DEFAULTS.has(norm(v))) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+const norm = (s) => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+/** Which language the widget's single-language texts are written in. */
+function detectContentLang(m, packs, base) {
+  // The base texts usually copy one pack verbatim (or nearly so).
+  for (const key of ['welcomeMessage', 'inputPlaceholder', 'popupMessage', 'bannerText']) {
+    const v = norm(m[key]);
+    if (!v) continue;
+    const hit = Object.keys(packs).find((l) => LANGS.includes(l) && norm(packs[l]?.[key]) === v);
+    if (hit) return hit;
+  }
+  return base;
 }
 
 // v1 defaults carried emoji in button labels ("📧 Email Support"); BoardUI
