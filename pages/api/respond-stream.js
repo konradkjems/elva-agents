@@ -184,6 +184,22 @@ export default async function handler(req, res) {
       conversationId: conversation._id
     })}\n\n`);
 
+    // Progress steps for the widget's activity trail ({type:'step'} events).
+    // Labels are localised client-side; the server only reports what happens.
+    // Old clients ignore unknown event types, so this is additive.
+    const step = (id, status, data) => {
+      try {
+        res.write(`data: ${JSON.stringify({ type: 'step', id, status, ...(data ? { data } : {}) })}\n\n`);
+      } catch { /* client gone */ }
+    };
+    const priorMessages = Math.max(0, conversation.messages.length - 1);
+    if (priorMessages >= 2) {
+      step('context', 'active', { count: priorMessages });
+      step('context', 'done', { count: priorMessages });
+    }
+    step('read', 'active', imageUrl ? { image: true } : undefined);
+    step('read', 'done', imageUrl ? { image: true } : undefined);
+
     // Determine which engine to use based on widget configuration.
     // Order: in-platform (new multi-provider) → openai-hosted (`pmpt_…`) → legacy.
     const usesInPlatform = widget.ai?.engine === 'in-platform' && !!widget.promptId;
@@ -206,15 +222,23 @@ export default async function handler(req, res) {
       // RAG: prepend relevant knowledge-base context (gated on the widget binding;
       // retrieveContext never throws, returns empty context on any failure).
       if (widget.knowledgeBase?.enabled === true) {
-        const { contextText } = await retrieveContext({
+        // The lookup embeds the visitor's own words, so no query is echoed
+        // back (it would just repeat their message).
+        step('search', 'active');
+        const { contextText, matches, chunkCount } = await retrieveContext({
           widgetId: widget.id,
           query: message,
           topK: widget.knowledgeBase?.topK,
         });
+        step('search', 'done', { count: chunkCount || 0 });
         if (contextText) {
           resolved.systemPrompt = `${contextText}\n\n${resolved.systemPrompt || ''}`.trim();
+          step('sources', 'active', { count: chunkCount, sources: (matches || []).slice(0, 6) });
+          step('sources', 'done', { count: chunkCount, sources: (matches || []).slice(0, 6) });
         }
       }
+
+      step('compose', 'active');
 
       const aiMessages = toAiMessages(conversation.messages, {
         provider: resolved.provider,
@@ -263,10 +287,71 @@ export default async function handler(req, res) {
       }
 
       console.log('🚀 Starting Responses API streaming...');
-      const stream = await openai.responses.create(responsePayload);
+      // One "thinking" step is open whenever the model works without a visible
+      // tool: closed when a search starts, reopened after it, closed at the first token.
+      let thinking = 'think';
+      step(thinking, 'active');
+      const stopThinking = () => { if (thinking) { step(thinking, 'done'); thinking = null; } };
+      // Ask for hosted-tool details (what was searched, what was found) so the
+      // widget can show them. If a prompt/model rejects `include`, retry
+      // without it: the activity trail must never cost the visitor an answer.
+      let stream;
+      try {
+        stream = await openai.responses.create({
+          ...responsePayload,
+          include: ['file_search_call.results', 'web_search_call.action.sources'],
+        });
+      } catch (includeErr) {
+        if (includeErr?.status !== 400) throw includeErr;
+        console.warn('Responses API rejected include; retrying without it:', includeErr?.message);
+        stream = await openai.responses.create(responsePayload);
+      }
+      let composing = false;
 
       for await (const event of stream) {
-        // Handle different event types from Responses API streaming
+        // Hosted tools (file_search / web_search) surface as activity steps.
+        const toolMatch = /^response\.(file_search|web_search)_call\.(in_progress|searching|completed)$/.exec(event.type || '');
+        if (toolMatch) {
+          const kind = toolMatch[1] === 'file_search' ? 'search' : 'web';
+          if (toolMatch[2] !== 'completed') stopThinking();
+          step(`${kind}-${event.item_id || event.output_index || 0}`, toolMatch[2] === 'completed' ? 'done' : 'active', { kind });
+          continue;
+        }
+        if (event.type === 'response.output_item.done' && event.item) {
+          const item = event.item;
+          if (item.type === 'file_search_call') {
+            const results = Array.isArray(item.results) ? item.results : null;
+            // The model often rewrites the visitor's question into several long queries;
+            // the first one reads best as a short detail.
+            const query = String((item.queries || []).find(Boolean) || '').slice(0, 80);
+            step(`search-${item.id}`, 'done', { kind: 'search', ...(query ? { query } : {}), ...(results ? { count: results.length } : {}) });
+            // Vector-store filenames are internal (e.g. "helper_vector_store.json"), so
+            // the visitor sees the reading step without filename chips.
+            if (results?.length) {
+              step(`sources-${item.id}`, 'active', { kind: 'sources' });
+              step(`sources-${item.id}`, 'done', { kind: 'sources' });
+            }
+          } else if (item.type === 'web_search_call') {
+            const query = String(item.action?.query || '').slice(0, 120);
+            step(`web-${item.id}`, 'done', { kind: 'web', ...(query ? { query } : {}) });
+            const urls = [...new Set((item.action?.sources || []).map((src) => src.url).filter(Boolean))];
+            if (urls.length) {
+              const sources = urls.slice(0, 6).map((url) => ({ title: null, url }));
+              step(`sources-${item.id}`, 'active', { kind: 'sources', sources });
+              step(`sources-${item.id}`, 'done', { kind: 'sources', sources });
+            }
+          }
+          if ((item.type === 'file_search_call' || item.type === 'web_search_call') && !composing && !thinking) {
+            thinking = `think-${item.id}`;
+            step(thinking, 'active', { kind: 'think' });
+          }
+          continue;
+        }
+        if (event.type === 'response.output_text.delta' && !composing) {
+          composing = true;
+          stopThinking();
+          step('compose', 'active');
+        }
         if (event.type === 'response.output_text.delta') {
           const delta = event.delta || '';
           if (delta) {
@@ -290,6 +375,7 @@ export default async function handler(req, res) {
         }))
       ];
 
+      step('compose', 'active');
       console.log('🚀 Starting Chat Completions API streaming...');
       const stream = await openai.chat.completions.create({
         model: widget.model || "gpt-4o-mini",
@@ -370,6 +456,8 @@ export default async function handler(req, res) {
     } catch (analyticsError) {
       console.error('Analytics update error:', analyticsError);
     }
+
+    step('compose', 'done');
 
     // Send completion event
     res.write(`data: ${JSON.stringify({

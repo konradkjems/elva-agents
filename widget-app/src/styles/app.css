@@ -1,0 +1,224 @@
+@import "./globals.css";
+
+/* Elva widget frame — app-level layer over BoardUI.
+ * The customer's colour arrives at runtime as the accent-50…950 ramp
+ * (see lib/theme.js), so every BoardUI accent token follows it. */
+
+@source "../";
+
+:root {
+  --font-inter: "Inter Variable";
+  /* Foreground on the customer's accent; flipped to dark for light accents. */
+  --elva-on-accent: #ffffff;
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-on-accent: var(--elva-on-accent);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-background-primary-default);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+/* BoardUI primary buttons sit on the customer accent: keep their label readable. */
+:root[data-light-accent] .bg-button-primary {
+  color: var(--elva-on-accent);
+}
+
+/* ---- Browser surfaces ---------------------------------------------------- */
+::selection {
+  background: color-mix(in oklab, var(--color-accent-500) 22%, transparent);
+  color: inherit;
+}
+textarea,
+input {
+  caret-color: var(--color-accent-500);
+}
+.elva-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-text-tertiary) 35%, transparent) transparent;
+  overscroll-behavior: contain;
+}
+.elva-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.elva-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-text-tertiary) 35%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* ---- Message prose ------------------------------------------------------- */
+.elva-prose {
+  overflow-wrap: anywhere;
+}
+.elva-prose > * + * {
+  margin-top: 0.6em;
+}
+.elva-prose ul,
+.elva-prose ol {
+  padding-inline-start: 1.25em;
+}
+.elva-prose ul {
+  list-style: disc;
+}
+.elva-prose ol {
+  list-style: decimal;
+}
+.elva-prose li + li {
+  margin-top: 0.25em;
+}
+.elva-prose li::marker {
+  color: var(--color-text-tertiary);
+}
+.elva-prose a {
+  color: var(--color-accent-600);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
+  transition: text-decoration-color 0.15s;
+}
+:root.dark .elva-prose a {
+  color: var(--color-accent-300);
+}
+.elva-prose a:hover {
+  text-decoration-color: currentColor;
+}
+.elva-prose strong {
+  font-weight: 600;
+}
+.elva-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  background: var(--color-background-secondary-default);
+}
+.elva-prose h3,
+.elva-prose h4 {
+  font-weight: 600;
+}
+/* Visitor bubble: links and markers ride the bubble's own foreground. */
+.elva-prose-on-accent a,
+:root.dark .elva-prose-on-accent a {
+  color: inherit;
+}
+.elva-prose-on-accent li::marker {
+  color: inherit;
+}
+
+/* ---- Signature motion: words blur in as they arrive ---------------------- */
+@keyframes elva-word-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+.elva-word {
+  animation: elva-word-in 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes elva-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.elva-rise {
+  animation: elva-rise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes elva-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--elva-online, #3fd128) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 5px transparent;
+  }
+}
+.elva-online-dot {
+  animation: elva-pulse 2.4s ease-out infinite;
+}
+
+/* Activity trail: a light sweep across the step that is running. */
+@keyframes elva-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+.elva-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-text-secondary) 0%,
+    var(--color-text-secondary) 40%,
+    var(--color-text-primary) 50%,
+    var(--color-text-secondary) 60%,
+    var(--color-text-secondary) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: elva-shimmer 1.6s linear infinite;
+}
+@keyframes elva-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.elva-pop {
+  animation: elva-pop 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elva-word,
+  .elva-rise,
+  .elva-pop,
+  .elva-online-dot {
+    animation: none;
+  }
+  .elva-shimmer {
+    animation: none;
+    background: none;
+    color: var(--color-text-secondary);
+  }
+}
+
+/* BoardUI's dark tertiary fill equals the panel ground (neutral-800), which
+   makes inputs and the idle send button vanish. Lift it one step. */
+.dark {
+  --color-background-tertiary-default: var(--color-neutral-700);
+}
+
+/* BoardUI darkens placeholders on focus; in a chat that reads as text
+   already typed. Keep them quiet everywhere in the widget. */
+:is(input, textarea):focus::placeholder {
+  color: var(--color-text-tertiary) !important;
+}
